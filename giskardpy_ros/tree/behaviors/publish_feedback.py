@@ -1,0 +1,109 @@
+from typing import Optional
+
+from line_profiler import profile
+
+import giskardpy_ros.ros2.msg_converter as msg_converter
+import numpy as np
+from giskard_msgs.msg import ExecutionState
+from py_trees.common import Status
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
+
+from giskardpy.data_types.data_types import LifeCycleState
+from giskardpy.god_map import god_map
+from giskardpy.utils.decorators import record_time
+from giskardpy_ros import ros_node
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+
+
+def giskard_state_to_execution_state() -> ExecutionState:
+    tasks = god_map.motion_statechart_manager.task_state.nodes
+    monitors = god_map.motion_statechart_manager.monitor_state.nodes
+    goals = god_map.motion_statechart_manager.goal_state.nodes
+    task_filter = np.array([task.plot for task in tasks])
+    monitor_filter = np.array([monitor.plot for monitor in monitors])
+    goal_filter = np.array([goal.plot for goal in goals])
+
+    msg = ExecutionState()
+    msg.header.stamp = ros_node.get_clock().now()
+    msg.goal_id = GiskardBlackboard().move_action_server.goal_id
+
+    msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t.plot]
+    msg.task_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in tasks if node.plot]
+    try:
+        msg.task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0][task_filter].tolist()
+        msg.task_life_cycle_state = god_map.motion_statechart_manager.task_state_history[-1][1][1][task_filter].tolist()
+    except IndexError as e:
+        pass
+
+    msg.monitors = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m.plot]
+    msg.monitor_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in monitors if node.plot]
+    try:
+        msg.monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][0][monitor_filter].tolist()
+        msg.monitor_life_cycle_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][1][monitor_filter].tolist()
+    except IndexError as e:
+        pass
+
+    msg.goals = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m.plot]
+    msg.goal_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in goals if node.plot]
+    try:
+        msg.goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0][goal_filter].tolist()
+        msg.goal_life_cycle_state = god_map.motion_statechart_manager.goal_state_history[-1][1][1][goal_filter].tolist()
+    except IndexError as e:
+        pass
+    return msg
+
+
+def did_state_change() -> bool:
+    if len(god_map.motion_statechart_manager.task_state_history) <= 1:
+        return False
+    if len(god_map.motion_statechart_manager.task_state_history) == 2:
+        return True
+    last_task_state = god_map.motion_statechart_manager.task_state_history[-2][1][0]
+    task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0]
+    if np.any(last_task_state != task_state):
+        return True
+    last_task_state = god_map.motion_statechart_manager.task_state_history[-2][1][1]
+    task_state = god_map.motion_statechart_manager.task_state_history[-1][1][1]
+    if np.any(last_task_state != task_state):
+        return True
+    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][0]
+    monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][0]
+    if np.any(last_monitor_state != monitor_state):
+        return True
+    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][1]
+    monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][1]
+    if np.any(last_monitor_state != monitor_state):
+        return True
+    last_goal_state = god_map.motion_statechart_manager.goal_state_history[-2][1][0]
+    goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0]
+    if np.any(last_goal_state != goal_state):
+        return True
+    last_goal_state = god_map.motion_statechart_manager.goal_state_history[-2][1][1]
+    goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][1]
+    if np.any(last_goal_state != goal_state):
+        return True
+    return False
+
+
+class PublishFeedback(GiskardBehavior):
+    @profile
+    def __init__(self, name: Optional[str] = None, topic_name: Optional[str] = None):
+        if name is None:
+            name = self.__class__.__name__
+        if topic_name is None:
+            topic_name = '~state'
+        super().__init__(name)
+        self.cmd_topic = topic_name
+        self.pub = ros_node.create_publisher(ExecutionState,
+                                             self.cmd_topic,
+                                             QoSProfile(depth=10,
+                                                        durability=QoSDurabilityPolicy.TRANSIENT_LOCAL))
+
+    @record_time
+    @profile
+    def update(self):
+        if did_state_change():
+            msg = giskard_state_to_execution_state()
+            self.pub.publish(msg)
+        return Status.SUCCESS
