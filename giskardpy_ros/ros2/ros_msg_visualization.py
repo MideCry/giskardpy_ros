@@ -15,10 +15,12 @@ from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions, Collision
 import giskardpy_ros.ros2.msg_converter as msg_converter
+from giskardpy.model.links import Link
 from giskardpy_ros.ros2.ros2_interface import wait_for_publisher, wait_for_topic_to_appear
 from giskardpy.model.links import Link
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy_ros.utils.decorators import memoize
 from giskardpy.model.trajectory import Trajectory
 
 
@@ -52,7 +54,6 @@ class ROSMsgVisualization:
         self.publisher = rospy.node.create_publisher(MarkerArray,
                                                    f'{rospy.node.get_name()}/visualization_marker_array',
                                                10)
-        # wait_for_publisher(self.publisher)
         self.marker_ids = {}
         if tf_frame is None:
             self.tf_root = str(god_map.world.root_link_name)
@@ -73,6 +74,10 @@ class ROSMsgVisualization:
             self.world_version = god_map.world.model_version
             return True
         return False
+
+    @memoize
+    def link_to_marker(self, link: Link):
+        return msg_converter.link_to_visualization_marker(link, self.use_decomposed_meshes).markers
 
     @profile
     def create_world_markers(self, name_space: str = 'world', marker_id_offset: int = 0) -> List[Marker]:
