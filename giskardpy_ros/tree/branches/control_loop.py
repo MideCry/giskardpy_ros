@@ -47,7 +47,7 @@ class ControlLoop(AsyncBehavior):
         super().__init__(name, max_hz=max_hz)
         self.publish_state = PublishState('publish state 2')
         self.publish_state.add_publish_feedback()
-        self.projection_synchronization = Synchronization()
+        self.projection_synchronization_sir = SuccessIsRunning('sir', self.projection_synchronization)
         # projection plugins
         self.time = TimePlugin()
         self.kin_sim = KinSimPlugin('kin sim')
@@ -56,6 +56,7 @@ class ControlLoop(AsyncBehavior):
         self.real_kin_sim = RealKinSimPlugin('real kin sim')
         self.send_controls = SendControls()
         self.closed_loop_synchronization = Synchronization()
+        self.closed_loop_synchronization_sir = SuccessIsRunning('sir', self.closed_loop_synchronization)
         self.evaluate_monitors = EvaluateMonitors()
 
         goal_canceled = GoalCanceled(GiskardBlackboard().move_action_server)
@@ -98,26 +99,26 @@ class ControlLoop(AsyncBehavior):
         self.remove_child(self.kin_sim)
 
     def remove_projection_behaviors(self):
-        self.remove_child(self.projection_synchronization)
+        self.remove_child(self.projection_synchronization_sir)
         self.remove_child(self.time)
         self.remove_child(self.kin_sim)
         # self.publish_state.remove_visualization_marker_behavior()
 
     def remove_closed_loop_behaviors(self):
-        self.remove_child(self.closed_loop_synchronization)
+        self.remove_child(self.closed_loop_synchronization_sir)
         self.remove_child(self.ros_time)
         self.remove_child(self.real_kin_sim)
         self.remove_child(self.send_controls)
 
     def add_projection_behaviors(self):
         # self.publish_state.add_visualization_marker_behavior(mode=VisualizationMode.CollisionsDecomposed)
-        self.insert_child(self.projection_synchronization, 1)
-        self.insert_child(self.time, -2)
-        self.insert_child(self.kin_sim, -2)
+        self.insert_child(self.projection_synchronization_sir, 1)
+        self.insert_child(SuccessIsRunning('sir', self.time), -2)
+        self.insert_child(SuccessIsRunning('sir', self.kin_sim), -2)
         self.in_projection = True
 
     def add_closed_loop_behaviors(self):
-        self.insert_child(self.closed_loop_synchronization, 1)
+        self.insert_child(self.closed_loop_synchronization_sir, 1)
         self.insert_child(self.ros_time, -2)
         self.insert_child(self.real_kin_sim, -2)
         self.insert_child(self.send_controls, -2)

@@ -11,7 +11,7 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from giskardpy.data_types.data_types import LifeCycleState
 from giskardpy.god_map import god_map
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros import ros_node
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
@@ -25,7 +25,7 @@ def giskard_state_to_execution_state() -> ExecutionState:
     goal_filter = np.array([goal.plot for goal in goals])
 
     msg = ExecutionState()
-    msg.header.stamp = ros_node.get_clock().now().to_msg()
+    msg.header.stamp = rospy.node.get_clock().now().to_msg()
     msg.goal_id = GiskardBlackboard().move_action_server.goal_id
 
     msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t.plot]
@@ -92,12 +92,12 @@ class PublishFeedback(GiskardBehavior):
         if name is None:
             name = self.__class__.__name__
         if topic_name is None:
-            topic_name = f'{ros_node.get_name()}/state'
+            topic_name = f'{rospy.node.get_name()}/state'
         super().__init__(name)
         self.cmd_topic = topic_name
-        self.pub = ros_node.create_publisher(ExecutionState,
-                                             self.cmd_topic,
-                                             QoSProfile(depth=10,
+        self.pub = rospy.node.create_publisher(ExecutionState,
+                                         self.cmd_topic,
+                                         QoSProfile(depth=10,
                                                         durability=QoSDurabilityPolicy.TRANSIENT_LOCAL))
 
     @record_time

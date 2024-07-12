@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, List
 
 from giskardpy.model.world_config import WorldConfig
-from giskardpy_ros import ros_node
+from giskardpy_ros.ros2 import rospy
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig, OpenLoopBTConfig
 from giskardpy.god_map import god_map
@@ -24,7 +24,7 @@ class Giskard:
     behavior_tree_config: BehaviorTreeConfig = None
     robot_interface_config: RobotInterfaceConfig = None
     qp_controller_config: QPControllerConfig = None
-    action_server_name: str = f'{ros_node.get_name()}/command'
+    action_server_name: str = f'{rospy.node.get_name()}/command'
 
     def __init__(self,
                  world_config: WorldConfig,
@@ -94,7 +94,7 @@ class Giskard:
         self.collision_avoidance_config._sanity_check()
         god_map.collision_scene.sync()
         self.sanity_check()
-        GiskardBlackboard().tree.setup(ros_node)
+        GiskardBlackboard().tree.setup(rospy.node)
 
     def sanity_check(self):
         self._controlled_joints_sanity_check()

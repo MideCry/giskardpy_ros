@@ -3,10 +3,11 @@ from __future__ import division
 from time import sleep
 
 import numpy as np
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 import rclpy
 from geometry_msgs.msg import PointStamped, Point, Vector3
+from nav_msgs.msg import Path
 from rclpy.publisher import Publisher
 from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
@@ -25,7 +26,7 @@ from giskardpy.motion_statechart.tasks.pointing import Pointing
 import giskardpy.casadi_wrapper as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.utils.decorators import clear_memo, memoize_with_counter
-from giskardpy_ros import ros_node
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
 
 
@@ -44,7 +45,7 @@ class RealTimePointing(Pointing):
                          pointing_axis=pointing_axis,
                          max_velocity=max_velocity,
                          weight=weight)
-        self.sub = ros_node.create_subscription(PointStamped, 'muh', self.cb, 10)
+        self.sub = rospy.node.create_subscription(PointStamped, 'muh', self.cb, 10)
 
     def cb(self, data: PointStamped):
         data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
@@ -99,7 +100,7 @@ class CarryMyBullshit(Goal):
         self.end_of_traj_reached = False
         self.enable_laser_avoidance = enable_laser_avoidance
         if CarryMyBullshit.pub is None:
-            CarryMyBullshit.pub = ros_node.create_publisher(MarkerArray, f'{ros_node.get_name()}/visualization_marker_array', 10)
+            CarryMyBullshit.pub = rospy.node.create_publisher(MarkerArray, f'{rospy.node.get_name()}/visualization_marker_array', 10)
         self.laser_topic_name = laser_topic_name
         if point_cloud_laser_topic_name == '':
             self.point_cloud_laser_topic_name = None
@@ -115,9 +116,9 @@ class CarryMyBullshit(Goal):
         self.closest_laser_reading_pc = 0
         self.laser_frame = laser_frame_id
         self.last_scan = LaserScan()
-        self.last_scan.header.stamp = ros_node.get_clock().now().to_msg()
+        self.last_scan.header.stamp = rospy.node.get_clock().now().to_msg()
         self.last_scan_pc = LaserScan()
-        self.last_scan_pc.header.stamp = ros_node.get_clock().now().to_msg()
+        self.last_scan_pc.header.stamp = rospy.node.get_clock().now().to_msg()
         self.laser_scan_age_threshold = laser_scan_age_threshold
         self.laser_avoidance_angle_cutout = laser_avoidance_angle_cutout
         self.laser_avoidance_sideways_buffer = laser_avoidance_sideways_buffer
@@ -157,20 +158,20 @@ class CarryMyBullshit(Goal):
             CarryMyBullshit.traj_flipped = False
             get_middleware().loginfo('cleared old path')
         if CarryMyBullshit.laser_sub is None:
-            CarryMyBullshit.laser_sub = ros_node.create_subscription(LaserScan, self.laser_topic_name, self.laser_cb, 10)
+            CarryMyBullshit.laser_sub = rospy.node.create_subscription(LaserScan, self.laser_topic_name, self.laser_cb, 10)
         if CarryMyBullshit.point_cloud_laser_sub is None and self.point_cloud_laser_topic_name is not None:
-            CarryMyBullshit.point_cloud_laser_sub = ros_node.create_subscription(LaserScan,
-                                                                                 self.point_cloud_laser_topic_name,
-                                                                                 self.point_cloud_laser_cb,
-                                                                                 10)
+            CarryMyBullshit.point_cloud_laser_sub = rospy.node.create_subscription(LaserScan,
+                                                                             self.point_cloud_laser_topic_name,
+                                                                             self.point_cloud_laser_cb,
+                                                                             10)
         self.publish_tracking_radius()
         self.publish_distance_to_target()
         if not self.drive_back:
             if CarryMyBullshit.target_sub is None:
-                CarryMyBullshit.target_sub = ros_node.create_subscription(PointStamped,
-                                                                          patrick_topic_name,
-                                                                          self.target_cb,
-                                                                          10)
+                CarryMyBullshit.target_sub = rospy.node.create_subscription(PointStamped,
+                                                                      patrick_topic_name,
+                                                                      self.target_cb,
+                                                                      10)
             sleep(0.5)
             for i in range(int(wait_for_patrick_timeout)):
                 if CarryMyBullshit.trajectory.shape[0] > 5:
@@ -662,7 +663,7 @@ class FollowNavPath(Goal):
 #     traj_data: List[np.ndarray]
 #     laser_thresholds: Dict[int, np.ndarray]
 #     pub: Publisher = None
-#     laser_subs: List[rclpy.Subscriber]
+#     laser_subs: List[Subscription]
 #     last_scan: Dict[int, LaserScan]
 #     odom_joint: OmniDrive
 #
@@ -694,7 +695,7 @@ class FollowNavPath(Goal):
 #         self.last_scan = {}
 #         self.enable_laser_avoidance = len(laser_topics) > 0
 #         if FollowNavPath.pub is None:
-#             FollowNavPath.pub = ros_node.create_publisher(MarkerArray, f'{ros_node.get_name()}/visualization_marker_array', 10)
+#             FollowNavPath.pub = rospy.node.create_publisher(MarkerArray, f'{rospy.node.get_name()}/visualization_marker_array', 10)
 #         self.laser_topics = list(laser_topics)
 #         self.laser_distance_threshold_width = laser_distance_threshold_width / 2
 #         self.closest_laser_left = [self.laser_distance_threshold_width] * len(self.laser_topics)
@@ -735,7 +736,7 @@ class FollowNavPath(Goal):
 #         self.laser_subs = []
 #         for i, laser_topic in enumerate(self.laser_topics):
 #             cb = lambda scan: self.laser_cb(scan, i)
-#             self.laser_subs.append(ros_node.create_subscription(LaserScan, laser_topic, cb, 10))
+#             self.laser_subs.append(rospy.node.create_subscription(LaserScan, laser_topic, cb, 10))
 #         self.publish_tracking_radius()
 #         self.path_to_trajectory(path=path)
 #
