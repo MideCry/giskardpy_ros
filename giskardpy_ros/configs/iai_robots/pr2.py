@@ -10,12 +10,14 @@ from giskardpy_ros.ros2 import ros2_interface
 
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
     def __init__(self, map_name: str = 'map', localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum'):
+                 odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum',
+                 urdf: Optional[str] = None):
         super().__init__(urdf=rospy.get_param('robot_description'),
                          map_name=map_name,
                          localization_joint_name=localization_joint_name,
                          odom_link_name=odom_link_name,
                          drive_joint_name=drive_joint_name)
+        self.urdf = urdf
 
     def setup(self, robot_name: Optional[str] = None):
         super().setup(robot_name)

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import rclpy
 from geometry_msgs.msg import PoseStamped, Quaternion
 
 import giskardpy_ros.ros2.tfwrapper as tf
@@ -7,19 +8,18 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.joints import OneDofJoint
 from giskardpy.utils.math import quaternion_from_axis_angle
-from giskardpy_ros.ros1.interface import ROS1Wrapper
+from giskardpy_ros.ros2.interface import ROS2Wrapper
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from utils_for_tests import launch_launchfile
 
-from utils_for_tests import GiskardTestWrapper
+from utils_for_tests import GiskardTester
 
 
 @pytest.fixture(scope='module')
 def ros(request):
-    get_middleware().loginfo('init ros')
-    rospy.init_node('tests')
-    set_middleware(ROS1Wrapper())
-    tf.init(60)
+    rospy.init_node('giskard')
+    middleware.loginfo('init ros')
+    tf.init()
 
     def kill_ros():
         try:
@@ -27,76 +27,76 @@ def ros(request):
         except KeyError as e:
             get_middleware().logerr(f'Failed to render behavior tree.')
         get_middleware().loginfo('shutdown ros')
-        rospy.signal_shutdown('die')
+        rclpy.shutdown()
 
-    try:
-        rospy.get_param('kitchen_description')
-    except:
-        try:
-            launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch')
-        except:
-            get_middleware().logwarn('iai_apartment not found')
-    try:
-        rospy.get_param('apartment_description')
-    except:
-        try:
-            launch_launchfile('package://iai_apartment/launch/upload_apartment.launch')
-        except:
-            get_middleware().logwarn('iai_kitchen not found')
+    # try:
+    #     rospy.get_param('kitchen_description')
+    # except:
+    #     try:
+    #         launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch')
+    #     except:
+    #         get_middleware().logwarn('iai_apartment not found')
+    # try:
+    #     rospy.get_param('apartment_description')
+    # except:
+    #     try:
+    #         launch_launchfile('package://iai_apartment/launch/upload_apartment.launch')
+    #     except:
+    #         get_middleware().logwarn('iai_kitchen not found')
     request.addfinalizer(kill_ros)
 
 
 @pytest.fixture()
-def resetted_giskard(giskard: GiskardTestWrapper) -> GiskardTestWrapper:
+def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
     get_middleware().loginfo('resetting giskard')
-    giskard.restart_ticking()
-    giskard.clear_motion_goals_and_monitors()
+    giskard.api.clear_motion_goals_and_monitors()
     if GiskardBlackboard().tree.is_standalone() and giskard.has_odometry_joint():
         zero = PoseStamped()
         zero.header.frame_id = 'map'
         zero.pose.orientation.w = 1
-        done = giskard.monitors.add_set_seed_odometry(zero, name='initial pose')
-        giskard.allow_all_collisions()
-        giskard.monitors.add_end_motion(start_condition=done)
+        done = giskard.api.monitors.add_set_seed_odometry(zero, name='initial pose')
+        giskard.api.motion_goals.allow_all_collisions()
+        giskard.api.monitors.add_end_motion(start_condition=done)
         giskard.execute(add_local_minimum_reached=False)
-    giskard.world.clear()
+    giskard.api.world.clear()
     giskard.reset()
     return giskard
 
 
 @pytest.fixture()
-def zero_pose(resetted_giskard: GiskardTestWrapper) -> GiskardTestWrapper:
+def zero_pose(resetted_giskard: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone():
-        done = resetted_giskard.monitors.add_set_seed_configuration(resetted_giskard.default_pose,
+        done = resetted_giskard.api.monitors.add_set_seed_configuration(resetted_giskard.default_pose,
                                                                     name='initial joint state')
-        resetted_giskard.allow_all_collisions()
-        resetted_giskard.monitors.add_end_motion(start_condition=done)
+        resetted_giskard.api.motion_goals.allow_all_collisions()
+        resetted_giskard.api.monitors.add_end_motion(start_condition=done)
         resetted_giskard.execute(add_local_minimum_reached=False)
     else:
-        resetted_giskard.allow_all_collisions()
-        done = resetted_giskard.motion_goals.add_joint_position(name='joint goal', goal_state=resetted_giskard.default_pose)
-        resetted_giskard.monitors.add_end_motion(start_condition=done)
+        resetted_giskard.api.motion_goals.allow_all_collisions()
+        done = resetted_giskard.api.motion_goals.add_joint_position(name='joint goal', goal_state=resetted_giskard.default_pose)
+        resetted_giskard.api.monitors.add_end_motion(start_condition=done)
         resetted_giskard.execute(add_local_minimum_reached=False)
     return resetted_giskard
 
 
 @pytest.fixture()
-def better_pose(resetted_giskard: GiskardTestWrapper) -> GiskardTestWrapper:
+def better_pose(resetted_giskard: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone():
-        done = resetted_giskard.monitors.add_set_seed_configuration(resetted_giskard.better_pose,
+        done = resetted_giskard.api.monitors.add_set_seed_configuration(resetted_giskard.better_pose,
                                                                     name='initial joint state')
-        resetted_giskard.allow_all_collisions()
-        resetted_giskard.monitors.add_end_motion(start_condition=done)
+        resetted_giskard.api.motion_goals.allow_all_collisions()
+        resetted_giskard.api.monitors.add_end_motion(start_condition=done)
         resetted_giskard.execute(add_local_minimum_reached=False)
     else:
-        resetted_giskard.allow_all_collisions()
-        resetted_giskard.set_joint_goal(resetted_giskard.better_pose)
+        resetted_giskard.api.motion_goals.allow_all_collisions()
+        resetted_giskard.api.motion_goals.add_joint_position(resetted_giskard.better_pose)
+        resetted_giskard.api.add_default_end_motion_conditions()
         resetted_giskard.execute()
     return resetted_giskard
 
 
 @pytest.fixture()
-def kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
+def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'iai_kitchen'
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()
@@ -155,7 +155,7 @@ def dlr_kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
 
 
 @pytest.fixture()
-def apartment_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
+def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'iai_apartment'
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()

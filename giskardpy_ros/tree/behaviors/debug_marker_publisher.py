@@ -1,3 +1,4 @@
+import typing
 from typing import List, Optional
 
 import numpy as np
@@ -38,10 +39,9 @@ class DebugMarkerPublisher(GiskardBehavior):
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)
         self.marker_pub = rospy.node.create_publisher(MarkerArray, f'{rospy.node.get_name()}/visualization_marker_array', 10)
 
-    @record_time
-    def setup(self, timeout):
+    def setup(self, **kwargs: typing.Any) -> None:
         self.clear_markers()
-        return super().setup(timeout)
+        super().setup(**kwargs)
 
     def clear_markers(self):
         msg = MarkerArray()
