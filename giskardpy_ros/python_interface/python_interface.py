@@ -1,25 +1,30 @@
 from __future__ import annotations
 import re
 from collections import defaultdict
+from threading import Thread
 from time import sleep
 from typing import Dict, Tuple, Optional, List, Union
 
 import numpy as np
 import rclpy
+from action_msgs.srv import CancelGoal, CancelGoal_Request
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, QuaternionStamped
 from nav_msgs.msg import Path
-from rclpy import Context, Parameter
+from rclpy import Context, Parameter, Future
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
 from rclpy.client import Client
 from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
+from unique_identifier_msgs.msg import UUID
 
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.action import World, Move
+from giskard_msgs.action._move import Move_Result
 from giskard_msgs.action._world import World_Result, World_Goal
-from giskard_msgs.msg import WorldBody, CollisionEntry, MotionGoal, Monitor, GiskardError
+from giskard_msgs.msg import WorldBody, CollisionEntry, MotionGoal, Monitor, GiskardError, LinkName
 from giskard_msgs.srv import GetGroupInfo, GetGroupNames, DyeGroup, DyeGroup_Response, DyeGroup_Request, \
     GetGroupNames_Response, GetGroupInfo_Response, GetGroupInfo_Request, GetGroupNames_Request
 from giskardpy.data_types.data_types import goal_parameter
@@ -53,6 +58,7 @@ from giskardpy_ros.ros2 import msg_converter
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
+from giskardpy_ros.utils.asynio_utils import wait_until_not_none
 from giskardpy_ros.utils.utils import make_world_body_box
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
@@ -90,9 +96,9 @@ class WorldWrapper:
         Be careful, you can remove parts of the robot like that.
         """
         world_body = WorldBody()
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.REMOVE
+        req.operation = World_Goal.REMOVE
         req.body = world_body
         return self._send_goal_and_wait(req)
 
@@ -126,9 +132,9 @@ class WorldWrapper:
         if isinstance(parent_link, str):
             parent_link = giskard_msgs.LinkName(name=parent_link)
         parent_link = parent_link or giskard_msgs.LinkName()
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.ADD
+        req.operation = World_Goal.ADD
         req.body = make_world_body_box(size[0], size[1], size[2])
         req.parent_link = parent_link or giskard_msgs.LinkName()
         req.pose = pose
@@ -149,9 +155,9 @@ class WorldWrapper:
         world_body.type = WorldBody.PRIMITIVE_BODY
         world_body.shape.type = SolidPrimitive.SPHERE
         world_body.shape.dimensions.append(radius)
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.ADD
+        req.operation = World_Goal.ADD
         req.body = world_body
         req.pose = pose
         req.parent_link = parent_link
@@ -174,9 +180,9 @@ class WorldWrapper:
         world_body = WorldBody()
         world_body.type = WorldBody.MESH_BODY
         world_body.mesh = mesh
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.ADD
+        req.operation = World_Goal.ADD
         req.body = world_body
         req.pose = pose
         req.body.scale.x = scale[0]
@@ -203,9 +209,9 @@ class WorldWrapper:
         world_body.shape.dimensions = [0, 0]
         world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = height
         world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = radius
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.ADD
+        req.operation = World_Goal.ADD
         req.body = world_body
         req.pose = pose
         req.parent_link = parent_link
@@ -223,8 +229,8 @@ class WorldWrapper:
         """
         if isinstance(parent_link, str):
             parent_link = giskard_msgs.LinkName(name=parent_link)
-        req = World.Goal()
-        req.operation = World.Goal.UPDATE_PARENT_LINK
+        req = World_Goal()
+        req.operation = World_Goal.UPDATE_PARENT_LINK
         req.group_name = str(name)
         req.parent_link = parent_link
         return self._send_goal_and_wait(req)
@@ -233,9 +239,9 @@ class WorldWrapper:
         """
         A wrapper for update_parent_link_of_group which set parent_link to the root link of the world.
         """
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(object_name)
-        req.operation = req.UPDATE_PARENT_LINK
+        req.operation = World_Goal.UPDATE_PARENT_LINK
         return self._send_goal_and_wait(req)
 
     def add_urdf(self,
@@ -261,9 +267,9 @@ class WorldWrapper:
         urdf_body.type = WorldBody.URDF_BODY
         urdf_body.urdf = str(urdf)
         urdf_body.joint_state_topic = js_topic
-        req = World.Goal()
+        req = World_Goal()
         req.group_name = str(name)
-        req.operation = World.Goal.ADD
+        req.operation = World_Goal.ADD
         req.body = urdf_body
         req.pose = pose
         req.parent_link = parent_link
@@ -311,8 +317,8 @@ class WorldWrapper:
         :param new_pose: New pose of the group
         :return: Giskard's reply
         """
-        req = World.Goal()
-        req.operation = req.UPDATE_POSE
+        req = World_Goal()
+        req.operation = World_Goal.UPDATE_POSE
         req.group_name = group_name
         req.pose = new_pose
         return self._send_goal_and_wait(req)
@@ -325,9 +331,9 @@ class WorldWrapper:
         :return: World_Result
         """
         if isinstance(root_link_name, str):
-            root_link_name = giskard_msgs.LinkName(root_link_name, '')
-        req = World.Goal()
-        req.operation = World.Goal.REGISTER_GROUP
+            root_link_name = LinkName(name=root_link_name)
+        req = World_Goal()
+        req.operation = World_Goal.REGISTER_GROUP
         req.group_name = new_group_name
         req.parent_link = root_link_name
         return self._send_goal_and_wait(req)
@@ -1005,8 +1011,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     end_condition=end_condition)
 
     def add_open_container(self,
-                           tip_link: Union[str, giskard_msgs.LinkName],
-                           environment_link: Union[str, giskard_msgs.LinkName],
+                           tip_link: Union[str, LinkName],
+                           environment_link: Union[str, LinkName],
                            name: Optional[str] = None,
                            goal_joint_state: Optional[float] = None,
                            weight: Optional[float] = None,
@@ -1024,9 +1030,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param weight:
         """
         if isinstance(environment_link, str):
-            environment_link = giskard_msgs.LinkName(name=environment_link)
+            environment_link = LinkName(name=environment_link)
         if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
+            tip_link = LinkName(name=tip_link)
         return self.add_motion_goal(class_name=Open.__name__,
                                     tip_link=tip_link,
                                     environment_link=environment_link,
@@ -2218,6 +2224,9 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 class GiskardWrapper:
     last_execution_state: ExecutionState
     last_feedback: Move.Feedback = None
+    _goal_handle: Optional[ClientGoalHandle]
+    _goal_result: Optional[Move_Result]
+    _result_future: Optional[Future]
     last_execution_state: ExecutionState = None
 
     def __init__(self, node_handle: Node, giskard_node_name: str = 'giskard'):
@@ -2225,6 +2234,9 @@ class GiskardWrapper:
         Python wrapper for the ROS interface of Giskard.
         :param giskard_node_name: node name of Giskard
         """
+        self._goal_handle = None
+        self._goal_result = None
+        self._result_future = None
         self.node_handle = node_handle
         self.world = WorldWrapper(node_handle=node_handle,
                                   giskard_node_name=giskard_node_name)
@@ -2338,38 +2350,38 @@ class GiskardWrapper:
         self.motion_goals.reset()
         self.monitors.reset()
 
-    def execute(self, wait: bool = True) -> Move.Result:
+    def execute_async(self) -> Future:
         """
         :param wait: this function blocks if wait=True
         :return: result from giskard
         """
-        return self._send_action_goal(Move.Goal.EXECUTE, wait)
+        return self._send_action_goal_async(Move.Goal.EXECUTE)
 
-    def projection(self, wait: bool = True) -> Move.Result:
-        """
-        Plans, but doesn't execute the goal. Useful, if you just want to look at the planning ghost.
-        :param wait: this function blocks if wait=True
-        :return: result from Giskard
-        """
-        return self._send_action_goal(Move.Goal.PROJECTION, wait)
+    def projection_async(self) -> Future:
+        return self._send_action_goal_async(Move.Goal.PROJECTION)
 
-    def _send_action_goal(self, goal_type: int, wait: bool = True) -> Optional[Move.Result]:
-        """
-        Send goal to Giskard. Use this if you want to specify the goal_type, otherwise stick to wrappers like
-        plan_and_execute.
-        :param goal_type: one of the constants in MoveGoal
-        :param wait: blocks if wait=True
-        :return: result from Giskard
-        """
+    def _send_action_goal_async(self, goal_type: int) -> Future:
         goal = self._create_action_goal()
         goal.type = goal_type
         future = self._client.send_goal_async(goal, feedback_callback=self._feedback_cb)
-        if wait:
-            rclpy.spin_until_future_complete(self.node_handle, future)
-            goal_handle: ClientGoalHandle = future.result()
-            result_future = goal_handle.get_result_async()
-            rclpy.spin_until_future_complete(self.node_handle, result_future)
-            return result_future.result().result
+        future.add_done_callback(self.__goal_accepted_cb)
+        return future
+
+    def __goal_accepted_cb(self, future: Future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.node_handle.get_logger().info('Goal rejected')
+            return
+
+        self._goal_handle = goal_handle
+        self.node_handle.get_logger().info('Goal accepted')
+
+        self._result_future = self._goal_handle.get_result_async()
+        self._result_future.add_done_callback(self.__goal_done_cb)
+
+    def __goal_done_cb(self, future: Future):
+        self.node_handle.get_logger().info(f'Goal result received')
+        self._goal_handle = None
 
     def _create_action_goal(self) -> Move.Goal:
         if not self.motion_goals._collision_entries:
@@ -2392,26 +2404,29 @@ class GiskardWrapper:
             result.append(node)
         return result
 
-    def interrupt(self):
+    def cancel_goal_async(self) -> Future:
         """
         Stops the goal that was last sent to Giskard.
         """
-        self._client._cancel_goal()
+        future = self._goal_handle.cancel_goal_async()
+        return future
+
+    async def get_result(self):
+        await wait_until_not_none(lambda: self._result_future)
+        result = await self._result_future
+        self._result_future = None
+        return result.result
 
     def cancel_all_goals(self):
         """
         Stops any goal that Giskard is processing and attempts to halt the robot, even those not send from this client.
         """
-        self._client.cancel_all_goals()
+        # Create request with a goal ID of zero to cancel all goals
+        request = CancelGoal_Request()
+        request.goal_info.goal_id = UUID(uuid=[0] * 16)
 
-    def get_result(self, timeout: Time) -> Move.Result:
-        """
-        Waits for Giskard result and returns it. Only used when plan_and_execute was called with wait=False
-        :param timeout: how long to wait
-        """
-        if not self._client.wait_for_result(timeout):
-            raise TimeoutError('Timeout while waiting for goal.')
-        return self._client.get_result()
+        future = self._client._client_handle.send_cancel_request(request)
+        future.add_done_callback(self.cancel_response_callback)
 
     def _feedback_cb(self, msg: Move.Feedback):
         self.last_feedback = msg
@@ -2471,6 +2486,8 @@ class GiskardWrapper:
 
 
 class GiskardWrapperNode(Node, GiskardWrapper):
+    is_spinning: bool
+
     def __init__(self, node_name: str, giskard_node_name: str = 'giskard', avoid_name_conflict: bool = False,
                  *, context: Optional[Context] = None, cli_args: Optional[List[str]] = None,
                  namespace: Optional[str] = None, use_global_arguments: bool = True, enable_rosout: bool = True,
@@ -2486,3 +2503,54 @@ class GiskardWrapperNode(Node, GiskardWrapper):
                       enable_logger_service=enable_logger_service)
         GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name,
                                 avoid_name_conflict=avoid_name_conflict)
+        self.executer = MultiThreadedExecutor()
+        self.is_spinning = False
+
+    def execute(self) -> Move.Result:
+        """
+        :param wait: this function blocks if wait=True
+        :return: result from giskard
+        """
+        return self._send_action_goal(Move.Goal.EXECUTE)
+
+    def projection(self) -> Move.Result:
+        """
+        Plans, but doesn't execute the goal. Useful, if you just want to look at the planning ghost.
+        :param wait: this function blocks if wait=True
+        :return: result from Giskard
+        """
+        return self._send_action_goal(Move.Goal.PROJECTION)
+
+    def _send_action_goal(self, goal_type: int) -> Move_Result:
+        """
+        Send goal to Giskard. Use this if you want to specify the goal_type, otherwise stick to wrappers like
+        plan_and_execute.
+        :param goal_type: one of the constants in MoveGoal
+        :param wait: blocks if wait=True
+        :return: result from Giskard
+        """
+        self._send_action_goal_async(goal_type)
+        return self.get_result()
+
+    def cancel_done_cb(self, future):
+        cancel_response = future.result()
+        if len(cancel_response.goals_canceling) > 0:
+            self.get_logger().info('Goal successfully canceled')
+        else:
+            self.get_logger().info('Goal failed to cancel')
+
+    def __spin(self):
+        self.is_spinning = True
+        while rclpy.ok():
+            rclpy.spin_once(self.node_handle, executor=self.executor, timeout_sec=1)
+        self.is_spinning = False
+
+    def spin_in_background(self):
+        self.spinner = Thread(target=self.__spin)
+        self.spinner.start()
+
+    # def _spin_until_future_complete(self, future: Future) -> None:
+    #     rclpy.spin_until_future_complete(self.node_handle,  future, executor=self.executor)
+    #
+    # def _spin_once(self) -> None:
+    #     rclpy.spin_once(self.node_handle, executor=self.executor)
