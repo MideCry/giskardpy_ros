@@ -4,6 +4,7 @@ from line_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 
 
@@ -39,5 +40,5 @@ class RosTime(GiskardBehavior):
 
     @profile
     def update(self):
-        god_map.time = rospy.get_rostime().to_sec() - self.start_time
+        god_map.time = rospy.node.get_clock().now().nanoseconds/1e9 - self.start_time
         return Status.SUCCESS

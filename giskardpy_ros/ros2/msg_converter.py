@@ -8,10 +8,8 @@ from line_profiler import profile
 
 import giskardpy.casadi_wrapper as cas
 import geometry_msgs.msg as geometry_msgs
-import numpy as np
-from rclpy.time import Time
-
 import giskard_msgs.msg as giskard_msgs
+import numpy as np
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
 import tf2_msgs.msg as tf2_msgs
@@ -19,6 +17,7 @@ import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from giskard_msgs.msg import GiskardError
 from rclpy.duration import Duration
+from rclpy.time import Time
 from rclpy_message_converter.message_converter import \
     convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
@@ -46,8 +45,8 @@ from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 
 def is_ros_message(obj: Any) -> bool:
     return (
-        hasattr(obj, '__slots__') and
-        hasattr(obj, 'get_fields_and_field_types')
+            hasattr(obj, '__slots__') and
+            hasattr(obj, 'get_fields_and_field_types')
     )
 
 
