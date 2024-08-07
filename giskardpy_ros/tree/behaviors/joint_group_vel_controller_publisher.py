@@ -7,6 +7,7 @@ from std_msgs.msg import Float64MultiArray
 
 from giskardpy.data_types.data_types import KeyDefaultDict
 from giskardpy.god_map import god_map
+from giskardpy.middleware import middleware
 from giskardpy_ros.ros2.ros2_interface import search_for_subscriber_with_type
 
 from giskardpy_ros.ros2 import rospy
@@ -30,6 +31,7 @@ class JointGroupVelController(GiskardBehavior):
             self.joint_names[i] = god_map.world.search_for_joint_name(self.joint_names[i])
         god_map.world.register_controlled_joints(self.joint_names)
         self.msg = None
+        middleware.loginfo(f'Created publisher for {self.cmd_topic} for {self.joint_names}')
 
     def get_joints(self):
         req = GetParameters_Request()
