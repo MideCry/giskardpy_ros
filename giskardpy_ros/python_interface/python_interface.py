@@ -55,8 +55,8 @@ from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.utils.utils import make_world_body_box
-from ros2 import msg_converter
-from ros2.ros2_interface import MyActionClient
+from giskardpy_ros.ros2 import msg_converter
+from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
 from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
