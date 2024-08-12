@@ -495,6 +495,15 @@ def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: WorldTre
                                                         reference_frame=world.search_for_link_name(msg.header.frame_id))
     return result
 
+def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
+    p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
+    R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
+                                 msg.orientation.z, msg.orientation.w).to_rotation_matrix()
+    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
+                                                        rotation_matrix=R,
+                                                        reference_frame=None)
+    return result
+
 
 def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
     p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)

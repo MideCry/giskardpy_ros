@@ -1,5 +1,9 @@
-#!/usr/bin/env python
-import rospy
+from giskardpy_ros.ros2 import rospy
+from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
+from giskardpy_ros.configs.giskard import Giskard
+from giskardpy_ros.configs.iai_robots.pr2 import WorldWithPR2Config, PR2VelocityMujocoInterface
 
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.qp.qp_solver_ids import SupportedQPSolver
@@ -7,11 +11,15 @@ from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, WorldWithPR2Config, PR2VelocityMujocoInterface
 
-if __name__ == '__main__':
+def main():
     rospy.init_node('giskard')
     giskard = Giskard(world_config=WorldWithPR2Config(),
-                      collision_avoidance_config=PR2CollisionAvoidance(),
+                      collision_avoidance_config=DisableCollisionAvoidanceConfig(),
                       robot_interface_config=PR2VelocityMujocoInterface(),
-                      behavior_tree_config=ClosedLoopBTConfig(debug_mode=True),
-                      qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
+                      behavior_tree_config=ClosedLoopBTConfig(),
+                      qp_controller_config=QPControllerConfig())
     giskard.live()
+
+
+if __name__ == '__main__':
+    main()
