@@ -161,8 +161,8 @@ class PR2Tester(GiskardTester):
         doc = xacro.process_file(xacro_file, mappings={'radius': '0.9'})
         robot_desc = doc.toprettyxml(indent='  ')
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name,
-                                                              urdf=robot_desc),
+            giskard = Giskard(world_config=WorldWithOmniDriveRobot(drive_joint_name=drive_joint_name,
+                                                                   urdf=robot_desc),
                               robot_interface_config=PR2StandaloneInterface(drive_joint_name=drive_joint_name),
                               collision_avoidance_config=PR2CollisionAvoidance(drive_joint_name=drive_joint_name,
                                                                                # collision_checker=CollisionCheckerLib.none),
