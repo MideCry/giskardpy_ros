@@ -27,7 +27,7 @@ class SyncOdometry(GiskardBehavior):
         super().__init__(str(self) + name_suffix)
         self.joint = god_map.world.get_drive_joint(joint_name=joint_name)
         self.odometry_sub = rospy.node.create_subscription(Odometry, self.odometry_topic, self.cb, 1)
-        middleware.loginfo(f'Subscribed to {self.odometry_topic}')
+        get_middleware().loginfo(f'Subscribed to {self.odometry_topic}')
 
     def __str__(self):
         return f'{super().__str__()} ({self.odometry_topic})'
