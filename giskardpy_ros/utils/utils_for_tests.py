@@ -191,25 +191,25 @@ def pr2_urdf():
 
 
 def pr2_without_base_urdf():
-    with open('urdfs/pr2.urdf', 'r') as f:
+    with open('../../test/urdfs/pr2.urdf', 'r') as f:
         urdf_string = f.read()
     return urdf_string
 
 
 def base_bot_urdf():
-    with open('urdfs/2d_base_bot.urdf', 'r') as f:
+    with open('../../test/urdfs/2d_base_bot.urdf', 'r') as f:
         urdf_string = f.read()
     return urdf_string
 
 
 def donbot_urdf():
-    with open('urdfs/iai_donbot.urdf', 'r') as f:
+    with open('../../test/urdfs/iai_donbot.urdf', 'r') as f:
         urdf_string = f.read()
     return urdf_string
 
 
 def boxy_urdf():
-    with open('urdfs/boxy.urdf', 'r') as f:
+    with open('../../test/urdfs/boxy.urdf', 'r') as f:
         urdf_string = f.read()
     return urdf_string
 
@@ -273,6 +273,7 @@ class GiskardTester:
     giskard: Giskard
 
     def __init__(self, giskard: Giskard):
+        print('0.0')
         self.async_loop = asyncio.new_event_loop()
         self.total_time_spend_giskarding = 0
         self.total_time_spend_moving = 0
@@ -447,9 +448,9 @@ class GiskardTester:
     #
 
     def teleport_base(self, goal_pose, group_name: Optional[str] = None):
-        done = self.monitors.add_set_seed_odometry(base_pose=goal_pose, group_name=group_name, name='teleport base')
-        self.allow_all_collisions()
-        self.monitors.add_end_motion(start_condition=done)
+        done = self.api.monitors.add_set_seed_odometry(base_pose=goal_pose, group_name=group_name, name='teleport base')
+        self.api.motion_goals.allow_all_collisions()
+        self.api.monitors.add_end_motion(start_condition=done)
         self.execute(add_local_minimum_reached=False)
 
     def set_keep_hand_in_workspace(self, tip_link: Union[str, giskard_msgs.LinkName], map_frame=None,

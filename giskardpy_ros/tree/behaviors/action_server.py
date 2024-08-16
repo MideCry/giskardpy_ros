@@ -43,13 +43,13 @@ class ActionServerHandler:
 
     def default_goal_callback(self, goal_request):
         if self.goal_handle is not None:
-            middleware.loginfo('cancelling old goal')
+            get_middleware().loginfo('cancelling old goal')
             self.cancel_requested = True
-        middleware.loginfo('new goal accepted')
+        get_middleware().loginfo('new goal accepted')
         return GoalResponse.ACCEPT
 
     def cancel_callback(self, goal_handle: ServerGoalHandle):
-        middleware.loginfo('Cancel request received')
+        get_middleware().loginfo('Cancel request received')
         return CancelResponse.ACCEPT
 
     def is_goal_msg_type_execute(self):
@@ -64,7 +64,7 @@ class ActionServerHandler:
     async def execute_cb(self, goal: ServerGoalHandle) -> None:
         self.goal_queue.put(goal)
         result_msg = self.result_queue.get()
-        middleware.loginfo('sending response')
+        get_middleware().loginfo('sending response')
         # self.client_alive_checker.shutdown()
         self.goal_msg = None
         self.goal_handle = None

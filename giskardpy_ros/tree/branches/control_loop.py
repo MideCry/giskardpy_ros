@@ -43,7 +43,7 @@ class ControlLoop(AsyncBehavior):
             max_hz = 1/control_dt
         else:
             max_hz = None
-        name = f'{name}\nmax_hz: {max_hz}'
+        name = f'{name}\nmax_hz -- {max_hz}'
         super().__init__(name, max_hz=max_hz)
         self.publish_state = PublishState('publish state 2')
         self.publish_state.add_publish_feedback()

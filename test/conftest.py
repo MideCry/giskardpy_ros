@@ -12,14 +12,15 @@ from giskardpy_ros.ros2.interface import ROS2Wrapper
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
-from utils_for_tests import GiskardTester
+from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 
 @pytest.fixture(scope='module')
 def ros(request):
     rospy.init_node('giskard')
-    middleware.loginfo('init ros')
+    get_middleware().loginfo('init ros')
     tf.init()
+    get_middleware().loginfo('done tf init')
 
     def kill_ros():
         try:

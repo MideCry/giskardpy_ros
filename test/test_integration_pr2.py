@@ -8,10 +8,21 @@ import pytest
 import xacro
 from ament_index_python import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, QuaternionStamped
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, QuaternionStamped
 from numpy import pi
 from shape_msgs.msg import SolidPrimitive
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName, GiskardError
+from giskardpy.middleware import get_middleware
+from giskardpy.model.world_config import WorldWithOmniDriveRobot
+from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
+from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
+from giskardpy_ros.configs.giskard import Giskard
+from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface
+from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
+from giskardpy.data_types.exceptions import GiskardException, VelocityLimitUnreachableException, \
+    MaxTrajectoryLengthException, UnknownGoalException, GoalInitalizationException, LocalMinimumException, \
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
     LocalMinimumException, \
@@ -28,6 +39,7 @@ from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulabi
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
+from giskardpy.data_types.data_types import PrefixName
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
 from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit, UnlimitedJointGoal
@@ -38,8 +50,9 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface, WorldWithPR2Config
 from giskardpy_ros.python_interface.old_python_interface import OldGiskardWrapper
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from utils_for_tests import compare_poses, publish_marker_vector, GiskardTester, compare_points
-from utils_for_tests import launch_launchfile
+from giskardpy_ros.utils.utils_for_tests import compare_poses, publish_marker_vector, GiskardTester, compare_points
+
+
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
               'r_forearm_roll_joint': -0.0301682323805,
@@ -231,7 +244,9 @@ class PR2Tester(GiskardTester):
 def giskard(request, ros):
     # launch_launchfile('package://iai_pr2_description/launch/upload_pr2_calibrated_with_ft2.launch')
     # launch_launchfile('package://iai_pr2_description/launch/upload_pr2_cableguide.launch')
+    print('init pr2 tester')
     c = PR2Tester()
+    print(' done init pr2 tester')
     # c = PR2TestWrapperMujoco()
     request.addfinalizer(c.tear_down)
     return c
@@ -652,7 +667,7 @@ class TestMonitors:
         hole_point.point.z = 0.5
         pose = PoseStamped()
         pose.header.frame_id = 'r_gripper_tool_frame'
-        pose.pose.orientation = Quaternion(*quaternion_from_matrix(np.array([[0, 0, 1, 0],
+        pose.pose.orientation = Quaternion(*quaternion_from_rotation_matrix(np.array([[0, 0, 1, 0],
                                                                              [0, 1, 0, 0],
                                                                              [-1, 0, 0, 0],
                                                                              [0, 0, 0, 1]])))
@@ -769,7 +784,7 @@ class TestMonitors:
         l_goal = deepcopy(bowl_pose)
         l_goal.header.frame_id = 'iai_kitchen/sink_area_left_middle_drawer_main'
         l_goal.pose.position.z += .2
-        l_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        l_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -791,7 +806,7 @@ class TestMonitors:
         r_goal = deepcopy(cup_pose)
         r_goal.header.frame_id = 'iai_kitchen/sink_area_left_middle_drawer_main'
         r_goal.pose.position.z += .2
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -847,7 +862,7 @@ class TestMonitors:
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'base_footprint'
         base_goal.pose.position.x = -.3
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(0.9 * pi, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(0.9 * pi, [0, 0, 1]))
         kitchen_setup.motion_goals.add_cartesian_pose(goal_pose=base_goal,
                                                       tip_link='base_footprint',
                                                       name='rotate_to_island',
@@ -860,7 +875,7 @@ class TestMonitors:
         bowl_goal = PoseStamped()
         bowl_goal.header.frame_id = 'kitchen_island_surface'
         bowl_goal.pose.position = Point(.2, 0, .05)
-        bowl_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        bowl_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                          [0, 0, -1, 0],
                                                                          [-1, 0, 0, 0],
                                                                          [0, 0, 0, 1]]))
@@ -868,7 +883,7 @@ class TestMonitors:
         cup_goal = PoseStamped()
         cup_goal.header.frame_id = 'kitchen_island_surface'
         cup_goal.pose.position = Point(.15, 0.25, .07)
-        cup_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        cup_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                         [0, 0, -1, 0],
                                                                         [-1, 0, 0, 0],
                                                                         [0, 0, 0, 1]]))
@@ -1390,12 +1405,12 @@ class TestConstraints:
         base_pose.header.frame_id = 'map'
         base_pose.pose.position.x = 0
         base_pose.pose.position.y = 1.5
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         kitchen_setup.teleport_base(goal_pose=base_pose)
         base_pose = PoseStamped()
         base_pose.header.frame_id = tip
         base_pose.pose.position.x = 2.3
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(0, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(0, [0, 0, 1]))
 
         avoidance_hint = Vector3Stamped()
         avoidance_hint.header.frame_id = 'map'
@@ -1540,7 +1555,7 @@ class TestConstraints:
         root = 'odom_combined'
         q = QuaternionStamped()
         q.header.frame_id = tip
-        q.quaternion = Quaternion(*quaternion_about_axis(4, [0, 0, 1]))
+        q.quaternion = Quaternion(*quaternion_from_axis_angle(4, [0, 0, 1]))
 
         zero_pose.allow_all_collisions()
         zero_pose.set_rotation_goal(root_link=root,
@@ -1650,7 +1665,7 @@ class TestConstraints:
         goal_position.header.frame_id = 'r_gripper_tool_frame'
         goal_position.pose.position.x = 1
         goal_position.pose.position.y = 0
-        goal_position.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 4, [0, 0, 1]))
+        goal_position.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 4, [0, 0, 1]))
         zero_pose.allow_all_collisions()
         zero_pose.set_cart_goal(goal_pose=goal_position,
                                 tip_link='r_gripper_tool_frame',
@@ -1714,13 +1729,7 @@ class TestConstraints:
             lower_limit2 = center - joint_range / 2. * (1 - percentage / 100.)
             assert upper_limit2 >= position >= lower_limit2
 
-    def test_pointing_kitchen(self, better_pose: PR2Tester):
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = 'base_footprint'
-        base_goal.pose.position.y = -1
-        base_goal.pose.orientation.w = 1
-        better_pose.teleport_base(base_goal)
-
+    def test_pointing(self, better_pose: PR2Tester):
         tip = 'head_mount_kinect_rgb_link'
         goal_point = better_pose.compute_fk_point(root_link='map', tip_link='r_gripper_tool_frame')
         pointing_axis = Vector3Stamped()
@@ -1753,7 +1762,7 @@ class TestConstraints:
         # base_goal = PoseStamped()
         # base_goal.header.frame_id = 'pr2/base_footprint'
         # base_goal.pose.position.y = 2
-        # base_goal.pose.orientation = Quaternion(*quaternion_about_axis(1, [0, 0, 1]))
+        # base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(1, [0, 0, 1]))
         # kitchen_setup.set_pointing_goal(tip_link=tip, goal_point=goal_point, pointing_axis=pointing_axis,
         #                                 root_link=kitchen_setup.default_root, add_monitor=False)
         # gaya_pose2 = deepcopy(kitchen_setup.better_pose)
@@ -1788,7 +1797,7 @@ class TestConstraints:
         # r_goal.pose.position.z += 0.6
         # r_goal.pose.orientation.w = 1
         # r_goal = kitchen_setup.transform_msg(kitchen_setup.default_root, r_goal)
-        # r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
+        # r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, -1, 0],
         #                                                               [0, 1, 0, 0],
         #                                                               [1, 0, 0, 0],
         #                                                               [0, 0, 0, 1]]))
@@ -2255,7 +2264,7 @@ class TestMoveBaseGoals:
         map_T_odom.header.frame_id = 'map'
         map_T_odom.pose.position.x = 1
         map_T_odom.pose.position.y = 1
-        map_T_odom.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 3, [0, 0, 1]))
+        map_T_odom.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 3, [0, 0, 1]))
         zero_pose.teleport_base(map_T_odom)
 
         base_goal = PoseStamped()
@@ -2263,7 +2272,7 @@ class TestMoveBaseGoals:
         base_goal.pose.position.x = 1
         base_goal.pose.position.y = -1
         # base_goal.pose.orientation.w = 1
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(-pi / 4, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(-pi / 4, [0, 0, 1]))
         zero_pose.allow_all_collisions()
         zero_pose.move_base(base_goal)
 
@@ -2312,38 +2321,38 @@ class TestMoveBaseGoals:
         base_goal.header.frame_id = 'map'
         base_goal.pose.position.x = 1
         base_goal.pose.position.y = -1
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(-pi / 4, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(-pi / 4, [0, 0, 1]))
         zero_pose.move_base(base_goal)
 
     def test_forward_then_left(self, zero_pose: PR2Tester):
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
         base_goal.pose.position.x = 1
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(-pi / 4, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(-pi / 4, [0, 0, 1]))
         zero_pose.move_base(base_goal)
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
         base_goal.pose.position.x = 0
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(pi / 3, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(pi / 3, [0, 0, 1]))
         zero_pose.move_base(base_goal)
 
     def test_rotate_pi_half(self, zero_pose: PR2Tester):
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(-pi / 2, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(-pi / 2, [0, 0, 1]))
         zero_pose.allow_all_collisions()
         zero_pose.move_base(base_goal)
 
     def test_rotate_pi(self, zero_pose: PR2Tester):
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(pi, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(pi, [0, 0, 1]))
         zero_pose.move_base(base_goal)
 
     def test_rotate_0_001_rad(self, zero_pose: PR2Tester):
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(0.001, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(0.001, [0, 0, 1]))
         zero_pose.move_base(base_goal)
 
 
@@ -2366,7 +2375,7 @@ class TestCartGoals:
     def test_rotate_gripper(self, zero_pose: PR2Tester):
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.r_tip
-        r_goal.pose.orientation = Quaternion(*quaternion_about_axis(pi, [1, 0, 0]))
+        r_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(pi, [1, 0, 0]))
         zero_pose.set_cart_goal(goal_pose=r_goal, tip_link=zero_pose.r_tip, root_link='map')
         zero_pose.execute()
 
@@ -2425,7 +2434,7 @@ class TestCartGoals:
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.r_tip
         r_goal.pose.position.x = 0.3
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[-1, 0, 0, 0],
                                                                       [0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [0, 0, 0, 1]]))
@@ -2554,7 +2563,7 @@ class TestCartGoals:
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.l_tip
         r_goal.pose.position.x = 0.2
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[-1, 0, 0, 0],
                                                                       [0, -1, 0, 0],
                                                                       [0, 0, 1, 0],
                                                                       [0, 0, 0, 1]]))
@@ -2574,7 +2583,7 @@ class TestCartGoals:
     #     l_goal = deepcopy(tray_pose)
     #     l_goal.pose.position.y -= 0.18
     #     l_goal.pose.position.z += 0.05
-    #     l_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, -1, 0, 0],
+    #     l_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, -1, 0, 0],
     #                                                                   [1, 0, 0, 0],
     #                                                                   [0, 0, 1, 0],
     #                                                                   [0, 0, 0, 1]]))
@@ -2582,7 +2591,7 @@ class TestCartGoals:
     #     r_goal = deepcopy(tray_pose)
     #     r_goal.pose.position.y += 0.18
     #     r_goal.pose.position.z += 0.05
-    #     r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+    #     r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
     #                                                                   [-1, 0, 0, 0],
     #                                                                   [0, 0, 1, 0],
     #                                                                   [0, 0, 0, 1]]))
@@ -2755,7 +2764,7 @@ class TestWorldManipulation:
         p = PoseStamped()
         p.header.frame_id = 'map'
         p.pose.position.x = 1
-        p.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        p.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         if GiskardBlackboard().tree.is_standalone():
             js_topic = ''
             set_js_topic = ''
@@ -3256,7 +3265,7 @@ class TestCollisionAvoidanceGoals:
         r_goal.header.frame_id = kitchen_setup.l_tip
         r_goal.pose.position.x = 0.05
         r_goal.pose.position.y = -0.08
-        r_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        r_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         # kitchen_setup.allow_all_collisions()
         kitchen_setup.set_cart_goal(goal_pose=r_goal,
                                     tip_link=kitchen_setup.r_tip,
@@ -3288,7 +3297,7 @@ class TestCollisionAvoidanceGoals:
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.position = Point(0.01, 0, 0)
-        p.pose.orientation = Quaternion(*quaternion_about_axis(-np.pi / 2, [0, 1, 0]))
+        p.pose.orientation = Quaternion(*quaternion_from_axis_angle(-np.pi / 2, [0, 1, 0]))
         zero_pose.add_mesh_to_world(object_name, mesh='package://giskardpy_ros/test/urdfs/meshes/bowl_21.obj', pose=p)
         zero_pose.execute()
 
@@ -3360,7 +3369,7 @@ class TestCollisionAvoidanceGoals:
     #     base_goal = PoseStamped()
     #     base_goal.header.frame_id = box_setup.default_root
     #     base_goal.pose.position.x = 0.25
-    #     base_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+    #     base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
     #     box_setup.teleport_base(base_goal)
     #     base_goal = PoseStamped()
     #     base_goal.header.frame_id = 'base_footprint'
@@ -3388,7 +3397,7 @@ class TestCollisionAvoidanceGoals:
         p = PoseStamped()
         p.header.frame_id = box_setup.default_root
         p.pose.position.x += 0.5
-        p.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        p.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         box_setup.teleport_base(p)
         box_setup.allow_self_collision()
         box_setup.avoid_collision(min_distance=0.25, group1=box_setup.robot_name, group2='box')
@@ -3399,7 +3408,7 @@ class TestCollisionAvoidanceGoals:
         p = PoseStamped()
         p.header.frame_id = box_setup.default_root
         p.pose.position.x += 0.5
-        p.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        p.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         box_setup.teleport_base(p)
         box_setup.check_cpi_geq(['bl_caster_l_wheel_link', 'bl_caster_r_wheel_link',
                                  'fl_caster_l_wheel_link', 'fl_caster_r_wheel_link',
@@ -3414,7 +3423,7 @@ class TestCollisionAvoidanceGoals:
         r_goal.pose.position.x = 0.8
         r_goal.pose.position.y = -0.38
         r_goal.pose.position.z = 0.84
-        r_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 1, 0]))
+        r_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 1, 0]))
         fake_table_setup.avoid_all_collisions(0.1)
         fake_table_setup.set_cart_goal(goal_pose=r_goal, tip_link=fake_table_setup.r_tip, root_link='map',
                                        add_monitor=False)
@@ -3534,7 +3543,7 @@ class TestCollisionAvoidanceGoals:
         p = PoseStamped()
         p.header.frame_id = pocky_pose_setup.r_tip
         p.pose.position.x = 0.08
-        p.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 1, 0]).tolist())
+        p.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 1, 0]).tolist())
         pocky_pose_setup.add_cylinder_to_world(name='box',
                                                # size=(0.2, 0.05, 0.05),
                                                height=0.2,
@@ -3564,9 +3573,9 @@ class TestCollisionAvoidanceGoals:
         base_pose.header.frame_id = 'map'
         base_pose.pose.position.x = 0.75
         base_pose.pose.position.y = 0.9
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 0, 1]))
         kitchen_setup.teleport_base(base_pose)
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi, [0, 0, 1]))
         kitchen_setup.set_joint_goal(kitchen_setup.better_pose, weight=WEIGHT_ABOVE_CA, add_monitor=False)
         kitchen_setup.set_cart_goal(goal_pose=base_pose, tip_link='base_footprint', root_link='map', add_monitor=False)
         kitchen_setup.execute()
@@ -3578,12 +3587,12 @@ class TestCollisionAvoidanceGoals:
         base_pose.header.frame_id = 'map'
         base_pose.pose.position.x = 0.57
         base_pose.pose.position.y = 0.5
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(0, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(0, [0, 0, 1]))
         kitchen_setup.teleport_base(base_pose)
         base_pose = PoseStamped()
         base_pose.header.frame_id = 'base_footprint'
         base_pose.pose.position.y = 1
-        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(0, [0, 0, 1]))
+        base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(0, [0, 0, 1]))
         kitchen_setup.set_cart_goal(goal_pose=base_pose, tip_link='base_footprint', root_link='map')
         kitchen_setup.execute()
 
@@ -3685,7 +3694,7 @@ class TestCollisionAvoidanceGoals:
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
         p.pose.position.x = 0.05
-        p.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+        p.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, 1, 0],
                                                                  [0, 1, 0, 0],
                                                                  [-1, 0, 0, 0],
                                                                  [0, 0, 0, 1]]))
@@ -3809,7 +3818,7 @@ class TestCollisionAvoidanceGoals:
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.r_tip
         r_goal.pose.position.x = 0.4
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[-1, 0, 0, 0],
                                                                       [0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4006,7 +4015,7 @@ class TestCollisionAvoidanceGoals:
         l_goal = deepcopy(bowl_pose)
         l_goal.header.frame_id = 'iai_kitchen/sink_area_left_middle_drawer_main'
         l_goal.pose.position.z += .2
-        l_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        l_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4020,7 +4029,7 @@ class TestCollisionAvoidanceGoals:
         r_goal = deepcopy(cup_pose)
         r_goal.header.frame_id = 'iai_kitchen/sink_area_left_middle_drawer_main'
         r_goal.pose.position.z += .2
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 1, 0, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                                                       [0, 0, -1, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4055,7 +4064,7 @@ class TestCollisionAvoidanceGoals:
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'base_footprint'
         base_goal.pose.position.x = -.1
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(pi, [0, 0, 1]))
+        base_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(pi, [0, 0, 1]))
         kitchen_setup.move_base(base_goal)
 
         # place bowl and cup
@@ -4101,7 +4110,7 @@ class TestCollisionAvoidanceGoals:
         # grasp spoon
         l_goal = deepcopy(cup_pose)
         l_goal.pose.position.z += .2
-        l_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
+        l_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, -1, 0],
                                                                       [0, -1, 0, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4145,7 +4154,7 @@ class TestCollisionAvoidanceGoals:
         l_goal = deepcopy(tray_pose)
         l_goal.pose.position.y -= 0.18
         l_goal.pose.position.z += 0.06
-        l_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
+        l_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, -1, 0],
                                                                       [1, 0, 0, 0],
                                                                       [0, -1, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4153,7 +4162,7 @@ class TestCollisionAvoidanceGoals:
         r_goal = deepcopy(tray_pose)
         r_goal.pose.position.y += 0.18
         r_goal.pose.position.z += 0.06
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+        r_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, 1, 0],
                                                                       [-1, 0, 0, 0],
                                                                       [0, -1, 0, 0],
                                                                       [0, 0, 0, 1]]))
@@ -4174,7 +4183,7 @@ class TestCollisionAvoidanceGoals:
 
         tray_goal = kitchen_setup.compute_fk_pose('base_footprint', tray_name)
         tray_goal.pose.position.y = 0
-        tray_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
+        tray_goal.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[-1, 0, 0, 0],
                                                                          [0, -1, 0, 0],
                                                                          [0, 0, 1, 0],
                                                                          [0, 0, 0, 1]]))
@@ -4204,7 +4213,7 @@ class TestCollisionAvoidanceGoals:
         tray_goal.header.frame_id = tray_name
         tray_goal.pose.position.z = .1
         tray_goal.pose.position.x = .1
-        tray_goal.pose.orientation = Quaternion(*quaternion_about_axis(-1, [0, 1, 0]))
+        tray_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(-1, [0, 1, 0]))
         kitchen_setup.set_avoid_joint_limits_goal(percentage=percentage)
         kitchen_setup.allow_collision(group1=tray_name,
                                       group2=kitchen_setup.l_gripper_group)
@@ -4223,7 +4232,7 @@ class TestCollisionAvoidanceGoals:
     #     pot_pose.header.frame_id = 'lid'
     #     pot_pose.pose.position.z = -0.22
     #     # pot_pose.pose.orientation.w = 1
-    #     pot_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+    #     pot_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 0, 1]))
     #     kitchen_setup.add_mesh(object_name,
     #                            mesh='package://cad_models/kitchen/cooking-vessels/cookingpot.dae',
     #                            pose=pot_pose)
@@ -4231,7 +4240,7 @@ class TestCollisionAvoidanceGoals:
     #     base_pose = PoseStamped()
     #     base_pose.header.frame_id = 'iai_kitchen/table_area_main'
     #     base_pose.pose.position.y = -1.1
-    #     base_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+    #     base_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 0, 1]))
     #     kitchen_setup.teleport_base(base_pose)
     #     # m = zero_pose.world.get_object(object_name).as_marker_msg()
     #     # compare_poses(m.pose, p.pose)
@@ -4239,7 +4248,7 @@ class TestCollisionAvoidanceGoals:
     #     hand_goal = PoseStamped()
     #     hand_goal.header.frame_id = 'lid'
     #     hand_goal.pose.position.y = -0.15
-    #     hand_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+    #     hand_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 0, 1]))
     #     # kitchen_setup.allow_all_collisions()
     #     # kitchen_setup.avoid_collision([], 'kitchen', ['table_area_main'], 0.05)
     #     kitchen_setup.set_cart_goal(hand_goal, 'r_gripper_tool_frame')
@@ -4369,7 +4378,7 @@ class TestBenchmark:
                 r_goal.pose.position.x = 0.8
                 r_goal.pose.position.y = -0.38
                 r_goal.pose.position.z = 0.84
-                r_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 1, 0]))
+                r_goal.pose.orientation = Quaternion(*quaternion_from_axis_angle(np.pi / 2, [0, 1, 0]))
                 fake_table_setup.avoid_all_collisions(0.1)
                 fake_table_setup.set_cart_goal(goal_pose=r_goal, tip_link=fake_table_setup.r_tip, root_link='map',
                                                add_monitor=False)
@@ -4440,7 +4449,7 @@ class TestWeightScaling:
 
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = 'map'
-        goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[1, 0, 0, 0],
+        goal_pose.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[1, 0, 0, 0],
                                                                          [0, 1, 0, 0],
                                                                          [0, 0, 1, 0],
                                                                          [0, 0, 0, 1]]))
@@ -4451,7 +4460,7 @@ class TestWeightScaling:
         goal_pose2 = deepcopy(goal_pose)
         goal_pose2.pose.position.y = -0.6
         goal_pose2.pose.position.z = 0.8
-        goal_pose2.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+        goal_pose2.pose.orientation = Quaternion(*quaternion_from_rotation_matrix([[0, 0, 1, 0],
                                                                           [0, 1, 0, 0],
                                                                           [-1, 0, 0, 0],
                                                                           [0, 0, 0, 1]]))

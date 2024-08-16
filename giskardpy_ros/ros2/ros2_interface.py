@@ -137,7 +137,7 @@ def wait_for_publisher(publisher):
 
 
 def load_urdf(file_path: str) -> str:
-    file_path = middleware.resolve_iri(file_path)
+    file_path = get_middleware().resolve_iri(file_path)
     doc = xacro.process_file(file_path, mappings={'radius': '0.9'})
     return doc.toprettyxml(indent='  ')
 

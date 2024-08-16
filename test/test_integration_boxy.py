@@ -3,7 +3,6 @@ from copy import copy
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, Vector3Stamped, PointStamped
-from tf.transformations import quaternion_from_matrix
 
 from giskard_msgs.msg import LinkName
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
@@ -12,8 +11,8 @@ from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
-from utils_for_tests import launch_launchfile
-from utils_for_tests import GiskardTester
+from giskardpy_ros.utils.utils_for_tests import launch_launchfile
+from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 
 class BoxyTester(GiskardTester):
