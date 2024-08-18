@@ -378,7 +378,6 @@ def dot_tree(
     graph.set_edge_defaults(fontname="times-roman")
     (node_shape, node_colour, node_font_colour) = get_node_attributes(root)
     label, color = get_node_label(root.name, root)
-    node_font_colour = color
     node_root = pydot.Node(
         name=root.name,
         label=label,
@@ -387,6 +386,7 @@ def dot_tree(
         fillcolor=node_colour,
         fontsize=fontsize,
         fontcolor=node_font_colour,
+        color=color,
     )
     graph.add_node(node_root)
     behaviour_id_name_map = {root.id: root.name}
@@ -412,7 +412,7 @@ def dot_tree(
                 # Node attributes can be found on page 5 of
                 #    https://graphviz.gitlab.io/_pages/pdf/dot.1.pdf
                 # Attributes that may be useful: tooltip, xlabel
-                label, node_font_colour = get_node_label(node_name, c)
+                label, color = get_node_label(node_name, c)
                 node = pydot.Node(
                     name=node_name,
                     label=label,
@@ -558,7 +558,7 @@ def add_children_stats_to_parent(parent: Composite) -> None:
         names2 = [c.name for c in children]
         for name, child in zip(names2, children):
             original_child = get_original_node(child)
-            if isinstance(original_child, Composite):
+            if isinstance(original_child, (Composite, Decorator)):
                 add_children_stats_to_parent(original_child)
 
             if not hasattr(parent, '__times'):
