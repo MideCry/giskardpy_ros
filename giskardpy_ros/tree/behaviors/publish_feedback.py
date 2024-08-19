@@ -1,4 +1,5 @@
 from typing import Optional
+from line_profiler import profile
 
 from line_profiler import profile
 

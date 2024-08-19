@@ -7,6 +7,7 @@ from typing import List, Dict, Tuple, Optional, Union, Set
 import pydot
 from line_profiler import profile
 from py_trees.common import Status
+from line_profiler import profile
 
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode

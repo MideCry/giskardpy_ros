@@ -8,6 +8,7 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
+from line_profiler import profile
 
 
 class PlotTrajectory(GiskardBehavior):

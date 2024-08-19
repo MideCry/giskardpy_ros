@@ -15,6 +15,8 @@ from giskardpy_ros.tree.behaviors import plot_motion_graph
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy.utils.decorators import record_time
+from giskardpy.utils.utils import create_path
+from line_profiler import profile
 from giskardpy.utils.utils import create_path, cm_to_inch
 
 

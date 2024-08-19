@@ -1,5 +1,7 @@
 from copy import deepcopy
 from enum import Enum
+from line_profiler import profile
+from typing import Optional, List, Dict
 from typing import Optional, List, Dict, Union
 
 from line_profiler import profile
@@ -16,6 +18,7 @@ from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions, Collision
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.model.links import Link
+from giskardpy.utils.decorators import clear_memo
 from giskardpy_ros.ros2.ros2_interface import wait_for_publisher, wait_for_topic_to_appear
 from giskardpy.model.links import Link
 from giskardpy_ros.ros2 import rospy
@@ -72,6 +75,7 @@ class ROSMsgVisualization:
     def has_world_changed(self) -> bool:
         if self.world_version != god_map.world.model_version:
             self.world_version = god_map.world.model_version
+            # clear_memo(self.link_to_marker)
             return True
         return False
 
@@ -102,11 +106,6 @@ class ROSMsgVisualization:
                 marker.id = self.marker_ids[link_id_key] + marker_id_offset
                 marker.ns = name_space
                 marker.header.stamp = time_stamp
-                pose = god_map.collision_scene.get_map_T_geometry(link_name, j)
-                if not isinstance(pose, Pose):
-                    marker.pose = msg_converter.numpy_to_pose_stamped(pose, self.tf_root).pose
-                else:
-                    marker.pose = pose
                 if self.frame_locked:
                     marker.frame_locked = True
                 else:

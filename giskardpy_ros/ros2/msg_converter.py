@@ -1,6 +1,7 @@
 import builtins
 import json
 from typing import Optional, Union, List, Dict, Any
+from line_profiler import profile
 
 import numpy as np
 from geometry_msgs.msg import TransformStamped
