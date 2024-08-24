@@ -9,8 +9,9 @@ from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.joints import OneDofJoint
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.ros2.interface import ROS2Wrapper
-from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2 import rospy, ros2_interface
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy_ros.utils.utils import load_xacro
 
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
@@ -34,7 +35,7 @@ def ros(request):
     #     rospy.get_param('kitchen_description')
     # except:
     #     try:
-    #         launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch')
+    #         launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch.py')
     #     except:
     #         get_middleware().logwarn('iai_apartment not found')
     # try:
@@ -54,7 +55,7 @@ def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone() and giskard.has_odometry_joint():
         zero = PoseStamped()
         zero.header.frame_id = 'map'
-        zero.pose.orientation.w = 1
+        zero.pose.orientation.w = 1.0
         done = giskard.api.monitors.add_set_seed_odometry(zero, name='initial pose')
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(start_condition=done)
@@ -102,14 +103,15 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
-        kitchen_pose.pose.orientation.w = 1
+        kitchen_pose.pose.orientation.w = 1.0
+        kitchen_urdf = load_xacro('package://iai_kitchen/urdf_obj/iai_kitchen_python.urdf.xacro')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=kitchen_urdf,
                                       pose=kitchen_pose)
     else:
         kitchen_pose = tf.lookup_pose('map', 'iai_kitchen/world')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=ros2_interface.get_robot_description('kitchen_description'),
                                       pose=kitchen_pose,
                                       js_topic='/kitchen/joint_states',
                                       set_js_topic='/kitchen/cram_joint_states')
@@ -161,7 +163,7 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
-        kitchen_pose.pose.orientation.w = 1
+        kitchen_pose.pose.orientation.w = 1.0
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
                                       urdf=rospy.get_param('apartment_description'),
                                       pose=kitchen_pose)
