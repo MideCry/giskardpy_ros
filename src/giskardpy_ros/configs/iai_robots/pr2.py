@@ -27,6 +27,11 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
                                          Derivatives.jerk: None},
                               joint_name='head_tilt_joint')
 
+        joint_name = self.world.search_for_joint_name('r_elbow_flex_joint')
+        joint = self.world.joints[joint_name]
+        free_variable = self.world.free_variables[joint.free_variable.name]
+        free_variable.set_upper_limit(Derivatives.position, -0.2)
+
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
     drive_joint_name: str

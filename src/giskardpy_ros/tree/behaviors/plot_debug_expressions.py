@@ -46,15 +46,20 @@ class PlotDebugExpressions(PlotTrajectory):
         return new_traj
 
     def plot(self):
-        trajectory = god_map.debug_expression_manager.raw_traj_to_traj()
+        trajectory, color_map = god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.control_dt)
         if trajectory and len(trajectory.items()) > 0:
-            sample_period = god_map.qp_controller.mpc_dt
             traj = self.split_traj(trajectory)
             try:
                 traj.plot_trajectory(path_to_data_folder=self.path_to_data_folder,
-                                     sample_period=sample_period,
                                      file_name=f'debug.pdf',
+                                     sample_period=god_map.qp_controller.control_dt,
                                      filter_0_vel=False,
+                                     hspace=0.7,
+                                     height_per_derivative=4,
+                                     color_map=color_map,
+                                     plot0_lines=False,
+                                     legend=True,
+                                     sort=False,
                                      **self.kwargs)
             except Exception:
                 traceback.print_exc()

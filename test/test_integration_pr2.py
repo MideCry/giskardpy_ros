@@ -24,7 +24,7 @@ from giskardpy.data_types.exceptions import GiskardException, VelocityLimitUnrea
 from giskardpy.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.goals.goals_tests import DebugGoal, CannotResolveSymbol
-from giskardpy.goals.joint_goals import JointVelocityLimit, UnlimitedJointGoal
+from giskardpy.goals.joint_goals import JointVelocityLimit, UnlimitedJointGoal, JointTrajectory
 from giskardpy.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.goals.tracebot import InsertCylinder
 from giskardpy.goals.weight_scaling_goals import MaxManipulabilityLinWeight, BaseArmWeightScaling
@@ -348,6 +348,21 @@ class TestJointGoals:
         zero_pose.allow_all_collisions()
         zero_pose.set_joint_goal(pocky_pose)
         zero_pose.execute()
+
+    def test_joint_traj(self, zero_pose: PR2TestWrapper):
+        sim_time = 6
+        x = np.linspace(0., sim_time, 1000)
+        x2 = np.linspace(0.75, 1.75, 1000)
+        y = np.cos((x) * np.pi * x2 * 0.8) * 0.1 - 0.25
+        traj = list(zip(x.tolist(), y.tolist()))
+
+        zero_pose.motion_goals.add_motion_goal(motion_goal_class=JointTrajectory.__name__,
+                                               trajectory = traj,
+                                               joint_name='r_elbow_flex_joint')
+        done = zero_pose.monitors.add_sleep(seconds=sim_time)
+        zero_pose.monitors.add_end_motion(start_condition=done)
+        zero_pose.allow_all_collisions()
+        zero_pose.execute(add_local_minimum_reached=False)
 
     def test_partial_joint_state_goal1(self, zero_pose: PR2TestWrapper):
         zero_pose.allow_self_collision()
