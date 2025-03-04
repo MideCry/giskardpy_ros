@@ -57,7 +57,6 @@ class RealTimePointing(Pointing):
         self.root_P_goal_point = data
 
 
-
 class RealTimeConePointing(PointingCone):
     def __init__(self,
                  tip_link: PrefixName,
@@ -91,6 +90,7 @@ class RealTimeConePointing(PointingCone):
         data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
         data = god_map.world.transform(self.root, data).to_np()
         self.root_P_goal_point = data
+
 
 class CarryMyBullshit(Goal):
     trajectory: np.ndarray = np.array([])
@@ -319,22 +319,28 @@ class CarryMyBullshit(Goal):
         map_P_human.z = self.height_for_camera_target
         root_V_camera_goal_axis = map_P_human - root_P_camera
         root_V_camera_goal_axis.scale(1)
-        root_V_goal_axis_proj = cas.project_to_cone(root_V_camera_axis, root_V_camera_goal_axis, cone_theta)
-        root_V_goal_axis_proj.vis_frame = self.tip
+        root_V_camera_goal_axis_proj = cas.project_to_cone(root_V_camera_axis, root_V_camera_goal_axis, cone_theta)
+
+        angle = cas.angle_between_vector(root_V_camera_axis, root_V_camera_goal_axis)
+        root_V_camera_goal_axis_proj = cas.if_less_eq(angle, np.pi / 1.9,
+                                                      if_result=root_V_camera_goal_axis_proj,
+                                                      else_result=root_V_goal_axis)
+
+        root_V_camera_goal_axis_proj.vis_frame = self.camera_link
         god_map.debug_expression_manager.add_debug_expression('cone_axis',
-                                                              root_V_goal_axis,
+                                                              root_V_camera_goal_axis,
                                                               color=ColorRGBA(r=1, g=1, b=0, a=1))
         god_map.debug_expression_manager.add_debug_expression('projected_axis',
-                                                              root_V_goal_axis_proj,
-                                                              color=ColorRGBA(r=1, g=1, b=0, a=1))
-                     
+                                                              root_V_camera_goal_axis_proj,
+                                                              color=ColorRGBA(r=1, g=0.5, b=0, a=1))
+
         look_at_target = self.create_and_add_task('look at target')
         if not self.drive_back:
             look_at_target.hold_condition = target_lost.get_state_expression()
         # god_map.debug_expression_manager.add_debug_expression('human', map_P_human)
         # god_map.debug_expression_manager.add_debug_expression('root_P_camera', root_P_camera)
         look_at_target.add_vector_goal_constraints(frame_V_current=root_V_camera_axis,
-                                                   frame_V_goal=root_V_goal_axis_proj,
+                                                   frame_V_goal=root_V_camera_goal_axis_proj,
                                                    reference_velocity=self.max_rotation_velocity_head,
                                                    weight=self.weight,
                                                    name='move camera')
@@ -367,6 +373,7 @@ class CarryMyBullshit(Goal):
                                                      reference_velocity=self.max_translation_velocity,
                                                      weight=self.weight,
                                                      name='min dist to next')
+        god_map.debug_expression_manager.add_debug_expression('root_P_goal_point', root_P_goal_point)
 
         # %% keep the closest point in footprint radius
         stay_in_circle = self.create_and_add_task('in circle')
@@ -653,13 +660,13 @@ class CarryMyBullshit(Goal):
         m_line = Marker()
         m_line.action = m_line.ADD
         m_line.ns = 'traj_tracking_radius'
-        m_line.id = 1332
+        m_line.id = 132
         m_line.type = m_line.CYLINDER
         m_line.header.frame_id = str(self.tip.short_name)
         m_line.scale.x = self.traj_tracking_radius * 2
         m_line.scale.y = self.traj_tracking_radius * 2
         m_line.scale.z = 0.05
-        m_line.color.a = 1
+        m_line.color.a = 0.5
         m_line.color.b = 1
         m_line.pose.orientation.w = 1
         m_line.frame_locked = True
@@ -671,7 +678,7 @@ class CarryMyBullshit(Goal):
         m_line = Marker()
         m_line.action = m_line.ADD
         m_line.ns = 'distance_to_target_stop_threshold'
-        m_line.id = 1332
+        m_line.id = 133
         m_line.type = m_line.CYLINDER
         m_line.header.frame_id = str(self.tip.short_name)
         m_line.scale.x = self.min_distance_to_target * 2

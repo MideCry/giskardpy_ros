@@ -11,10 +11,12 @@ from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
 import giskardpy_ros.ros1.tfwrapper as tf
+from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
 from giskardpy.data_types.suturo_types import ForceTorqueThresholds, ObjectTypes, TakePoseTypes
 from giskardpy.data_types.suturo_types import GraspTypes
+from giskardpy.goals.pointing import PointingCone
 from giskardpy.god_map import god_map
 from giskardpy.motion_graph.monitors.lidar_monitor import LidarPayloadMonitor
 from giskardpy.motion_graph.tasks.task import WEIGHT_ABOVE_CA
@@ -382,6 +384,28 @@ class TestCartGoals:
 
 
 class TestConstraints:
+
+    def test_PointingCone(self, zero_pose: HSRTestWrapper):
+        tip_link = 'head_center_camera_frame'
+        goal_point = PointStamped()
+        goal_point.header.frame_id = 'map'
+        goal_point.point.x = -0.5
+        goal_point.point.y = -0.1
+        goal_point.point.z = 1
+
+        pointing_axis = Vector3Stamped()
+        pointing_axis.header.frame_id = tip_link
+        pointing_axis.vector.z = 1
+
+        zero_pose.motion_goals.add_motion_goal(motion_goal_class=PointingCone.__name__,
+                                               name='pointy_cone',
+                                               tip_link=LinkName(tip_link, ''),
+                                               root_link=LinkName('map', ''),
+                                               goal_point=goal_point,
+                                               pointing_axis=pointing_axis)
+        zero_pose.allow_all_collisions()
+        zero_pose.add_default_end_motion_conditions()
+        zero_pose.execute(add_local_minimum_reached=False)
 
     def test_open_fridge(self, kitchen_setup: HSRTestWrapper):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'

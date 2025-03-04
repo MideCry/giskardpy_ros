@@ -1036,7 +1036,7 @@ class MotionGoalWrapper:
                              odom_joint_name: str = 'brumbrum',
                              root_link: Optional[str] = None,
                              camera_link: str = 'head_rgbd_sensor_link',
-                             distance_to_target_stop_threshold: float = 0.3,
+                             distance_to_target_stop_threshold: float = 1,
                              cone_theta: float = 0.2, # size of FoV cone
                              laser_scan_age_threshold: float = 2,
                              laser_distance_threshold: float = 0.5,
