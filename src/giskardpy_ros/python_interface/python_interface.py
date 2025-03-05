@@ -9,7 +9,6 @@ from controller_manager_msgs.srv import ListControllers, SwitchController, Switc
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, QuaternionStamped, Vector3, Quaternion, Point
 from nav_msgs.msg import Path
 from shape_msgs.msg import SolidPrimitive
-from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 from tf.transformations import quaternion_from_matrix
 
 import giskard_msgs.msg as giskard_msgs
@@ -22,7 +21,7 @@ from giskard_msgs.srv import GetGroupNamesResponse, GetGroupInfoResponse
 from giskardpy.data_types.data_types import goal_parameter
 from giskardpy.data_types.exceptions import LocalMinimumException, ObjectForceTorqueThresholdException
 from giskardpy.data_types.exceptions import MonitorInitalizationException
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds
+from giskardpy.data_types.suturo_types import ForceTorqueThresholds, TakePoseTypes
 from giskardpy.goals.align_planes import AlignPlanes
 from giskardpy.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.goals.cartesian_goals import CartesianPose, DiffDriveBaseGoal, CartesianVelocityLimit, \
@@ -57,6 +56,7 @@ from giskardpy_ros.ros1 import tfwrapper as tf
 from giskardpy_ros.ros1.msg_converter import kwargs_to_json
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy_ros.utils.utils import make_world_body_box
+from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 
 
 class WorldWrapper:
@@ -3122,7 +3122,7 @@ class GiskardWrapper:
                                                              root_link='map',
                                                              position_threshold=0.08,
                                                              orientation_threshold=0.04)
-        self.motion_goals.avoid_all_collisions(end_condition=pre_grasp_reached)
+        self.motion_goals.avoid_all_collisions(end_condition=pre_grasp_reached, min_distance=-0.8)
         self.motion_goals.allow_collision(group1='gripper', group2=left_door, start_condition=pre_grasp_reached)
 
         grasp_reached = self.monitors.add_cartesian_pose(name='first goal monitor',
@@ -3597,4 +3597,155 @@ class GiskardWrapper:
                                               start_condition=close_gripper)
 
         self.motion_goals.allow_all_collisions()
+        self.execute()
+
+    def billy_shelf_open(self,
+                         setup_pose: PoseStamped,
+                         handle_link_right: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_right:handle',
+                         hinge_joint_right: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_right:joint',
+                         handle_link_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_left:joint',
+                         door_link_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_left',
+                         hinge_joint_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_right:joint',
+                         vertical_grasp: bool = True):
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_link_right
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_link_right
+        bar_axis.vector.z = 1
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = 'hand_gripper_tool_frame'
+        tip_grasp_axis.vector.z = 1
+
+        align_gripper = Vector3Stamped()
+        align_gripper.header.frame_id = 'hand_gripper_tool_frame'
+        align_goal = Vector3Stamped()
+        align_goal.header.frame_id = handle_link_right
+
+        if vertical_grasp:
+            align_gripper.vector.y = -1
+            align_goal.vector.x = 1
+        else:
+            align_gripper.vector.x = -1
+            align_goal.vector.x = 1
+
+        self.motion_goals.add_align_planes(name='pre grasp align z',
+                                           tip_link='hand_gripper_tool_frame',
+                                           tip_normal=align_gripper,
+                                           goal_normal=align_goal,
+                                           root_link='map')
+
+        pre_grasp_offset = Vector3Stamped()
+        pre_grasp_offset.header.frame_id = handle_link_right
+        pre_grasp_offset.vector.z = -0.05
+
+        ft_offset = Vector3Stamped()
+        ft_offset.header.frame_id = handle_link_right
+        ft_offset.vector.z = 0.1
+
+        self.monitors.add_open_hsr_gripper(name='first open gripper')
+
+        local_min_pre_grasp = self.monitors.add_local_minimum_reached(name='pre grasp local min')
+        self.motion_goals.add_grasp_bar_offset(name='pre grasp bar',
+                                               root_link='map',
+                                               tip_link='hand_gripper_tool_frame',
+                                               tip_grasp_axis=tip_grasp_axis,
+                                               bar_center=bar_center,
+                                               bar_axis=bar_axis,
+                                               bar_length=0.001,
+                                               grasp_axis_offset=pre_grasp_offset,
+                                               end_condition=local_min_pre_grasp)
+
+        ft_monitor = self.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value,
+                                                    start_condition=local_min_pre_grasp)
+        self.motion_goals.add_grasp_bar_offset(name='grasp bar',
+                                               root_link='map',
+                                               tip_link='hand_gripper_tool_frame',
+                                               tip_grasp_axis=tip_grasp_axis,
+                                               bar_center=bar_center,
+                                               bar_axis=bar_axis,
+                                               bar_length=0.001,
+                                               grasp_axis_offset=ft_offset,
+                                               reference_linear_velocity=0.01,
+                                               reference_angular_velocity=0.05,
+                                               start_condition=local_min_pre_grasp,
+                                               end_condition=ft_monitor)
+
+        goal_point = PointStamped()
+        goal_point.header.frame_id = 'base_link'
+
+        handle_retract_direction = Vector3Stamped()
+        handle_retract_direction.header.frame_id = handle_link_right
+        handle_retract_direction.vector.z = -0.06
+
+        base_retract = tf.transform_vector(goal_point.header.frame_id, handle_retract_direction)
+
+        goal_point.point = Point(base_retract.vector.x, base_retract.vector.y, base_retract.vector.z)
+
+        grasped = self.monitors.add_cartesian_position(root_link='map', tip_link='base_link', goal_point=goal_point,
+                                                       name='grasped monitor', start_condition=ft_monitor)
+
+        close_gripper = self.monitors.add_close_hsr_gripper(start_condition=grasped, name='first close gripper')
+
+        self.motion_goals.add_cartesian_position(root_link='map', tip_link='base_link',
+                                                 goal_point=goal_point, start_condition=ft_monitor,
+                                                 reference_velocity=0.02, end_condition=grasped)
+
+        align_goal = Vector3Stamped()
+        align_goal.header.frame_id = handle_link_right
+        align_goal.vector.z = -1
+
+        x_base = Vector3Stamped()
+        x_base.header.frame_id = 'base_link'
+        x_base.vector.y = 1
+
+        door_open = self.monitors.add_joint_position(goal_state={hinge_joint_right: 1.7}, start_condition=close_gripper)
+        open_gripper = self.monitors.add_open_hsr_gripper(start_condition=door_open, name='second open gripper')
+
+        self.motion_goals.add_align_planes(goal_normal=align_goal, tip_link='base_link', tip_normal=x_base,
+                                           root_link='map',
+                                           start_condition=close_gripper,
+                                           end_condition=door_open)
+        self.motion_goals.add_open_container(tip_link='hand_gripper_tool_frame', environment_link=handle_link_right,
+                                             start_condition=close_gripper,
+                                             end_condition=door_open)
+
+        self.monitors.add_end_motion(start_condition=open_gripper)
+        self.execute()
+
+        # Reset Position
+        self.motion_goals.add_take_pose(pose_keyword=TakePoseTypes.PARK_LEFT.value)
+        self.add_default_end_motion_conditions()
+        self.execute()
+
+        self.motion_goals.add_cartesian_pose(root_link='map', tip_link='base_footprint', goal_pose=setup_pose)
+        self.motion_goals.avoid_all_collisions()
+        odom = self.monitors.add_local_minimum_reached()
+        self.monitors.add_end_motion(start_condition=odom)
+        self.execute()
+
+        # Left door opening
+        self.pre_pose_shelf_open(offset_x=-0.18,
+                                 offset_y=-0.01,
+                                 offset_z=0.03)
+        self.execute()
+
+        close_gripper = self.monitors.add_close_hsr_gripper()
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'base_footprint'
+        goal_pose.pose.orientation.w = 1
+        self.motion_goals.add_cartesian_pose(goal_pose=goal_pose, root_link='map', tip_link='base_footprint')
+        self.monitors.add_end_motion(start_condition=close_gripper)
+        self.execute()
+
+        self.open_shelf_door()
+        self.execute()
+
+        open_gripper = self.monitors.add_open_hsr_gripper()
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'base_footprint'
+        goal_pose.pose.orientation.w = 1
+        self.motion_goals.add_cartesian_pose(goal_pose=goal_pose, root_link='map', tip_link='base_footprint')
+        self.monitors.add_end_motion(start_condition=open_gripper)
         self.execute()
