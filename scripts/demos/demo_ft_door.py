@@ -253,6 +253,4 @@ elif test == 3:
 elif test == 4:
     hinge_turning()
 else:
-    grasping()
-    handle_turning()
-    hinge_turning()
+    gis.hsr_door_opening(ft_timeout=10000)
