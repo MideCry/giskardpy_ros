@@ -3147,7 +3147,7 @@ class GiskardWrapper:
                                                              root_link='map',
                                                              position_threshold=0.08,
                                                              orientation_threshold=0.04)
-        self.motion_goals.avoid_all_collisions(end_condition=pre_grasp_reached, min_distance=-0.8)
+        self.motion_goals.avoid_all_collisions(end_condition=pre_grasp_reached)
         self.motion_goals.allow_collision(group1='gripper', group2=left_door, start_condition=pre_grasp_reached)
 
         grasp_reached = self.monitors.add_cartesian_pose(name='first goal monitor',
@@ -3725,7 +3725,7 @@ class GiskardWrapper:
         x_base.header.frame_id = 'base_link'
         x_base.vector.y = 1
 
-        door_open = self.monitors.add_joint_position(goal_state={hinge_joint_right: 1.7}, start_condition=close_gripper)
+        door_open = self.monitors.add_joint_position(goal_state={hinge_joint_right: 1.65}, start_condition=close_gripper)
         open_gripper = self.monitors.add_open_hsr_gripper(start_condition=door_open, name='second open gripper')
 
         self.motion_goals.add_align_planes(goal_normal=align_goal, tip_link='base_link', tip_normal=x_base,
@@ -3776,18 +3776,18 @@ class GiskardWrapper:
         self.execute()
 
     def hsr_door_opening(self,
-                     handle_name: str = "iai_kitchen/iai_kitchen:arena:door_handle_inside",
-                     hinge_joint: str = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint",
-                     handle_joint:str = "iai_kitchen/iai_kitchen:arena:door_handle_joint",
-                     hinge_name: str = 'iai_kitchen/iai_kitchen:arena:door_center',
-                     tip_link: str = 'hand_gripper_tool_frame',
-                     handle_length: float = 0.01,
-                     ref_speed: float = 0.3,
-                     handle_retract_distance: float = 0.063,
-                     bar_center_offset: float = 0.01,
-                     pre_grasp_distance: float = 0.15,
-                     grasp_into_distance: float = -0.1,
-                     ft_timeout: float = 10):
+                         handle_name: str = "iai_kitchen/iai_kitchen:arena:door_handle_inside",
+                         hinge_joint: str = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint",
+                         handle_joint:str = "iai_kitchen/iai_kitchen:arena:door_handle_joint",
+                         hinge_name: str = 'iai_kitchen/iai_kitchen:arena:door_center',
+                         tip_link: str = 'hand_gripper_tool_frame',
+                         handle_length: float = 0.01,
+                         ref_speed: float = 0.3,
+                         handle_retract_distance: float = 0.063,
+                         bar_center_offset: float = 0.02,
+                         pre_grasp_distance: float = 0.15,
+                         grasp_into_distance: float = -0.1,
+                         ft_timeout: float = 10):
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_name

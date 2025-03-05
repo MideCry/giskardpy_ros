@@ -58,8 +58,9 @@ def setup(init_pose_pub: Publisher):
     rot_left.quaternion.w = 0.766
 
     starting_rot = QuaternionStamped()
-    starting_rot.header.frame_id = 'map'
-    starting_rot.quaternion.z = -1
+    starting_rot.header.frame_id = 'base_footprint'
+    starting_rot.quaternion.z = -0.643
+    starting_rot.quaternion.w = 0.766
 
     rot_left_monitor = gis.monitors.add_cartesian_orientation(goal_orientation=rot_left,
                                                               root_link='map',
