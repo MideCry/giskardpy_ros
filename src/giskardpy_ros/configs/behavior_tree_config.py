@@ -170,17 +170,20 @@ class BehaviorTreeConfig(ABC):
                                                                                        topic_name=topic_name,
                                                                                        only_prismatic_and_revolute=True)
 
-    def add_free_variable_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False):
+    def add_free_variable_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False,
+                                    group_name: Optional[str] = None, add_to_control_loop: bool = True):
         """
         Publishes joint states for Giskard's internal state.
         """
-        GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=False)
+        if add_to_control_loop:
+            GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
+                include_prefix=include_prefix,
+                topic_name=topic_name,
+                only_prismatic_and_revolute=False)
         GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(include_prefix=include_prefix,
                                                                                        topic_name=topic_name,
-                                                                                       only_prismatic_and_revolute=False)
+                                                                                       only_prismatic_and_revolute=False,
+                                                                                       group_name=group_name)
 
 
 class StandAloneBTConfig(BehaviorTreeConfig):
@@ -312,6 +315,7 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         if self.add_tf_pub:
             self.add_tf_publisher(include_prefix=True, mode=TfPublishingModes.all)
 
+        self.add_free_variable_publisher(include_prefix=False, topic_name='giskard_joint_states', group_name='iai_kitchen')
         self.add_hsr_controller()
 
     def add_hsr_controller(self):
