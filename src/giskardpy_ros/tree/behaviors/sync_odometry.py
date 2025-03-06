@@ -48,7 +48,7 @@ class SyncOdometry(GiskardBehavior):
     def update(self):
         if self.data:
             pose = msg_converter.ros_msg_to_giskard_obj(self.data.pose.pose, god_map.world)
-            self.joint.update_transform(pose)
+            self.joint.update_transform(pose, max_translation_correction=1000, max_rotation_correction=1000)
             self.data = None
             return Status.SUCCESS
         else:
@@ -75,5 +75,5 @@ class SyncOdometryNoLock(SyncOdometry):
         if self.odom is not None:
             pose = msg_converter.ros_msg_to_giskard_obj(self.odom.pose.pose, god_map.world)
             self.joint.update_transform(pose, alpha=self.alpha)
-            self.odom = None
+            # self.odom = None
         return Status.SUCCESS
