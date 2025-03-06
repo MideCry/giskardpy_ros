@@ -320,6 +320,7 @@ class CarryMyBullshit(Goal):
         root_V_camera_goal_axis = map_P_human - root_P_camera
         root_V_camera_goal_axis.scale(1)
         root_V_camera_goal_axis_proj = cas.project_to_cone(root_V_camera_axis, root_V_camera_goal_axis, cone_theta)
+        root_V_camera_goal_axis_proj.scale(1)
 
         angle = cas.angle_between_vector(root_V_camera_axis, root_V_camera_goal_axis)
         root_V_camera_goal_axis_proj = cas.if_less_eq(angle, np.pi / 1.9,
