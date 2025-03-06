@@ -315,7 +315,9 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         if self.add_tf_pub:
             self.add_tf_publisher(include_prefix=True, mode=TfPublishingModes.all)
 
-        self.add_free_variable_publisher(include_prefix=False, topic_name='giskard_joint_states', group_name='iai_kitchen')
+        self.add_free_variable_publisher(include_prefix=False,
+                                         topic_name='kitchen/cram_joint_states',
+                                         group_name='iai_kitchen')
         self.add_hsr_controller()
 
     def add_hsr_controller(self):

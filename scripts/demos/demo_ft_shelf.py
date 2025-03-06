@@ -203,6 +203,16 @@ hinge_joint = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_right:joint'
 #
 # right_door(handle_id, hinge_joint)
 
-setup(hinge_left_joint, TakePoseTypes.PARK_LEFT.value)
+# setup(hinge_left_joint, TakePoseTypes.PARK_LEFT.value)
+#
+# left_door()
 
-left_door()
+setup(hinge_joint, TakePoseTypes.PARK.value)
+
+setup_pose = PoseStamped()
+setup_pose.header.frame_id = 'map'
+setup_pose.pose.position.x = 4.3
+setup_pose.pose.position.y = 3.8
+setup_pose.pose.orientation.w = 1
+
+gis.billy_shelf_open(setup_pose=setup_pose)
