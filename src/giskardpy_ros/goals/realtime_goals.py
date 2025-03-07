@@ -124,7 +124,7 @@ class CarryMyBullshit(Goal):
                  base_orientation_threshold: float = np.pi / 16,
                  wait_for_patrick_timeout: int = 30,
                  max_rotation_velocity: float = 0.5,
-                 max_rotation_velocity_head: float = 1,
+                 max_rotation_velocity_head: float = 1.4, # how to make that faster??
                  max_translation_velocity: float = 0.38,
                  traj_tracking_radius: float = 0.4,
                  height_for_camera_target: float = 1,
