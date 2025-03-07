@@ -3154,7 +3154,7 @@ class GiskardWrapper:
                                                          goal_pose=first_goal,
                                                          tip_link='hand_gripper_tool_frame',
                                                          root_link='map',
-                                                         position_threshold=0.04)
+                                                         position_threshold=0.01)
 
         self.motion_goals.add_cartesian_pose(goal_pose=first_goal,
                                              tip_link='hand_gripper_tool_frame',

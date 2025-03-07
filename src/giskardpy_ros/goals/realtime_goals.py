@@ -115,7 +115,7 @@ class CarryMyBullshit(Goal):
                  root_link: Optional[str] = None,
                  camera_link: str = 'head_rgbd_sensor_link',
                  distance_to_target_stop_threshold: float = 1,
-                 cone_theta: float = 0.2,
+                 cone_theta: float = 0.1,
                  laser_scan_age_threshold: float = 2,
                  laser_distance_threshold: float = 0.5,
                  laser_distance_threshold_width: float = 0.8,
@@ -124,7 +124,7 @@ class CarryMyBullshit(Goal):
                  base_orientation_threshold: float = np.pi / 16,
                  wait_for_patrick_timeout: int = 30,
                  max_rotation_velocity: float = 0.5,
-                 max_rotation_velocity_head: float = 1,
+                 max_rotation_velocity_head: float = 1.4, # how to make that faster??
                  max_translation_velocity: float = 0.38,
                  traj_tracking_radius: float = 0.4,
                  height_for_camera_target: float = 1,
