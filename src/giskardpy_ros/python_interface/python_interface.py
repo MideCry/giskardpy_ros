@@ -3631,7 +3631,8 @@ class GiskardWrapper:
                          handle_link_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_left:joint',
                          door_link_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_left',
                          hinge_joint_left: str = 'iai_kitchen/shelf_billy:shelf_billy:shelf_door_right:joint',
-                         vertical_grasp: bool = True):
+                         vertical_grasp: bool = True,
+                         simulation: bool = False):
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_link_right
 
@@ -3750,19 +3751,73 @@ class GiskardWrapper:
         self.monitors.add_end_motion(start_condition=odom)
         self.execute()
 
+        if simulation:
+            js = {'hand_motor_joint': 1.23}
+            self.motion_goals.add_joint_position(js)
+            joint_monitor = self.monitors.add_joint_position(js)
+            self.motion_goals.allow_all_collisions()
+            self.monitors.add_end_motion(start_condition=joint_monitor)
+            self.execute()
+
         # Left door opening
         self.pre_pose_shelf_open(offset_x=-0.18,
                                  offset_y=-0.01,
                                  offset_z=0.03)
         self.execute()
 
-        close_gripper = self.monitors.add_close_hsr_gripper()
+        goal_states = {
+            'head_pan_joint': 0,
+            'head_tilt_joint': 0,
+            'arm_lift_joint': 0,
+            'arm_flex_joint': 0,
+            'arm_roll_joint': 0,
+            'wrist_flex_joint': 0,
+            'wrist_roll_joint': 0
+        }
+        goal_point = PointStamped()
+        goal_point.header.frame_id = 'hand_gripper_tool_frame'
+        goal_point.point.z = 0.1
+
+        retract_point = PointStamped()
+        retract_point.header.frame_id = 'hand_gripper_tool_frame'
+        retract_point.point.z = -0.02
+
+        ft_mon_left = self.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.SHELF_GRASP.value)
+        cart_mon = self.monitors.add_cartesian_position(root_link='map',
+                                                        tip_link='hand_gripper_tool_frame',
+                                                        goal_point=retract_point,
+                                                        start_condition=ft_mon_left)
+        self.motion_goals.add_joint_position_stop(goal_state=goal_states, end_condition=cart_mon)
+        self.motion_goals.add_cartesian_position(name='ft push',
+                                                 root_link='map',
+                                                 tip_link='hand_gripper_tool_frame',
+                                                 goal_point=goal_point,
+                                                 end_condition=ft_mon_left)
+        self.motion_goals.add_cartesian_position(name='ft retract',
+                                                 root_link='map',
+                                                 tip_link='hand_gripper_tool_frame',
+                                                 goal_point=retract_point,
+                                                 start_condition=ft_mon_left,
+                                                 end_condition=cart_mon)
+
+        close_gripper = self.monitors.add_close_hsr_gripper(start_condition=cart_mon)
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = 'base_footprint'
         goal_pose.pose.orientation.w = 1
-        self.motion_goals.add_cartesian_pose(goal_pose=goal_pose, root_link='map', tip_link='base_footprint')
+        self.motion_goals.add_cartesian_pose(goal_pose=goal_pose,
+                                             root_link='map',
+                                             tip_link='base_footprint',
+                                             start_condition=cart_mon)
         self.monitors.add_end_motion(start_condition=close_gripper)
         self.execute()
+
+        if simulation:
+            js = {'hand_motor_joint': 0}
+            self.motion_goals.add_joint_position(js)
+            joint_monitor = self.monitors.add_joint_position(js)
+            self.motion_goals.allow_all_collisions()
+            self.monitors.add_end_motion(start_condition=joint_monitor)
+            self.execute()
 
         self.open_shelf_door()
         self.execute()
@@ -3774,6 +3829,14 @@ class GiskardWrapper:
         self.motion_goals.add_cartesian_pose(goal_pose=goal_pose, root_link='map', tip_link='base_footprint')
         self.monitors.add_end_motion(start_condition=open_gripper)
         self.execute()
+
+        if simulation:
+            js = {'hand_motor_joint': 1.23}
+            self.motion_goals.add_joint_position(js)
+            joint_monitor = self.monitors.add_joint_position(js)
+            self.motion_goals.allow_all_collisions()
+            self.monitors.add_end_motion(start_condition=joint_monitor)
+            self.execute()
 
     def hsr_door_opening(self,
                          handle_name: str = "iai_kitchen/iai_kitchen:arena:door_handle_inside",

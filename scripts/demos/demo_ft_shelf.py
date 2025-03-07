@@ -215,4 +215,4 @@ setup_pose.pose.position.x = 4.3
 setup_pose.pose.position.y = 3.8
 setup_pose.pose.orientation.w = 1
 
-gis.billy_shelf_open(setup_pose=setup_pose)
+gis.billy_shelf_open(setup_pose=setup_pose, simulation=True)
