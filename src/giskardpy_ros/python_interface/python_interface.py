@@ -1037,7 +1037,7 @@ class MotionGoalWrapper:
                              root_link: Optional[str] = None,
                              camera_link: str = 'head_rgbd_sensor_link',
                              distance_to_target_stop_threshold: float = 1,
-                             cone_theta: float = 0.2, # size of FoV cone
+                             cone_theta: float = 0.1, # size of FoV cone
                              laser_scan_age_threshold: float = 2,
                              laser_distance_threshold: float = 0.5,
                              laser_distance_threshold_width: float = 0.8,
@@ -1046,8 +1046,8 @@ class MotionGoalWrapper:
                              base_orientation_threshold: float = np.pi / 16,
                              tracked_human_position_topic_name_timeout: int = 30,
                              max_rotation_velocity: float = 0.5,
-                             max_rotation_velocity_head: float = 1.0, # head speed
-                             max_translation_velocity: float = 0.38,
+                             max_rotation_velocity_head: float = 2.5, # head speed
+                             max_translation_velocity: float = 0.42, # base speed
                              traj_tracking_radius: float = 0.4,
                              height_for_camera_target: float = 1,
                              laser_frame_id: str = 'base_range_sensor_link',
