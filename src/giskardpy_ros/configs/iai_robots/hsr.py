@@ -68,6 +68,9 @@ class WorldWithHSRConfig(WorldConfig):
         self.world.register_group(name='gripper',
                                   root_link_name=self.world.search_for_link_name('wrist_roll_link'),
                                   actuated=False)
+        self.world.register_group(name='arm',
+                                  root_link_name=self.world.search_for_link_name('arm_flex_link'),
+                                  actuated=False)
 
 
 class SuturoArenaWithHSRConfig(WorldWithHSRConfig):

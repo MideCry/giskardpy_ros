@@ -48,6 +48,7 @@ from giskardpy.motion_graph.monitors.monitors import LocalMinimumReached, TimeAb
 from giskardpy.motion_graph.monitors.overwrite_state_monitors import SetOdometry, SetSeedConfiguration
 from giskardpy.motion_graph.monitors.payload_monitors import Print, Sleep, SetMaxTrajectoryLength, \
     PayloadAlternator
+from giskardpy.motion_graph.monitors.prepush_monitors import PrePushDoorMonitor
 from giskardpy.motion_graph.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 from giskardpy.utils.utils import get_all_classes_in_package
 from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, FollowNavPath, RealTimePointing, RealTimeConePointing
@@ -1037,7 +1038,7 @@ class MotionGoalWrapper:
                              root_link: Optional[str] = None,
                              camera_link: str = 'head_rgbd_sensor_link',
                              distance_to_target_stop_threshold: float = 1,
-                             cone_theta: float = 0.2, # size of FoV cone
+                             cone_theta: float = 0.2,  # size of FoV cone
                              laser_scan_age_threshold: float = 2,
                              laser_distance_threshold: float = 0.5,
                              laser_distance_threshold_width: float = 0.8,
@@ -1046,7 +1047,7 @@ class MotionGoalWrapper:
                              base_orientation_threshold: float = np.pi / 16,
                              tracked_human_position_topic_name_timeout: int = 30,
                              max_rotation_velocity: float = 0.5,
-                             max_rotation_velocity_head: float = 1.0, # head speed
+                             max_rotation_velocity_head: float = 1.0,  # head speed
                              max_translation_velocity: float = 0.38,
                              traj_tracking_radius: float = 0.4,
                              height_for_camera_target: float = 1,
@@ -1935,14 +1936,14 @@ class MotionGoalWrapper:
                                     pointing_axis=tip_V_pointing_axis)
 
     def add_joint_position_stop(self,
-                           goal_state: Dict[str, float],
-                           weight: Optional[float] = None,
-                           max_velocity: Optional[float] = None,
-                           name: Optional[str] = None,
-                           start_condition: str = '',
-                           hold_condition: str = '',
-                           end_condition: str = '',
-                           **kwargs: goal_parameter):
+                                goal_state: Dict[str, float],
+                                weight: Optional[float] = None,
+                                max_velocity: Optional[float] = None,
+                                name: Optional[str] = None,
+                                start_condition: str = '',
+                                hold_condition: str = '',
+                                end_condition: str = '',
+                                **kwargs: goal_parameter):
         """
         Sets joint position goals for all pairs in goal_state
         :param goal_state: maps joint_name to goal position
@@ -2586,6 +2587,32 @@ class MonitorWrapper:
                                 name=name,
                                 start_condition=start_condition)
 
+    def add_pre_push_door(self,
+                          root_link: str,
+                          tip_link: str,
+                          door_object: str,
+                          door_handle: str,
+                          threshold: float = 0.025,
+                          root_group: Optional[str] = None,
+                          tip_group: Optional[str] = None,
+                          name: Optional[str] = None,
+                          start_condition: str = '',
+                          hold_condition: str = '',
+                          end_condition: Optional[str] = None) -> str:
+
+        return self.add_monitor(monitor_class=PrePushDoorMonitor.__name__,
+                                root_link=root_link,
+                                tip_link=tip_link,
+                                door_object=door_object,
+                                door_handle=door_handle,
+                                threshold=threshold,
+                                root_group=root_group,
+                                tip_group=tip_group,
+                                name=name,
+                                start_condition=start_condition,
+                                hold_condition=hold_condition,
+                                end_condition=end_condition)
+
 
 class GiskardWrapper:
     last_feedback: MoveFeedback = None
@@ -3193,16 +3220,16 @@ class GiskardWrapper:
         self.monitors.add_end_motion(open_door)
 
     def hsrb_dishwasher_test(self, handle_frame_id: str, hinge_joint: str, door_hinge_frame_id: str):
-        # TODO: move to Pycram and make parameters better available
+        # TODO: move to Pycram and/or make parameters better available
         root_link = 'map'
         tip_link = 'hand_gripper_tool_frame'
         grasp_bar_offset = 0.1
-        goal_angle_half = 0.6
+        goal_angle_half = 0.3
         goal_angle_full = 1.35
         bar_length = 0.1
         after_force_retract = 0.05
         env_name = 'iai_kitchen'
-        gripper_group = 'gripper'
+        allow_collision_group = 'arm'
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
@@ -3219,10 +3246,6 @@ class GiskardWrapper:
         grasp_axis_offset.header.frame_id = handle_frame_id
         grasp_axis_offset.vector.x = -grasp_bar_offset
 
-        grasp_axis_offset_pre = Vector3Stamped()
-        grasp_axis_offset_pre.header.frame_id = handle_frame_id
-        grasp_axis_offset_pre.vector.x = 0.1
-
         tip_grasp_axis_push = Vector3Stamped()
         tip_grasp_axis_push.header.frame_id = tip_link
         tip_grasp_axis_push.vector.y = 1
@@ -3235,99 +3258,28 @@ class GiskardWrapper:
         x_goal.header.frame_id = handle_frame_id
         x_goal.vector.x = -1
 
-        first_open = self.monitors.add_open_hsr_gripper(name='first open gripper')
+        js = {hinge_joint: goal_angle_half}
 
-        local_min_pre_grasp = self.monitors.add_local_minimum_reached(name='local min pre grasp',
-                                                                      start_condition=first_open)
+        hinge_state_monitor = self.monitors.add_joint_position(goal_state=js, name='hinge monitor for preopen')
+        self.motion_goals.add_joint_position(goal_state=js, end_condition=hinge_state_monitor,
+                                             name='hinge goal for preopen')
 
-        self.motion_goals.add_grasp_bar_offset(name='pre grasp bar',
-                                               root_link=root_link,
-                                               tip_link=tip_link,
-                                               tip_grasp_axis=tip_grasp_axis_bar,
-                                               bar_center=bar_center,
-                                               bar_axis=bar_axis,
-                                               bar_length=bar_length,
-                                               grasp_axis_offset=grasp_axis_offset_pre,
-                                               start_condition=first_open,
-                                               end_condition=local_min_pre_grasp)
-
-        bar_grasped_force = self.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value,
-                                                           start_condition=local_min_pre_grasp)
-
-        self.motion_goals.add_grasp_bar_offset(name='grasp bar',
-                                               root_link=root_link,
-                                               tip_link=tip_link,
-                                               tip_grasp_axis=tip_grasp_axis_bar,
-                                               bar_center=bar_center,
-                                               bar_axis=bar_axis,
-                                               bar_length=bar_length,
-                                               reference_linear_velocity=0.02,
-                                               reference_angular_velocity=0.05,
-                                               grasp_axis_offset=grasp_axis_offset,
-                                               start_condition=local_min_pre_grasp,
-                                               end_condition=bar_grasped_force)
-
-        self.motion_goals.add_align_planes(tip_link=tip_link,
-                                           tip_normal=x_gripper,
-                                           goal_normal=x_goal,
-                                           root_link=root_link,
-                                           start_condition=local_min_pre_grasp,
-                                           end_condition=bar_grasped_force)
-
-        goal_point = PointStamped()
-        goal_point.header.frame_id = 'base_link'
-
-        handle_retract_direction = Vector3Stamped()
-        handle_retract_direction.header.frame_id = handle_frame_id
-        handle_retract_direction.vector.x = after_force_retract
-
-        base_retract = tf.transform_vector(goal_point.header.frame_id, handle_retract_direction)
-
-        goal_point.point = Point(base_retract.vector.x, base_retract.vector.y, base_retract.vector.z)
-
-        grasped = self.monitors.add_local_minimum_reached(name='grasped monitor',
-                                                          start_condition=bar_grasped_force)
-
-        retracted = self.monitors.add_cartesian_position(root_link='map', tip_link='base_link', goal_point=goal_point,
-                                                         start_condition=bar_grasped_force)
-
-        self.motion_goals.add_cartesian_position_straight(root_link='map', tip_link='base_link',
-                                                          goal_point=goal_point,
-                                                          name='retract after hit',
-                                                          start_condition=bar_grasped_force,
-                                                          end_condition=retracted)
-
-        first_close = self.monitors.add_close_hsr_gripper(name='first close gripper', start_condition=retracted)
-
-        half_open_joint = self.monitors.add_joint_position(name='half open joint',
-                                                           goal_state={hinge_joint: goal_angle_half},
-                                                           threshold=0.02,
-                                                           start_condition=first_close)
-
-        self.motion_goals.add_open_container(name='half open',
-                                             tip_link=tip_link,
-                                             environment_link=handle_frame_id,
-                                             goal_joint_state=goal_angle_half,
-                                             start_condition=first_close,
-                                             end_condition=half_open_joint)
-
-        final_open = self.monitors.add_open_hsr_gripper(name='final open gripper',
-                                                        start_condition=half_open_joint)
+        final_close = self.monitors.add_close_hsr_gripper(name='final close gripper',
+                                                          start_condition=hinge_state_monitor)
 
         around_local_min = self.monitors.add_local_minimum_reached(name='around door local min',
-                                                                   start_condition=final_open)
+                                                                   start_condition=final_close)
 
         self.motion_goals.hsrb_dishwasher_door_around(handle_name=handle_frame_id,
                                                       tip_gripper_axis=tip_grasp_axis_push,
                                                       root_link=root_link,
                                                       tip_link=tip_link,
                                                       goal_angle=goal_angle_half,
-                                                      start_condition=final_open,
+                                                      start_condition=final_close,
                                                       end_condition=around_local_min)
 
         align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
                                                                             start_condition=around_local_min)
-
         self.motion_goals.add_align_to_push_door(root_link=root_link,
                                                  tip_link=tip_link,
                                                  door_handle=handle_frame_id,
@@ -3335,34 +3287,34 @@ class GiskardWrapper:
                                                  tip_gripper_axis=tip_grasp_axis_push,
                                                  weight=WEIGHT_ABOVE_CA,
                                                  goal_angle=goal_angle_half,
-                                                 intermediate_point_scale=0.95,
+                                                 intermediate_point_scale=0.96,
                                                  start_condition=around_local_min,
                                                  end_condition=align_push_door_local_min)
 
-        final_close = self.monitors.add_close_hsr_gripper(name='final close gripper',
-                                                          start_condition=align_push_door_local_min)
-
-        pre_push_local_min = self.monitors.add_local_minimum_reached(name='pre push local min',
-                                                                     start_condition=final_close)
+        pre_push_monitor = self.monitors.add_pre_push_door(root_link=root_link,
+                                                           tip_link=tip_link,
+                                                           door_handle=handle_frame_id,
+                                                           door_object=door_hinge_frame_id,
+                                                           start_condition=align_push_door_local_min)
 
         self.motion_goals.add_pre_push_door(root_link=root_link,
                                             tip_link=tip_link,
                                             door_handle=handle_frame_id,
                                             weight=WEIGHT_ABOVE_CA,
                                             door_object=door_hinge_frame_id,
-                                            start_condition=final_close,
-                                            end_condition=pre_push_local_min)
+                                            start_condition=align_push_door_local_min,
+                                            end_condition=pre_push_monitor)
 
         full_open_joint = self.monitors.add_joint_position(name='full open joint',
                                                            goal_state={hinge_joint: goal_angle_full},
                                                            threshold=0.02,
-                                                           start_condition=pre_push_local_min)
+                                                           start_condition=pre_push_monitor)
 
         self.motion_goals.add_open_container(name='full open',
                                              tip_link=tip_link,
                                              environment_link=handle_frame_id,
                                              goal_joint_state=goal_angle_full,
-                                             start_condition=pre_push_local_min,
+                                             start_condition=pre_push_monitor,
                                              end_condition=full_open_joint)
 
         park_joint_monitor = self.monitors.add_joint_position(name='park joint pos',
@@ -3381,8 +3333,191 @@ class GiskardWrapper:
 
         self.monitors.add_end_motion(start_condition=park_joint_monitor)
 
-        self.motion_goals.allow_collision(env_name, gripper_group)
+        self.motion_goals.avoid_all_collisions(end_condition=align_push_door_local_min)
+        self.motion_goals.allow_collision(env_name, allow_collision_group, start_condition=align_push_door_local_min)
         self.execute()
+
+        # gripper_group = 'gripper'
+        #
+        # bar_axis = Vector3Stamped()
+        # bar_axis.header.frame_id = handle_frame_id
+        # bar_axis.vector.y = 1
+        #
+        # bar_center = PointStamped()
+        # bar_center.header.frame_id = handle_frame_id
+        #
+        # tip_grasp_axis_bar = Vector3Stamped()
+        # tip_grasp_axis_bar.header.frame_id = tip_link
+        # tip_grasp_axis_bar.vector.x = 1
+        #
+        # grasp_axis_offset = Vector3Stamped()
+        # grasp_axis_offset.header.frame_id = handle_frame_id
+        # grasp_axis_offset.vector.x = -grasp_bar_offset
+        #
+        # grasp_axis_offset_pre = Vector3Stamped()
+        # grasp_axis_offset_pre.header.frame_id = handle_frame_id
+        # grasp_axis_offset_pre.vector.x = 0.1
+        #
+        # tip_grasp_axis_push = Vector3Stamped()
+        # tip_grasp_axis_push.header.frame_id = tip_link
+        # tip_grasp_axis_push.vector.y = 1
+        #
+        # x_gripper = Vector3Stamped()
+        # x_gripper.header.frame_id = tip_link
+        # x_gripper.vector.z = 1
+        #
+        # x_goal = Vector3Stamped()
+        # x_goal.header.frame_id = handle_frame_id
+        # x_goal.vector.x = -1
+        #
+        # first_open = self.monitors.add_open_hsr_gripper(name='first open gripper')
+        #
+        # local_min_pre_grasp = self.monitors.add_local_minimum_reached(name='local min pre grasp',
+        #                                                               start_condition=first_open)
+        #
+        # self.motion_goals.add_grasp_bar_offset(name='pre grasp bar',
+        #                                        root_link=root_link,
+        #                                        tip_link=tip_link,
+        #                                        tip_grasp_axis=tip_grasp_axis_bar,
+        #                                        bar_center=bar_center,
+        #                                        bar_axis=bar_axis,
+        #                                        bar_length=bar_length,
+        #                                        grasp_axis_offset=grasp_axis_offset_pre,
+        #                                        start_condition=first_open,
+        #                                        end_condition=local_min_pre_grasp)
+        #
+        # bar_grasped_force = self.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value,
+        #                                                    start_condition=local_min_pre_grasp)
+        #
+        # self.motion_goals.add_grasp_bar_offset(name='grasp bar',
+        #                                        root_link=root_link,
+        #                                        tip_link=tip_link,
+        #                                        tip_grasp_axis=tip_grasp_axis_bar,
+        #                                        bar_center=bar_center,
+        #                                        bar_axis=bar_axis,
+        #                                        bar_length=bar_length,
+        #                                        reference_linear_velocity=0.02,
+        #                                        reference_angular_velocity=0.05,
+        #                                        grasp_axis_offset=grasp_axis_offset,
+        #                                        start_condition=local_min_pre_grasp,
+        #                                        end_condition=bar_grasped_force)
+        #
+        # self.motion_goals.add_align_planes(tip_link=tip_link,
+        #                                    tip_normal=x_gripper,
+        #                                    goal_normal=x_goal,
+        #                                    root_link=root_link,
+        #                                    start_condition=local_min_pre_grasp,
+        #                                    end_condition=bar_grasped_force)
+        #
+        # goal_point = PointStamped()
+        # goal_point.header.frame_id = 'base_link'
+        #
+        # handle_retract_direction = Vector3Stamped()
+        # handle_retract_direction.header.frame_id = handle_frame_id
+        # handle_retract_direction.vector.x = after_force_retract
+        #
+        # base_retract = tf.transform_vector(goal_point.header.frame_id, handle_retract_direction)
+        #
+        # goal_point.point = Point(base_retract.vector.x, base_retract.vector.y, base_retract.vector.z)
+        #
+        # grasped = self.monitors.add_local_minimum_reached(name='grasped monitor',
+        #                                                   start_condition=bar_grasped_force)
+        #
+        # retracted = self.monitors.add_cartesian_position(root_link='map', tip_link='base_link', goal_point=goal_point,
+        #                                                  start_condition=bar_grasped_force)
+        #
+        # self.motion_goals.add_cartesian_position_straight(root_link='map', tip_link='base_link',
+        #                                                   goal_point=goal_point,
+        #                                                   name='retract after hit',
+        #                                                   start_condition=bar_grasped_force,
+        #                                                   end_condition=retracted)
+        #
+        # first_close = self.monitors.add_close_hsr_gripper(name='first close gripper', start_condition=retracted)
+        #
+        # half_open_joint = self.monitors.add_joint_position(name='half open joint',
+        #                                                    goal_state={hinge_joint: goal_angle_half},
+        #                                                    threshold=0.02,
+        #                                                    start_condition=first_close)
+        #
+        # self.motion_goals.add_open_container(name='half open',
+        #                                      tip_link=tip_link,
+        #                                      environment_link=handle_frame_id,
+        #                                      goal_joint_state=goal_angle_half,
+        #                                      start_condition=first_close,
+        #                                      end_condition=half_open_joint)
+        #
+        # final_open = self.monitors.add_open_hsr_gripper(name='final open gripper',
+        #                                                 start_condition=half_open_joint)
+        #
+        # around_local_min = self.monitors.add_local_minimum_reached(name='around door local min',
+        #                                                            start_condition=final_open)
+        #
+        # self.motion_goals.hsrb_dishwasher_door_around(handle_name=handle_frame_id,
+        #                                               tip_gripper_axis=tip_grasp_axis_push,
+        #                                               root_link=root_link,
+        #                                               tip_link=tip_link,
+        #                                               goal_angle=goal_angle_half,
+        #                                               start_condition=final_open,
+        #                                               end_condition=around_local_min)
+        #
+        # align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
+        #                                                                     start_condition=around_local_min)
+        #
+        # self.motion_goals.add_align_to_push_door(root_link=root_link,
+        #                                          tip_link=tip_link,
+        #                                          door_handle=handle_frame_id,
+        #                                          door_object=door_hinge_frame_id,
+        #                                          tip_gripper_axis=tip_grasp_axis_push,
+        #                                          weight=WEIGHT_ABOVE_CA,
+        #                                          goal_angle=goal_angle_half,
+        #                                          intermediate_point_scale=0.95,
+        #                                          start_condition=around_local_min,
+        #                                          end_condition=align_push_door_local_min)
+        #
+        # final_close = self.monitors.add_close_hsr_gripper(name='final close gripper',
+        #                                                   start_condition=align_push_door_local_min)
+        #
+        # pre_push_local_min = self.monitors.add_local_minimum_reached(name='pre push local min',
+        #                                                              start_condition=final_close)
+        #
+        # self.motion_goals.add_pre_push_door(root_link=root_link,
+        #                                     tip_link=tip_link,
+        #                                     door_handle=handle_frame_id,
+        #                                     weight=WEIGHT_ABOVE_CA,
+        #                                     door_object=door_hinge_frame_id,
+        #                                     start_condition=final_close,
+        #                                     end_condition=pre_push_local_min)
+        #
+        # full_open_joint = self.monitors.add_joint_position(name='full open joint',
+        #                                                    goal_state={hinge_joint: goal_angle_full},
+        #                                                    threshold=0.02,
+        #                                                    start_condition=pre_push_local_min)
+        #
+        # self.motion_goals.add_open_container(name='full open',
+        #                                      tip_link=tip_link,
+        #                                      environment_link=handle_frame_id,
+        #                                      goal_joint_state=goal_angle_full,
+        #                                      start_condition=pre_push_local_min,
+        #                                      end_condition=full_open_joint)
+        #
+        # park_joint_monitor = self.monitors.add_joint_position(name='park joint pos',
+        #                                                       goal_state={'head_pan_joint': 0.0,
+        #                                                                   'head_tilt_joint': 0.0,
+        #                                                                   'arm_lift_joint': 0.0,
+        #                                                                   'arm_flex_joint': 0.0,
+        #                                                                   'arm_roll_joint': -1.5,
+        #                                                                   'wrist_flex_joint': -1.5,
+        #                                                                   'wrist_roll_joint': 0.0},
+        #                                                       threshold=0.05,
+        #                                                       start_condition=full_open_joint)
+        #
+        # self.motion_goals.add_take_pose(pose_keyword='park', start_condition=full_open_joint,
+        #                                 end_condition=park_joint_monitor)
+        #
+        # self.monitors.add_end_motion(start_condition=park_joint_monitor)
+        #
+        # self.motion_goals.allow_collision(env_name, gripper_group)
+        # self.execute()
 
         # root_link = 'map'
         # tip_link = 'hand_gripper_tool_frame'
@@ -3835,7 +3970,7 @@ class GiskardWrapper:
     def hsr_door_opening(self,
                          handle_name: str = "iai_kitchen/iai_kitchen:arena:door_handle_inside",
                          hinge_joint: str = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint",
-                         handle_joint:str = "iai_kitchen/iai_kitchen:arena:door_handle_joint",
+                         handle_joint: str = "iai_kitchen/iai_kitchen:arena:door_handle_joint",
                          hinge_name: str = 'iai_kitchen/iai_kitchen:arena:door_center',
                          tip_link: str = 'hand_gripper_tool_frame',
                          handle_length: float = 0.01,
