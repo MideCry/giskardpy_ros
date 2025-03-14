@@ -13,6 +13,5 @@ class LogTrajPlugin(GiskardBehavior):
     @record_time
     @profile
     def update(self):
-        current_js = deepcopy(god_map.world.state)
-        god_map.trajectory.set(god_map.control_cycle_counter, current_js)
+        god_map.trajectory.set(god_map.control_cycle_counter, god_map.world.state)
         return Status.SUCCESS

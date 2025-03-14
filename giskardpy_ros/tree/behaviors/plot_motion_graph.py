@@ -21,6 +21,17 @@ from giskardpy_ros.ros1.msg_converter import json_str_to_ros_kwargs
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.behaviors.publish_feedback import giskard_state_to_execution_state
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
+from giskardpy.motion_graph.monitors.payload_monitors import CancelMotion
+from giskardpy.tree.behaviors.plugin import GiskardBehavior
+from giskardpy.tree.behaviors.publish_feedback import giskard_state_to_execution_state
+from giskardpy.utils import logging
+from giskardpy.utils.decorators import record_time, catch_and_raise_to_blackboard
+from giskardpy.utils.utils import create_path, json_str_to_kwargs
+
+
+def extract_monitor_names_from_condition(condition: str) -> List[str]:
+    return re.findall(r"'(.*?)'", condition)
+
 
 
 def extract_node_names_from_condition(condition: str) -> Set[str]:
