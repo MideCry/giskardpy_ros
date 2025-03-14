@@ -3278,8 +3278,13 @@ class GiskardWrapper:
                                                       start_condition=final_close,
                                                       end_condition=around_local_min)
 
+        js_wrist = {'wrist_flex_joint': -1.3}
+        joint_monitor = self.monitors.add_joint_position(goal_state=js_wrist, start_condition=around_local_min)
+        self.motion_goals.add_joint_position(goal_state=js_wrist, start_condition=around_local_min, end_condition=joint_monitor)
+
         align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
-                                                                            start_condition=around_local_min)
+                                                                            start_condition=joint_monitor)
+
         self.motion_goals.add_align_to_push_door(root_link=root_link,
                                                  tip_link=tip_link,
                                                  door_handle=handle_frame_id,
@@ -3288,7 +3293,7 @@ class GiskardWrapper:
                                                  weight=WEIGHT_ABOVE_CA,
                                                  goal_angle=goal_angle_half,
                                                  intermediate_point_scale=0.96,
-                                                 start_condition=around_local_min,
+                                                 start_condition=joint_monitor,
                                                  end_condition=align_push_door_local_min)
 
         pre_push_monitor = self.monitors.add_pre_push_door(root_link=root_link,
