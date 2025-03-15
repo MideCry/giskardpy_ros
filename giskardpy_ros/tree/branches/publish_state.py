@@ -1,6 +1,6 @@
 from typing import Optional
 
-from py_trees import Sequence
+from py_trees.composites import Sequence
 
 from giskardpy_ros.ros1.ros_msg_visualization import VisualizationMode
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisher
@@ -17,7 +17,7 @@ class PublishState(Sequence):
     debug_marker_publisher: Optional[DebugMarkerPublisher]
 
     def __init__(self, name: str = 'publish state'):
-        super().__init__(name)
+        super().__init__(name, memory=True)
         self.visualization_behavior = None
         self.debug_marker_publisher = None
 

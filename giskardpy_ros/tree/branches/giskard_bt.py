@@ -5,11 +5,14 @@ from typing import Any, Type, Tuple
 
 import numpy as np
 import pydot
+import rclpy
 from py_trees import common
 from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence, Selector, Composite
+from py_trees.decorators import FailureIsSuccess
 from py_trees_ros.trees import BehaviourTree
 from giskardpy.god_map import god_map
+from giskardpy_ros import ros_node
 from giskardpy_ros.tree.behaviors.send_result import SendResult
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.clean_up_control_loop import CleanupControlLoop
@@ -21,7 +24,6 @@ from giskardpy_ros.tree.branches.wait_for_goal import WaitForGoal
 from giskardpy_ros.tree.composites.async_composite import AsyncBehavior
 from giskardpy_ros.tree.composites.better_parallel import Parallel
 from giskardpy_ros.tree.control_modes import ControlModes
-from giskardpy_ros.tree.decorators import failure_is_success
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy.utils.utils import create_path
@@ -49,23 +51,28 @@ class GiskardBT(BehaviourTree):
             raise AttributeError(f'Control mode {control_mode} doesn\'t exist.')
         self.root = Sequence('Giskard', memory=True)
         self.wait_for_goal = WaitForGoal()
-        self.prepare_control_loop = failure_is_success(PrepareControlLoop)()
-        self.control_loop_branch = failure_is_success(ControlLoop)()
+        self.prepare_control_loop = PrepareControlLoop()
+        self.prepare_control_loop_failure_is_success = FailureIsSuccess('ignore failure',
+                                                                        self.prepare_control_loop)
+        self.control_loop_branch = ControlLoop()
+        self.control_loop_branch_failure_is_success = FailureIsSuccess('ignore failure', self.control_loop_branch)
         if self.is_closed_loop():
             self.control_loop_branch.add_closed_loop_behaviors()
         else:
             self.control_loop_branch.add_projection_behaviors()
 
-        self.post_processing = failure_is_success(PostProcessing)()
+        self.post_processing = PostProcessing()
+        self.post_processing_failure_is_success = FailureIsSuccess('ignore failure', self.post_processing)
         self.cleanup_control_loop = CleanupControlLoop()
         if self.is_open_loop():
-            self.execute_traj = failure_is_success(ExecuteTraj)()
+            self.execute_traj = ExecuteTraj()
+            self.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.execute_traj)
 
         self.root.add_child(self.wait_for_goal)
-        self.root.add_child(self.prepare_control_loop)
-        self.root.add_child(self.control_loop_branch)
+        self.root.add_child(self.prepare_control_loop_failure_is_success)
+        self.root.add_child(self.control_loop_branch_failure_is_success)
         self.root.add_child(self.cleanup_control_loop)
-        self.root.add_child(self.post_processing)
+        self.root.add_child(self.post_processing_failure_is_success)
         self.root.add_child(SendResult(GiskardBlackboard().move_action_server))
         super().__init__(self.root)
         self.switch_to_execution()
@@ -95,7 +102,7 @@ class GiskardBT(BehaviourTree):
     @toggle_on('projection_mode')
     def switch_to_projection(self):
         if self.is_open_loop():
-            self.root.remove_child(self.execute_traj)
+            self.root.remove_child(self.execute_traj_failure_is_success)
         elif self.is_closed_loop():
             self.control_loop_branch.switch_to_projection()
         self.cleanup_control_loop.add_reset_world_state()
@@ -103,15 +110,15 @@ class GiskardBT(BehaviourTree):
     @toggle_off('projection_mode')
     def switch_to_execution(self):
         if self.is_open_loop():
-            self.root.insert_child(self.execute_traj, -2)
+            self.root.insert_child(self.execute_traj_failure_is_success, -2)
         elif self.is_closed_loop():
             self.control_loop_branch.switch_to_closed_loop()
         self.cleanup_control_loop.remove_reset_world_state()
 
     def live(self):
-        sleeper = middleware.create_rate(1 / self.tick_rate)
+        sleeper = ros_node.create_rate(1 / self.tick_rate)
         get_middleware().loginfo('giskard is ready')
-        while middleware.ok():
+        while rclpy.ok():
             try:
                 self.tick()
                 sleeper.sleep()

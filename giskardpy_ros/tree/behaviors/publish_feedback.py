@@ -25,7 +25,7 @@ def giskard_state_to_execution_state() -> ExecutionState:
     goal_filter = np.array([goal.plot for goal in goals])
 
     msg = ExecutionState()
-    msg.header.stamp = ros_node.get_clock().now()
+    msg.header.stamp = ros_node.get_clock().now().to_msg()
     msg.goal_id = GiskardBlackboard().move_action_server.goal_id
 
     msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t.plot]
@@ -92,7 +92,7 @@ class PublishFeedback(GiskardBehavior):
         if name is None:
             name = self.__class__.__name__
         if topic_name is None:
-            topic_name = '~state'
+            topic_name = f'{ros_node.get_name()}/state'
         super().__init__(name)
         self.cmd_topic = topic_name
         self.pub = ros_node.create_publisher(ExecutionState,

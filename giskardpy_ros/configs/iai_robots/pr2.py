@@ -5,6 +5,7 @@ from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
 from giskardpy.data_types.data_types import Derivatives
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from giskardpy_ros.ros2 import ros2_interface
 
 
 class WorldWithPR2Config(WorldWithOmniDriveRobot):

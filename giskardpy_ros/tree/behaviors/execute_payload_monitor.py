@@ -1,7 +1,7 @@
 from threading import Thread
 
 from line_profiler import profile
-from py_trees import Status
+from py_trees.common import Status
 
 from giskardpy.motion_statechart.monitors.payload_monitors import PayloadMonitor
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior

@@ -18,6 +18,15 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, G
 
 
 class DebugMarkerPublisher(GiskardBehavior):
+    colors = [ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0),  # red
+              ColorRGBA(r=0.0, g=0.0, b=1.0, a=1.0),  # blue
+              ColorRGBA(r=1.0, g=1.0, b=0.0, a=1.0),  # yellow
+              ColorRGBA(r=1.0, g=0.0, b=1.0, a=1.0),  # violet
+              ColorRGBA(r=0.0, g=1.0, b=1.0, a=1.0),  # cyan
+              ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0),  # green
+              ColorRGBA(r=1.0, g=1.0, b=1.0, a=1.0),  # white
+              ColorRGBA(r=0.0, g=0.0, b=0.0, a=1.0),  # black
+              ]
 
     @profile
     def __init__(self, name: str = 'debug marker', tf_topic: str = '/tf', map_frame: Optional[str] = None):
@@ -27,7 +36,7 @@ class DebugMarkerPublisher(GiskardBehavior):
         else:
             self.map_frame = map_frame
         self.tf_pub = ros_node.create_publisher(TFMessage, tf_topic, 10)
-        self.marker_pub = ros_node.create_publisher(MarkerArray, '~visualization_marker_array', 10)
+        self.marker_pub = ros_node.create_publisher(MarkerArray, f'{ros_node.get_name()}/visualization_marker_array', 10)
 
     @record_time
     def setup(self, timeout):

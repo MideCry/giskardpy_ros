@@ -1,5 +1,5 @@
 from line_profiler import profile
-from py_trees import Status
+from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import PreemptedException
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler

@@ -3,11 +3,9 @@ from enum import Enum
 from typing import Optional, List, Dict, Union
 
 from line_profiler import profile
-from tf.transformations import rotation_matrix, quaternion_from_matrix
 
 import giskardpy.casadi_wrapper as cas
 import numpy as np
-import rospy
 from geometry_msgs.msg import Vector3, Point, PoseStamped, Pose
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from std_msgs.msg import ColorRGBA
@@ -17,7 +15,7 @@ from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions, Collision
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from giskardpy_ros.ros2.ros1_interface import wait_for_publisher, wait_for_topic_to_appear
+from giskardpy_ros.ros2.ros2_interface import wait_for_publisher, wait_for_topic_to_appear
 from giskardpy.model.links import Link
 from giskardpy_ros import ros_node
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -51,7 +49,9 @@ class ROSMsgVisualization:
                                           VisualizationMode.CollisionsFrameLocked,
                                           VisualizationMode.CollisionsDecomposedFrameLocked]
         qos_profile = QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
-        self.publisher = ros_node.create_publisher(MarkerArray, '~visualization_marker_array', qos_profile)
+        self.publisher = ros_node.create_publisher(MarkerArray,
+                                                   f'{ros_node.get_name()}/visualization_marker_array',
+                                                   qos_profile)
         wait_for_publisher(self.publisher)
         self.marker_ids = {}
         if tf_frame is None:
@@ -77,7 +77,7 @@ class ROSMsgVisualization:
     @profile
     def create_world_markers(self, name_space: str = 'world', marker_id_offset: int = 0) -> List[Marker]:
         markers = []
-        time_stamp = rospy.Time()
+        time_stamp = ros_node.get_clock().now().to_msg()
         if self.mode in [VisualizationMode.Visuals, VisualizationMode.VisualsFrameLocked]:
             links = god_map.world.link_names
         else:

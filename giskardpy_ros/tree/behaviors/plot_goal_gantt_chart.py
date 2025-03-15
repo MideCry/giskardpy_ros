@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 from line_profiler import profile
-from py_trees import Status
+from py_trees.common import Status
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode

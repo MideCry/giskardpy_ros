@@ -1,8 +1,7 @@
 import traceback
 from typing import List, Union, Tuple
 
-import genpy
-from py_trees import Status
+from py_trees.common import Status
 
 import giskard_msgs.msg as giskard_msgs
 import giskardpy.casadi_wrapper as cas
@@ -84,7 +83,7 @@ class ParseActionGoal(GiskardBehavior):
             get_middleware().logwarn(f'No {EndMotion.__name__} monitor specified. Motion can\'t end successfully.')
 
 
-def get_ros_msgs_constant_name_by_value(ros_msg_class: genpy.Message, value: Union[str, int, float]) -> str:
+def get_ros_msgs_constant_name_by_value(ros_msg_class, value: Union[str, int, float]) -> str:
     for attr_name in dir(ros_msg_class):
         if not attr_name.startswith('_'):
             attr_value = getattr(ros_msg_class, attr_name)

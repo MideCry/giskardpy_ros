@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from line_profiler import profile
-from py_trees import Status
+from py_trees.common import Status
 
 from giskardpy.god_map import god_map
 from giskardpy.model.trajectory import Trajectory

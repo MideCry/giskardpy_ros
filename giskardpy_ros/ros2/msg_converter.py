@@ -2,18 +2,25 @@ import builtins
 import json
 from typing import Optional, Union, List, Dict, Any
 
+import numpy as np
+from geometry_msgs.msg import TransformStamped
 from line_profiler import profile
 
 import giskardpy.casadi_wrapper as cas
 import geometry_msgs.msg as geometry_msgs
-import visualization_msgs.msg as visualization_msgs
-import std_msgs.msg as std_msgs
-import sensor_msgs.msg as sensor_msgs
-import trajectory_msgs.msg as trajectory_msgs
-import tf2_msgs.msg as tf2_msgs
-
 import giskard_msgs.msg as giskard_msgs
+import sensor_msgs.msg as sensor_msgs
+import std_msgs.msg as std_msgs
+import tf2_msgs.msg as tf2_msgs
+import trajectory_msgs.msg as trajectory_msgs
+import visualization_msgs.msg as visualization_msgs
 from giskard_msgs.msg import GiskardError
+from rclpy.duration import Duration
+from rclpy_message_converter.message_converter import \
+    convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
+    convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
+
+import giskardpy.casadi_wrapper as cas
 from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException
@@ -23,23 +30,22 @@ from giskardpy.model.joints import MovableJoint
 from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.model.world import WorldTree
-
-from rclpy_message_converter.message_converter import \
-    convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
-    convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
-
 from giskardpy.motion_statechart.monitors.monitors import EndMotion, CancelMotion, Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
-from giskardpy_ros.ros1.visualization_mode import VisualizationMode
+from giskardpy_ros import ros_node
+from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 
 
 # TODO probably needs some consistency check
 # 1. weights are same as in message
 
 def is_ros_message(obj: Any) -> bool:
-    return isinstance(obj, Message)
+    return (
+        hasattr(obj, '__slots__') and
+        hasattr(obj, 'get_fields_and_field_types')
+    )
 
 
 # %% to ros
@@ -178,7 +184,7 @@ def trans_matrix_to_transform_stamped(data: cas.TransMatrix) -> geometry_msgs.Tr
     transform_stamped.child_frame_id = data.child_frame
     position = data.to_position().to_np()
     orientation = data.to_rotation().to_quaternion().to_np()
-    transform_stamped.transform.translation = geometry_msgs.Vector3(x=position[0], y=position[1], z=position[2])
+    transform_stamped.transform.translation = geometry_msgs.Point(x=position[0], y=position[1], z=position[2])
     transform_stamped.transform.rotation = geometry_msgs.Quaternion(x=orientation[0], y=orientation[1],
                                                                     z=orientation[2], w=orientation[3])
     return transform_stamped
@@ -186,17 +192,17 @@ def trans_matrix_to_transform_stamped(data: cas.TransMatrix) -> geometry_msgs.Tr
 
 def trajectory_to_ros_trajectory(data: Trajectory,
                                  sample_period: float,
-                                 start_time: Union[rospy.Duration, float],
+                                 start_time: Union[Duration, float],
                                  joints: List[MovableJoint],
                                  fill_velocity_values: bool = True) -> trajectory_msgs.JointTrajectory:
     if isinstance(start_time, (int, float)):
-        start_time = rospy.Duration(start_time)
+        start_time = Duration(seconds=start_time)
     trajectory_msg = trajectory_msgs.JointTrajectory()
     trajectory_msg.header.stamp = start_time
     trajectory_msg.joint_names = []
     for i, (time, traj_point) in enumerate(data.items()):
         p = trajectory_msgs.JointTrajectoryPoint()
-        p.time_from_start = rospy.Duration(time * sample_period)
+        p.time_from_start = Duration(time * sample_period)
         for joint in joints:
             free_variables = joint.get_free_variable_names()
             for free_variable in free_variables:
@@ -219,7 +225,7 @@ def trajectory_to_ros_trajectory(data: Trajectory,
 def world_to_tf_message(world: WorldTree, include_prefix: bool) -> tf2_msgs.TFMessage:
     tf_msg = tf2_msgs.TFMessage()
     tf = world._fk_computer.compute_tf()
-    current_time = rospy.get_rostime()
+    current_time = ros_node.get_clock().now().to_msg()
     tf_msg.transforms = create_tf_message_batch(len(world._fk_computer.tf))
     for i, (parent_link_name, child_link_name) in enumerate(world._fk_computer.tf):
         pose = tf[i]
