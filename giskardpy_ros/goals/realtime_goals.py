@@ -1035,7 +1035,7 @@ class FollowNavPath(Goal):
 #         return result
 #
 #    def check_laser_scan_age(self):
-        raise NotImplementedError()
+#         raise NotImplementedError()
         #         current_time = rospy.get_rostime().to_sec()
 #         for id_, scan in self.last_scan.items():
 #             base_laser_age = current_time - scan.header.stamp.to_sec()
