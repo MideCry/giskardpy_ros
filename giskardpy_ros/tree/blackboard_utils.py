@@ -24,6 +24,8 @@ class GiskardBlackboard(Client):
     world_action_server: ActionServerHandler
     ros_visualizer: ROSMsgVisualization
     fill_trajectory_velocity_values: bool
+    control_loop_max_hz: float
+    simulation_max_hz: float
     exception: Optional[Exception]
 
     def __init__(self, *, name: typing.Optional[str] = None, namespace: typing.Optional[str] = None):

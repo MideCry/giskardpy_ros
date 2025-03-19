@@ -42,6 +42,13 @@ from giskardpy.model.collision_world_syncer import Collisions, Collision, Collis
 from giskardpy.model.joints import OneDofJoint, OmniDrive, DiffDrive, Joint
 from giskardpy.motion_graph.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
     PositionReached, PointingAt
+from giskardpy.motion_graph.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
+    DistanceMonitor
+from giskardpy.motion_graph.monitors.joint_monitors import JointGoalReached
+from giskardpy.motion_graph.monitors.monitors import Monitor
+from giskardpy.motion_graph.monitors.overwrite_state_monitors import SetSeedConfiguration
+from giskardpy.motion_graph.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
+    PositionReached, PointingAt
 from giskardpy.motion_graph.monitors.joint_monitors import JointGoalReached
 from giskardpy.motion_graph.monitors.monitors import Monitor
 from giskardpy.motion_graph.monitors.overwrite_state_monitors import SetSeedConfiguration
@@ -489,6 +496,10 @@ class GiskardTester:
         CartesianPositionStraight.__name__: PositionReached,
         AlignPlanes.__name__: VectorsAligned,
         Pointing.__name__: PointingAt,
+        AlignPerpendicular.__name__: PerpendicularMonitor,
+        AngleGoal.__name__: AngleMonitor,
+        HeightGoal.__name__: HeightMonitor,
+        DistanceGoal.__name__: DistanceMonitor,
     }
 
     def add_monitor_for_everything(self):

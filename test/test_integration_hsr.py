@@ -357,7 +357,7 @@ class TestConstraints:
         kitchen_setup.allow_self_collision()
         kitchen_setup.execute()
 
-    def test_open_fridge_sequence_simple(self, kitchen_setup: HSRTestWrapper):
+    def test_open_fridge_sequence_simple(self, kitchen_setup: HSRTester):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
         handle_name = 'iai_fridge_door_handle'
         camera_link = 'head_rgbd_sensor_link'

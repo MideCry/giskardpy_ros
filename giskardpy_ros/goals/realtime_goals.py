@@ -228,6 +228,7 @@ class CarryMyBullshit(Goal):
         # root_V_tangent = cas.Vector3([tangent.x, tangent.y, 0])
         tip_V_pointing_axis = cas.Vector3(self.tip_V_pointing_axis)
 
+
         if self.drive_back:
             map_P_human = root_P_goal_point
         else:
@@ -369,6 +370,9 @@ class CarryMyBullshit(Goal):
             end = EndMotion(name='done')
             end.start_condition = goal_reached.get_observation_state_expression()
             self.add_monitor(end)
+        self.connect_start_condition_to_all_tasks(start_condition)
+        self.connect_hold_condition_to_all_tasks(hold_condition)
+        self.connect_end_condition_to_all_tasks(end_condition)
 
     def clean_up(self):
         if CarryMyBullshit.target_sub is not None:
@@ -1138,3 +1142,21 @@ class FollowNavPath(Goal):
 #         m_line.frame_locked = True
 #         ms.markers.append(m_line)
 #         FollowNavPath.pub.publish(ms)
+
+    def publish_tracking_radius(self):
+        ms = MarkerArray()
+        m_line = Marker()
+        m_line.action = m_line.ADD
+        m_line.ns = 'traj_tracking_radius'
+        m_line.id = 1332
+        m_line.type = m_line.CYLINDER
+        m_line.header.frame_id = str(self.tip.short_name)
+        m_line.scale.x = self.traj_tracking_radius * 2
+        m_line.scale.y = self.traj_tracking_radius * 2
+        m_line.scale.z = 0.05
+        m_line.color.a = 1
+        m_line.color.b = 1
+        m_line.pose.orientation.w = 1
+        m_line.frame_locked = True
+        ms.markers.append(m_line)
+        FollowNavPath.pub.publish(ms)

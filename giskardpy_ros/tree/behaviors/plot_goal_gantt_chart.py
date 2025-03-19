@@ -1,6 +1,6 @@
 import traceback
 from copy import copy
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,6 +13,7 @@ from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import LifeCycleState
 from giskardpy_ros.tree.behaviors import plot_motion_graph
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy.utils.decorators import record_time
 from giskardpy.utils.utils import create_path
@@ -74,6 +75,7 @@ class PlotGanttChart(GiskardBehavior):
         plt.ylim(-0.8, num_bars - 1 + 0.8)
         plt.yticks([thing_positions[name] for name in thing_names], thing_names)
         plt.gca().yaxis.tick_right()
+        plt.grid()
 
         plt.subplots_adjust(left=0.05, right=0.75)
         plt.tight_layout()

@@ -5,8 +5,7 @@ defaults:
 on:
   push:
 #    branches:
-#      - master
-#      - devel
+#      - ros2-jazzy-main
   pull_request:
 #    branches:
 #      - master
@@ -62,18 +61,18 @@ jobs:
     uses: ./.github/workflows/reusable_robot_ci.yml
     with:
       robot: pr2
-#      test1: test_integration_pr2.py::TestCollisionAvoidanceGoals
-#      test2: test_integration_pr2.py::TestWorldManipulation
-#      test3: test_integration_pr2.py::TestSelfCollisionAvoidance
-#      test4: test_integration_pr2.py::TestInfoServices
-      test1: test_integration_pr2.py::TestJointGoals
-#      test6: test_integration_pr2.py::TestMonitors
+#      test1: test/test_integration_pr2.py::TestCollisionAvoidanceGoals
+#      test2: test/test_integration_pr2.py::TestWorld
+#      test3: test/test_integration_pr2.py::TestSelfCollisionAvoidance
+#      test4: test/test_integration_pr2.py::TestInfoServices
+      test1: test/test_integration_pr2.py::TestJointGoals
+#      test6: test/test_integration_pr2.py::TestMonitors
 #  tiago:
 #    needs: [ build_dependencies ]
 #    uses: ./.github/workflows/reusable_robot_ci.yml
 #    with:
 #      robot: tiago
-#      test1: test_integration_tiago_stand_alone.py::TestConstraints
-#      test2: test_integration_tiago_stand_alone.py::TestJointGoals
-#      test3: test_integration_tiago_stand_alone.py::TestCollisionAvoidance
-#      test4: test_integration_tiago_stand_alone.py::TestCartGoals
+#      test1: test/test_integration_tiago_stand_alone.py::TestConstraints
+#      test2: test/test_integration_tiago_stand_alone.py::TestJointGoals
+#      test3: test/test_integration_tiago_stand_alone.py::TestCollisionAvoidance
+#      test4: test/test_integration_tiago_stand_alone.py::TestCartGoals

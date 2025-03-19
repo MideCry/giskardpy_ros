@@ -17,9 +17,9 @@ from shape_msgs.msg import SolidPrimitive
 
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.action import World, Move
-from giskard_msgs.action._move import Move_Result
+from giskard_msgs.action._move import Move_Result, Move_Feedback
 from giskard_msgs.action._world import World_Result, World_Goal
-from giskard_msgs.msg import WorldBody, CollisionEntry, MotionGoal, Monitor, GiskardError, LinkName
+from giskard_msgs.msg import WorldBody, CollisionEntry, MotionGoal, Monitor, GiskardError, LinkName, ExecutionState
 from giskard_msgs.srv import GetGroupInfo, GetGroupNames, DyeGroup, DyeGroup_Response, DyeGroup_Request, \
     GetGroupNames_Response, GetGroupInfo_Response, GetGroupInfo_Request, GetGroupNames_Request
 from giskardpy.data_types.data_types import goal_parameter
@@ -368,6 +368,8 @@ class MotionStatechartNodeWrapper:
         """
         if name is None:
             name = f'{self._name_prefix}{len(self._motion_graph_nodes)} [{class_name}]'
+        if [x for x in self._goals if x.name == name]:
+            raise KeyError(f'Motion Goal named {name} already exists.')
         if [x for x in self._goals if x.name == name]:
             raise KeyError(f'Motion Goal named {name} already exists.')
         motion_goal = MotionStatechartNode()
@@ -2218,6 +2220,7 @@ class GiskardWrapper:
     _goal_handle: Optional[ClientGoalHandle]
     _goal_result: Optional[Move_Result]
     _result_future: Optional[Future]
+    last_feedback: Move_Feedback = None
     last_execution_state: ExecutionState = None
 
     def __init__(self, node_handle: Node, giskard_node_name: str = 'giskard'):
@@ -2367,7 +2370,7 @@ class GiskardWrapper:
     def _send_action_goal(self, goal_type: int) -> Move_Result:
         goal = self._create_action_goal()
         goal.type = goal_type
-        return self._client.send_goal(goal)
+        return self._client.send_goal_async(goal)
 
     def _create_action_goal(self) -> Move.Goal:
         if not self.motion_goals._collision_entries:
@@ -2400,7 +2403,7 @@ class GiskardWrapper:
     async def get_result(self):
         return await self._client.get_result()
 
-    def get_end_motion_reason(self, move_result: Optional[MoveResult] = None, show_all: bool = False) \
+    def get_end_motion_reason(self, move_result: Optional[Move_Result] = None, show_all: bool = False) \
             -> Dict[str, bool]:
         """
         Analyzes a MoveResult msg to return a list of all monitors that hindered the EndMotion Monitors from becoming active.

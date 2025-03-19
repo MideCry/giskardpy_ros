@@ -136,12 +136,12 @@ def dlr_kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
         kitchen_pose.pose.position.y = 2
         kitchen_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle([0,0,1], -np.pi/2))
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=kitchen_urdf,
                                       pose=kitchen_pose)
     else:
         kitchen_pose = tf.lookup_pose('map', 'iai_kitchen/world')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=ros2_interface.get_robot_description('kitchen_description'),
                                       pose=kitchen_pose,
                                       js_topic='/kitchen/joint_states',
                                       set_js_topic='/kitchen/cram_joint_states')

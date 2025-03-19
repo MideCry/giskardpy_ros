@@ -112,7 +112,7 @@ class ControlLoop(AsyncBehavior):
         self.remove_child(self.send_controls)
 
     def add_projection_behaviors(self):
-        # self.publish_state.add_visualization_marker_behavior(mode=VisualizationMode.CollisionsDecomposed)
+        # self.publish_state.add_visualization_marker_behavior()
         self.insert_child(self.projection_synchronization_sir, 1)
         self.insert_child(SuccessIsRunning('sir', self.time), -2)
         self.insert_child(SuccessIsRunning('sir', self.kin_sim), -2)

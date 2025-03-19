@@ -48,6 +48,8 @@ class SetMoveResult(GiskardBehavior):
                     get_middleware().loginfo(f'{self.context} succeeded.')
                 else:
                     get_middleware().logwarn(f'{self.context} failed: {move_result.error.msg}.')
+
+        move_result.execution_state = giskard_state_to_execution_state()
         GiskardBlackboard().move_action_server.result_msg = move_result
         move_result.execution_state = giskard_state_to_execution_state()
         return Status.SUCCESS

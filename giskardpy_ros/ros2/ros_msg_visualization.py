@@ -16,12 +16,14 @@ from visualization_msgs.msg import MarkerArray, Marker
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions, Collision
+from giskardpy.model.trajectory import Trajectory
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.model.links import Link
 from giskardpy.utils.decorators import clear_memo
 from giskardpy_ros.ros2.ros2_interface import wait_for_publisher, wait_for_topic_to_appear
 from giskardpy.model.links import Link
 from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.decorators import memoize
 from giskardpy.model.trajectory import Trajectory

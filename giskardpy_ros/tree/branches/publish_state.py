@@ -2,7 +2,7 @@ from typing import Optional
 
 from py_trees.composites import Sequence
 
-from giskardpy_ros.ros1.ros_msg_visualization import VisualizationMode
+from giskardpy_ros.ros2.ros_msg_visualization import VisualizationMode
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisher
 from giskardpy_ros.tree.behaviors.publish_debug_expressions import PublishDebugExpressions
 from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback

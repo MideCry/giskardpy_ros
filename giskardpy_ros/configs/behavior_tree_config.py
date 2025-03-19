@@ -3,11 +3,12 @@ from typing import Optional
 
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
-from giskardpy_ros.ros1.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
+from giskardpy_ros.ros1.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 from giskardpy_ros.tree.control_modes import ControlModes
+from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.utils.utils import is_running_in_pytest
 
 
