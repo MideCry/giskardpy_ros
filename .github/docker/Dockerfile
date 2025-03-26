@@ -22,7 +22,7 @@ RUN apt-get install -y \
             sudo \
             pkg-config
 
-RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
 # Install virtualenvwrapper \
 # and create giskardpy venv
