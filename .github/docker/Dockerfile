@@ -22,7 +22,8 @@ RUN apt-get install -y \
             sudo \
             pkg-config
 
-RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc && \
+    echo "source /usr/share/colcon_cd/function/colcon_cd.sh" >> ~/.bashrc
 
 # Install virtualenvwrapper \
 # and create giskardpy venv
