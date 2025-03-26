@@ -150,7 +150,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'giskard_ws/src/giskardpy_ros'
-          repository: SemRoCo/giskardpy_ros
 #      - name: Checkout iai_maps
 #        uses: actions/checkout@v3
 #        with:
@@ -209,7 +208,7 @@ jobs:
           sudo apt-get update
           rosdep install --from-paths ./ -i -y --rosdistro ${ROS_DISTRO}
           colcon build
-          source giskard_ws/install/setup.bash
+          source install/setup.bash
           echo 'source $GITHUB_WORKSPACE/giskard_ws/install/setup.bash' >> ~/.bashrc
       #tests ===========================================================================================================
       - if: ${{ (always()) && (runner.debug == '1') }}
