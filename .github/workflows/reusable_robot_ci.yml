@@ -42,15 +42,17 @@ on:
         type: string
 jobs:
   test_standalone:
-    runs-on: ubuntu-24.04
-#    container:
-#      image: osrf/ros:jazzy-desktop
+    runs-on: ubuntu-latest
+    container: # Login and start specified container image. Ubuntu20.04 isn't supported on GitHub-Workflow as of 04.2025
+      image: ghcr.io/${{ needs.to-lowercase.outputs.repo_lowercase }}:jazzy
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         qp_solver: [qpalm, qpSWIFT]
     env:
       QP_SOLVER: ${{ matrix.qp_solver }}
-
     steps:
       - uses: ros-tooling/setup-ros@v0.7
         with:
@@ -147,8 +149,8 @@ jobs:
           source giskard_ws/install/setup.bash
           echo 'source $GITHUB_WORKSPACE/giskard_ws/install/setup.bash' >> ~/.bashrc
       #tests ===========================================================================================================
-#      - if: ${{ (always()) && (runner.debug == '1') }}
-      - if: ${{ (always()) }}
+      - if: ${{ (always()) && (runner.debug == '1') }}
+#      - if: ${{ (always()) }}
         name: Setup upterm session
         uses: lhotari/action-upterm@v1
       - name: run ${{ inputs.test1 }}

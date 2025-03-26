@@ -26,8 +26,6 @@ on:
         required: false
         type: boolean
 jobs:
-  build_dependencies:
-    uses: ./.github/workflows/build_dependencies.yml
 #  hsr:
 #    needs: [ build_dependencies ]
 #    uses: ./.github/workflows/reusable_robot_ci.yml
@@ -57,7 +55,6 @@ jobs:
 #      test6: test/test_integration_pr2.py::TestFeatureFunctions
 #      test7: test/test_integration_pr2.py::TestEndMotionReason
   pr2_part2:
-    needs: [ build_dependencies ]
     uses: ./.github/workflows/reusable_robot_ci.yml
     with:
       robot: pr2
