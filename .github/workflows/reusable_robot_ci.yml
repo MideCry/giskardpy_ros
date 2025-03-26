@@ -66,28 +66,6 @@ jobs:
     env:
       QP_SOLVER: ${{ matrix.qp_solver }}
     steps:
-      - uses: ros-tooling/setup-ros@v0.7
-        with:
-          use-ros2-testing: false
-          required-ros-distributions: jazzy
-      #load cache ------------------------------------------------------------------------------------------------------
-      - name: load venv
-        id: load-venv
-        uses: actions/cache@v3
-        with:
-          path: ~/venv
-          key: venv
-      - name: load bpb # -----------------------------------------------------------------------------------------------
-        id: load-bpb
-        uses: actions/cache@v3
-        with:
-          path: ~/bpb
-          key: bpb
-      - name: add bpb to bashrc
-        run: |
-          source ~/venv/bin/activate
-          cd ~/bpb/bullet3
-          echo 'export PYTHONPATH=${PYTHONPATH}':"${PWD}/build_cmake/better_python:${PWD}/examples/pybullet" >> ~/.bashrc
       #pull github deps ================================================================================================
       - name: Create workspace I
         run: |
