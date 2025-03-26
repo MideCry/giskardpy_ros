@@ -43,17 +43,20 @@ RUN workon giskardpy && \
     pip3 install -r requirements.txt
 
 # Install qpSWIFT
-RUN cd ~ && \
+RUN workon giskardpy &&  \
+    cd ~ && \
     git clone https://github.com/SemRoCo/qpSWIFT && \
     cd qpSWIFT && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --config Release && \
     cmake --build build --target install && \
     cd python && \
-    python3 setup.py install
+    echo -e "[build-system]\nrequires = [\"setuptools\", \"wheel\", \"numpy\"]\nbuild-backend = \"setuptools.build_meta\"" > pyproject.toml && \
+    pip3 install .
 
 # Install betterpybullet
-RUN mkdir -p ~/bpb && \
+RUN workon giskardpy && \
+    mkdir -p ~/bpb && \
     cd ~/bpb && \
     git clone -b jazzy https://github.com/SemRoCo/bullet3.git && \
     cd bullet3 && \
