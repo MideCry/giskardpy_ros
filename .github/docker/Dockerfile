@@ -35,7 +35,7 @@ RUN mkvirtualenv giskardpy --system-site-packages; exit 0
 RUN echo "source /root/venvs/giskardpy/bin/activate" >> ~/.bashrc
 
 # Download python-requirements
-# and install in venv
+# and install in giskardpy venv
 RUN curl -fsSL $DOWNLOAD_URL -o requirements.txt
 RUN workon giskardpy && \
     sudo apt-get install libeigen3-dev && \
