@@ -17,6 +17,9 @@ RUN apt-get install -y \
             python3-venv  \
             python3-virtualenvwrapper \
             python3-numpy \
+            ros-jazzy-ros2-control \
+            ros-jazzy-ros2-controllers \
+            ros-jazzy-rclpy-message-converter \
             git-all  \
             cmake \
             sudo \
