@@ -3,3 +3,5 @@ numpy>=1.22.2
 pytest>=4.6.9
 matplotlib>=3.6.2
 hypothesis>=6.60.0
+networkx>=3.4.2
+graphviz>=0.20.3
