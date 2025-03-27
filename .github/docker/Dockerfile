@@ -11,7 +11,9 @@ ENV WORKON_HOME=/root/venvs
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin apt-get -y install tzdata
 RUN apt-get install -y \
-            curl  \
+            curl \
+            jq \
+            gh \
             python3  \
             python3-pip  \
             python3-venv  \
@@ -20,7 +22,7 @@ RUN apt-get install -y \
             ros-jazzy-ros2-control \
             ros-jazzy-ros2-controllers \
             ros-jazzy-rclpy-message-converter \
-            git-all  \
+            git-all \
             cmake \
             sudo \
             pkg-config
