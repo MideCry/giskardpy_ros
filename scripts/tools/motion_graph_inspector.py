@@ -1,12 +1,12 @@
 import sys
-import rospy
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QLabel
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtCore import Qt, QTimer, QRectF
+from PyQt5.QtCore import QTimer, QRectF
 from giskard_msgs.msg import ExecutionState
 from PyQt5.QtCore import QMutex, QMutexLocker
 
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plot_motion_graph import ExecutionStateToDotParser
 
 
@@ -46,7 +46,7 @@ class DotGraphViewer(QWidget):
         self.last_goal_id = -1
 
         # Initialize the ROS node
-        rospy.init_node('motion_statechart_viewer', anonymous=True)
+        rospy.init_node('motion_statechart_viewer')
 
         # Set up the GUI components
         self.svg_widget = MySvgWidget(self)
@@ -116,8 +116,9 @@ class DotGraphViewer(QWidget):
     def refresh_topics(self) -> None:
         if self.topic_selector.currentText() == '':
             # Find all topics of type ExecutionState
-            topics = rospy.get_published_topics()
-            execution_state_topics = [topic for topic, msg_type in topics if msg_type == 'giskard_msgs/ExecutionState']
+            topics = rospy.node.get_topic_names_and_types()
+            target_type = 'giskard_msgs/msg/ExecutionState'
+            execution_state_topics = [name for name, types in topics if target_type in types]
 
             self.topic_selector.clear()
             self.topic_selector.addItems(execution_state_topics)
@@ -133,7 +134,8 @@ class DotGraphViewer(QWidget):
     def on_topic_selected(self, index: int) -> None:
         topic_name = self.topic_selector.currentText()
         if topic_name:
-            rospy.Subscriber(topic_name, ExecutionState, self.on_new_message_received, queue_size=50)
+            rospy.node.create_subscription(msg_type=ExecutionState, topic=topic_name,
+                                           callback=self.on_new_message_received, qos_profile=10)
 
     def on_new_message_received(self, msg: ExecutionState) -> None:
         if len(self.goals) > 0:
