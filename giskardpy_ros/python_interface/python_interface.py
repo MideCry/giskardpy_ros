@@ -921,7 +921,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param min_distance: set this to overwrite default distances
         """
         if min_distance is None:
-            min_distance = -1
+            min_distance = -1.
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.distance = min_distance
