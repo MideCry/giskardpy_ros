@@ -328,7 +328,7 @@ class TestJointGoals:
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
 
-        zero_pose.api.monitors.add_api.monitors.add_set_seed_configuration(zero_pose.better_pose)
+        zero_pose.api.monitors.add_set_seed_configuration(zero_pose.better_pose)
         done = zero_pose.api.motion_goals.add_joint_position(goal_state=js)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(done)
@@ -412,7 +412,7 @@ class TestJointGoals:
         zero_pose.api.add_default_end_motion_conditions()
         zero_pose.execute(add_monitors_for_everything=False)
         js = {'torso_lift_joint': 0.32}
-        zero_pose.api.motion_goals.add_joint_position(js, add_monitor=False)
+        zero_pose.api.motion_goals.add_joint_position(js)
         zero_pose.execute()
 
         goal_js = {'r_elbow_flex_joint': r_elbow_flex_joint_limits[1] + 0.2,
