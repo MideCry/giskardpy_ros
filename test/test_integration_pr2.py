@@ -10,66 +10,37 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Po
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
 from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName
-from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, QuaternionStamped
 from numpy import pi
 from rclpy.duration import Duration
 from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
-import giskard_msgs.msg as giskard_msgs
-from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName
-from giskardpy.middleware import get_middleware
-from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy.motion_graph.monitors.set_prediction_horizon import SetQPSolver
-from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
-from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface
-from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 
 from giskardpy.data_types.data_types import PrefixName
-from giskardpy.data_types.exceptions import GiskardException, VelocityLimitUnreachableException, \
-    MaxTrajectoryLengthException, UnknownGoalException, GoalInitalizationException, LocalMinimumException, \
-    LocalMinimumException, \
+from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
     DuplicateNameException, CorruptMeshException, UnknownGroupException, UnknownLinkException, \
     InvalidWorldOperationException, CorruptShapeException, TransformException, CorruptURDFException, \
     SelfCollisionViolatedException, HardConstraintsViolatedException, PreemptedException, InvalidGoalException, \
-    EmptyProblemException, SetupException
-from giskardpy.goals.cartesian_goals import RelativePositionSequence
-from giskardpy.goals.collision_avoidance import CollisionAvoidanceHint
-from giskardpy.goals.goals_tests import DebugGoal, CannotResolveSymbol
-from giskardpy.goals.joint_goals import JointVelocityLimit, UnlimitedJointGoal
-from giskardpy.goals.tracebot import InsertCylinder
-from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
-from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
-from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
-from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
-from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
-from giskardpy.goals.weight_scaling_goals import MaxManipulabilityLinWeight, BaseArmWeightScaling
+    EmptyProblemException, SetupException, UnknownJointException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy.motion_graph.monitors.set_prediction_horizon import SetQPSolver
-from giskardpy.motion_graph.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
+from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
+from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
+from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
+from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
+from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
+from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
+from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
+from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit, UnlimitedJointGoal
+from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface
-from giskardpy_ros.goals.realtime_goals import FollowNavPath
 from giskardpy_ros.ros2 import rospy
-from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
-from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
-from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit, UnlimitedJointGoal
-from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
-from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface, WorldWithPR2Config
-from giskardpy_ros.python_interface.old_python_interface import OldGiskardWrapper
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester, compare_points
@@ -504,7 +475,7 @@ class TestMonitors:
         zero_pose.api.monitors.add_end_motion(start_condition=end_monitor)
         zero_pose.execute(add_monitors_for_everything=False)
 
-    def test_reset(self, zero_pose: PR2TestWrapper):
+    def test_reset(self, zero_pose: PR2Tester):
         g1 = zero_pose.motion_goals.add_joint_position(name='joint goal 1',
                                                        goal_state=zero_pose.better_pose)
         zero_pose.update_end_condition(node_name=g1, condition=g1)
@@ -556,7 +527,7 @@ class TestMonitors:
         np.testing.assert_almost_equal(current_pose.pose.position.x, 1, decimal=2)
         np.testing.assert_almost_equal(current_pose.pose.position.y, 1, decimal=2)
 
-    def test_thesis_example1(self, zero_pose: PR2TestWrapper):
+    def test_thesis_example1(self, zero_pose: PR2Tester):
         pose1 = PoseStamped()
         pose1.header.frame_id = 'map'
         pose1.pose.position.x = 1
@@ -625,14 +596,14 @@ class TestMonitors:
         np.testing.assert_almost_equal(current_pose.pose.position.x, 1, decimal=2)
         np.testing.assert_almost_equal(current_pose.pose.position.y, 1, decimal=2)
 
-    def test_true_monitor(self, zero_pose: PR2TestWrapper):
+    def test_true_monitor(self, zero_pose: PR2Tester):
         done = zero_pose.monitors.add_monitor(class_name=TrueMonitor.__name__, name='Node1')
         zero_pose.monitors.add_monitor(class_name=TrueMonitor.__name__, name='Node Name')
         zero_pose.allow_all_collisions()
         zero_pose.monitors.add_end_motion(start_condition=done)
         zero_pose.execute(add_local_minimum_reached=False)
 
-    def test_cart_goal_sequence_absolute(self, zero_pose: PR2TestWrapper):
+    def test_cart_goal_sequence_absolute(self, zero_pose: PR2Tester):
         pose1 = PoseStamped()
         pose1.header.frame_id = 'map'
         pose1.pose.position.x = 1
@@ -999,7 +970,7 @@ class TestMonitors:
                                                  tip_link='base_footprint')
         compare_poses(current_pose.pose, base_goal.pose)
 
-    def test_joint_and_base_goal(self, zero_pose: PR2TestWrapper):
+    def test_joint_and_base_goal(self, zero_pose: PR2Tester):
         js = {
             'torso_lift_joint': 0.2999225173357618,
             'head_pan_joint': 0.041880780651479044,

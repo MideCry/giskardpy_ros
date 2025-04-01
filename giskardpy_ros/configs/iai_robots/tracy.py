@@ -1,7 +1,6 @@
 from typing import Optional
 
 import numpy as np
-import rospy
 
 from giskardpy.model.collision_avoidance_config import LoadSelfCollisionMatrixConfig
 from giskardpy.model.world_config import WorldWithFixedRobot

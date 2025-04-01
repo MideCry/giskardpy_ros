@@ -1,7 +1,7 @@
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
-from giskardpy.motion_graph.monitors.monitors import CancelMotion
+from giskardpy.motion_statechart.monitors.monitors import CancelMotion
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard

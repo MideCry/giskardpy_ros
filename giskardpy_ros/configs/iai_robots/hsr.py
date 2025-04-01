@@ -1,5 +1,4 @@
 import numpy as np
-import rospy
 
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldConfig

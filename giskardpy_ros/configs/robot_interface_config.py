@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Union
 
+import controller_manager as cm
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import ListControllers_Response
 from geometry_msgs.msg import Twist
@@ -10,19 +11,17 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
+from giskardpy.data_types.data_types import PrefixName, Derivatives
+from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
+from giskardpy.model.world import WorldTree
 from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.msg_converter import msg_type_as_str
 from giskardpy_ros.ros2.ros2_interface import search_for_subscriber_of_node_with_type, get_parameters, \
-    search_for_publisher_of_node_with_type, search_for_subscribers_of_type, search_for_unique_publisher_of_type, \
+    search_for_publisher_of_node_with_type, search_for_unique_publisher_of_type, \
     search_for_unique_subscriber_of_type
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 from giskardpy_ros.tree.control_modes import ControlModes
-from giskardpy.data_types.exceptions import SetupException
-from giskardpy.model.world import WorldTree
-from giskardpy.data_types.data_types import PrefixName, Derivatives
-import controller_manager as cm
 
 
 class RobotInterfaceConfig(ABC):
@@ -54,7 +53,7 @@ class RobotInterfaceConfig(ABC):
     def control_mode(self) -> ControlModes:
         return GiskardBlackboard().tree.control_mode
 
-    def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str], sync_in_control_loop: bool = True):
+    def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str] = None, sync_in_control_loop: bool = True):
         """
         Tell Giskard to sync an odometry joint added during by the world config.
         """

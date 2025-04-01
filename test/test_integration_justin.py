@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, PointStamped, Vector3Stamped
+from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 from giskardpy.god_map import god_map
 from giskardpy.qp.qp_controller_config import QPControllerConfig
@@ -11,12 +12,10 @@ from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig, JustinStandaloneInterface, \
     JustinCollisionAvoidanceConfig
-from giskardpy_ros.ros1.visualization_mode import VisualizationMode
-from utils_for_tests import GiskardTestWrapper
-from utils_for_tests import launch_launchfile
+from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 
 
-class JustinTestWrapper(GiskardTestWrapper):
+class JustinTestWrapper(GiskardTester):
     default_pose = {
         "torso1_joint": 0.0,
         "torso2_joint": -0.9,

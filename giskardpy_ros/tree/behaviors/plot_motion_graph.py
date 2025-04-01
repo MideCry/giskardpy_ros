@@ -1,64 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import re
-from collections import defaultdict
-from typing import List, Dict, Tuple, Optional, Union, Set
-
-import pydot
-from line_profiler import profile
-from py_trees.common import Status
-from line_profiler import profile
+from typing import List, Dict, Optional, Union, Set
 
 import giskard_msgs.msg as giskard_msgs
+import pydot
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
+from line_profiler import profile
+from py_trees.common import Status
+
 from giskardpy.data_types.data_types import LifeCycleState, ObservationState
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.monitors.monitors import EndMotion, CancelMotion
 from giskardpy.utils.decorators import record_time
 from giskardpy.utils.utils import create_path
-from giskardpy_ros.ros1.msg_converter import json_str_to_ros_kwargs
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.behaviors.publish_feedback import giskard_state_to_execution_state
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
-from giskardpy.motion_graph.monitors.payload_monitors import CancelMotion
-from giskardpy.motion_graph.monitors.monitor_manager import EndMotion
-from giskardpy.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.tree.behaviors.publish_feedback import giskard_state_to_execution_state
-from giskardpy.utils import logging
-from giskardpy.utils.decorators import record_time, catch_and_raise_to_blackboard
-from giskardpy.utils.utils import create_path, json_str_to_kwargs
 
-
-def extract_monitor_names_from_condition(condition: str) -> List[str]:
-    return re.findall(r"'(.*?)'", condition)
-
-
-def search_for_monitor(monitor_name: str, execution_state: ExecutionState) -> giskard_msgs.Monitor:
-    return [m for m in execution_state.monitors if m.name == monitor_name][0]
-
-
-task_state_to_color: Dict[TaskState, str] = {
-    TaskState.not_started: 'gray',
-    TaskState.running: 'green',
-    TaskState.on_hold: 'orange',
-    TaskState.succeeded: 'palegreen',
-    TaskState.failed: 'red'
-}
-
-monitor_state_to_color: Dict[Tuple[TaskState, int], str] = {
-    (TaskState.not_started, 1): 'darkgreen',
-    (TaskState.running, 1): 'green',
-    (TaskState.on_hold, 1): 'turquoise',
-    (TaskState.succeeded, 1): 'palegreen',
-    (TaskState.failed, 1): 'gray',
-
-    (TaskState.not_started, 0): 'darkred',
-    (TaskState.running, 0): 'red',
-    (TaskState.on_hold, 0): 'orange',
-    (TaskState.succeeded, 0): 'lightpink',
-    (TaskState.failed, 0): 'black'
-}
 
 def extract_node_names_from_condition(condition: str) -> Set[str]:
     matches = re.findall(r'"(.*?)"|\'(.*?)\'', condition)
@@ -407,6 +367,7 @@ class ExecutionStateToDotParser:
                                           arrowtail='normal',
                                           minlen=0,
                                           dir='both', arrowsize=ArrowSize, **kwargs))
+
         return graph
 
 

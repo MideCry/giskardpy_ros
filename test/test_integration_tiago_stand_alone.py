@@ -2,7 +2,6 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-import rospy
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, PointStamped, Vector3Stamped
 
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig

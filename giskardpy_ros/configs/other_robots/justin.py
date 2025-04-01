@@ -1,5 +1,4 @@
 import numpy as np
-import rospy
 
 from giskardpy.data_types.data_types import Derivatives, PrefixName
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig

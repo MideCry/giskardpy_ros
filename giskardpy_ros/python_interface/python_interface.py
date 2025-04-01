@@ -1,67 +1,65 @@
 from __future__ import annotations
+
 import re
 from collections import defaultdict
 from threading import Thread
 from time import sleep
 from typing import Dict, Tuple, Optional, List, Union
 
+import giskard_msgs.msg as giskard_msgs
 import numpy as np
 import rclpy
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, QuaternionStamped
+from giskard_msgs.action import World, Move
+from giskard_msgs.action._move import Move_Result
+from giskard_msgs.action._world import World_Result, World_Goal
+from giskard_msgs.msg import ExecutionState, MotionStatechartNode
+from giskard_msgs.msg import WorldBody, CollisionEntry, GiskardError, LinkName
+from giskard_msgs.srv import GetGroupInfo, GetGroupNames, DyeGroup, DyeGroup_Response, DyeGroup_Request, \
+    GetGroupNames_Response, GetGroupInfo_Response, GetGroupInfo_Request, GetGroupNames_Request
 from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
+from rclpy.action.client import ClientGoalHandle
 from rclpy.client import Client
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
-import giskard_msgs.msg as giskard_msgs
-from giskard_msgs.action import World, Move
-from giskard_msgs.action._move import Move_Result, Move_Feedback
-from giskard_msgs.action._world import World_Result, World_Goal
-from giskard_msgs.msg import WorldBody, CollisionEntry, MotionGoal, Monitor, GiskardError, LinkName, ExecutionState
-from giskard_msgs.srv import GetGroupInfo, GetGroupNames, DyeGroup, DyeGroup_Response, DyeGroup_Request, \
-    GetGroupNames_Response, GetGroupInfo_Response, GetGroupInfo_Request, GetGroupNames_Request
 from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import LocalMinimumException, MaxTrajectoryLengthException
-from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
+from giskardpy.data_types.exceptions import MaxTrajectoryLengthException
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
     CartesianPoseStraight, CartesianPositionStraight
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
-from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
 from giskardpy.motion_statechart.goals.open_close import Close, Open
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits, \
-    MirrorJointPosition
-from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
     PointingAt, VectorsAligned, DistanceToLine
+from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
+    DistanceMonitor
 from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
 from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached, TimeAbove, Alternator, CancelMotion, \
     EndMotion, TrueMonitor, FalseMonitor
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry, SetSeedConfiguration
 from giskardpy.motion_statechart.monitors.payload_monitors import Print, Sleep, \
-    PayloadAlternator, Pulse, CheckMaxTrajectoryLength
+    Pulse, CheckMaxTrajectoryLength
+from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation, \
     CartesianPose, \
     JustinTorsoLimitCart, CartesianVelocityLimit
+from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
+from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits, \
+    MirrorJointPosition
+from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
-from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath
-from giskardpy_ros.ros2 import msg_converter
-from giskardpy_ros.ros2.msg_converter import kwargs_to_json
-
-from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
-from giskardpy_ros.ros2.msg_converter import kwargs_to_json
-from giskardpy_ros.utils.utils import make_world_body_box
-from giskardpy_ros.ros2 import msg_converter
-from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
-from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
-from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
-    DistanceMonitor
-from giskard_msgs.msg import ExecutionState
+from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
+from giskardpy_ros.ros2 import msg_converter
+from giskardpy_ros.ros2.msg_converter import kwargs_to_json
+from giskardpy_ros.ros2.ros2_interface import MyActionClient
+from giskardpy_ros.utils.utils import make_world_body_box
 
 
 class WorldWrapper:
@@ -368,10 +366,6 @@ class MotionStatechartNodeWrapper:
         """
         if name is None:
             name = f'{self._name_prefix}{len(self._motion_graph_nodes)} [{class_name}]'
-        if [x for x in self._goals if x.name == name]:
-            raise KeyError(f'Motion Goal named {name} already exists.')
-        if [x for x in self._goals if x.name == name]:
-            raise KeyError(f'Motion Goal named {name} already exists.')
         motion_goal = MotionStatechartNode()
         motion_goal.name = name
         motion_goal.class_name = class_name
@@ -2215,12 +2209,10 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
 
 class GiskardWrapper:
-    last_execution_state: ExecutionState
     last_feedback: Move.Feedback = None
     _goal_handle: Optional[ClientGoalHandle]
     _goal_result: Optional[Move_Result]
     _result_future: Optional[Future]
-    last_feedback: Move_Feedback = None
     last_execution_state: ExecutionState = None
 
     def __init__(self, node_handle: Node, giskard_node_name: str = 'giskard'):
@@ -2234,8 +2226,8 @@ class GiskardWrapper:
         self.node_handle = node_handle
         self.world = WorldWrapper(node_handle=node_handle,
                                   giskard_node_name=giskard_node_name)
-        self.monitors = MonitorWrapper(robot_name=self)
-        self.motion_goals = MotionGoalWrapper(robot_name=self)
+        self.monitors = MonitorWrapper(self)
+        self.motion_goals = MotionGoalWrapper(self)
         self.clear_motion_goals_and_monitors()
         giskard_topic = f'{giskard_node_name}/command'
         self._client = MyActionClient(node_handle, Move, giskard_topic)
@@ -2370,7 +2362,7 @@ class GiskardWrapper:
     def _send_action_goal(self, goal_type: int) -> Move_Result:
         goal = self._create_action_goal()
         goal.type = goal_type
-        return self._client.send_goal_async(goal)
+        return self._client.send_goal(goal)
 
     def _create_action_goal(self) -> Move.Goal:
         if not self.motion_goals._collision_entries:
@@ -2401,7 +2393,8 @@ class GiskardWrapper:
         return future
 
     async def get_result(self):
-        return await self._client.get_result()
+        self.last_execution_state = await self._client.get_result()
+        return self.last_execution_state
 
     def get_end_motion_reason(self, move_result: Optional[Move_Result] = None, show_all: bool = False) \
             -> Dict[str, bool]:
@@ -2474,8 +2467,7 @@ class GiskardWrapperNode(Node, GiskardWrapper):
                       allow_undeclared_parameters=allow_undeclared_parameters,
                       automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides,
                       enable_logger_service=enable_logger_service)
-        GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name,
-                                avoid_name_conflict=avoid_name_conflict)
+        GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name)
         self.executor = MultiThreadedExecutor()
         self.is_spinning = False
 

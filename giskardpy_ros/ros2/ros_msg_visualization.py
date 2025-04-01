@@ -1,32 +1,24 @@
 from copy import deepcopy
-from enum import Enum
-from line_profiler import profile
-from typing import Optional, List, Dict
 from typing import Optional, List, Dict, Union
 
-from line_profiler import profile
-
-import giskardpy.casadi_wrapper as cas
 import numpy as np
-from geometry_msgs.msg import Vector3, Point, PoseStamped, Pose
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy
+from geometry_msgs.msg import Vector3, Point, Quaternion
+from line_profiler import profile
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
+import giskardpy.casadi_wrapper as cas
+import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
-from giskardpy.model.collision_world_syncer import Collisions, Collision
+from giskardpy.model.collision_world_syncer import Collisions
+from giskardpy.model.links import Link
 from giskardpy.model.trajectory import Trajectory
-import giskardpy_ros.ros2.msg_converter as msg_converter
-from giskardpy.model.links import Link
-from giskardpy.utils.decorators import clear_memo
-from giskardpy_ros.ros2.ros2_interface import wait_for_publisher, wait_for_topic_to_appear
-from giskardpy.model.links import Link
+from giskardpy.utils.decorators import clear_memo, memoize
+from giskardpy.utils.math import rotation_matrix_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy_ros.utils.decorators import memoize
-from giskardpy.model.trajectory import Trajectory
 
 
 class ROSMsgVisualization:
@@ -77,13 +69,8 @@ class ROSMsgVisualization:
     def has_world_changed(self) -> bool:
         if self.world_version != god_map.world.model_version:
             self.world_version = god_map.world.model_version
-            # clear_memo(self.link_to_marker)
             return True
         return False
-
-    @memoize
-    def link_to_marker(self, link: Link):
-        return msg_converter.link_to_visualization_marker(link, self.use_decomposed_meshes).markers
 
     @profile
     def create_world_markers(self, name_space: str = 'world', marker_id_offset: int = 0) -> List[Marker]:
@@ -153,8 +140,8 @@ class ROSMsgVisualization:
                     map_P_pb = np.dot(map_T_b, collision.b_P_pb)
                 else:
                     map_P_pb = collision.map_P_pb
-                m.points.append(Point(*map_P_pa[:3]))
-                m.points.append(Point(*map_P_pb[:3]))
+                m.points.append(Point(x=map_P_pa[0], y=map_P_pa[1], z=map_P_pa[2]))
+                m.points.append(Point(x=map_P_pb[0], y=map_P_pb[1], z=map_P_pb[2]))
                 m.colors.append(self.red)
                 m.colors.append(self.green)
                 if contact_distance < yellow_threshold:
@@ -295,18 +282,19 @@ class ROSMsgVisualization:
                 d_V_x_offset = np.array([width, 0, 0, 0])
                 map_V_x_offset = np.dot(map_T_d, d_V_x_offset)
                 mx = Marker()
-                mx.action = mx.ADD
+                mx.action = Marker.ADD
                 mx.header.frame_id = self.tf_root
                 mx.ns = f'debug/{name}'
                 mx.id = 0 + marker_id_offset
-                mx.type = mx.CYLINDER
+                mx.type = Marker.CYLINDER
                 mx.pose.position.x = map_P_d[0][0] + map_V_x_offset[0]
                 mx.pose.position.y = map_P_d[1][0] + map_V_x_offset[1]
                 mx.pose.position.z = map_P_d[2][0] + map_V_x_offset[2]
-                d_R_x = rotation_matrix(np.pi / 2, [0, 1, 0])
+                d_R_x = rotation_matrix_from_axis_angle([0, 1, 0], np.pi / 2)
                 map_R_x = np.dot(map_T_d, d_R_x)
-                mx.pose.orientation = Quaternion(*quaternion_from_matrix(map_R_x))
-                mx.color = ColorRGBA(1, 0, 0, 1)
+                q = quaternion_from_rotation_matrix(map_R_x)
+                mx.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+                mx.color = ColorRGBA(r=1., g=0., b=0., a=1.)
                 mx.scale.x = width / 4
                 mx.scale.y = width / 4
                 mx.scale.z = width * 2
@@ -315,18 +303,19 @@ class ROSMsgVisualization:
                 d_V_y_offset = np.array([0, width, 0, 0])
                 map_V_y_offset = np.dot(map_T_d, d_V_y_offset)
                 my = Marker()
-                my.action = my.ADD
+                my.action = Marker.ADD
                 my.header.frame_id = self.tf_root
                 my.ns = f'debug/{name}'
                 my.id = 1 + marker_id_offset
-                my.type = my.CYLINDER
+                my.type = Marker.CYLINDER
                 my.pose.position.x = map_P_d[0][0] + map_V_y_offset[0]
                 my.pose.position.y = map_P_d[1][0] + map_V_y_offset[1]
                 my.pose.position.z = map_P_d[2][0] + map_V_y_offset[2]
-                d_R_y = rotation_matrix(-np.pi / 2, [1, 0, 0])
+                d_R_y = rotation_matrix_from_axis_angle([1, 0, 0], -np.pi / 2)
                 map_R_y = np.dot(map_T_d, d_R_y)
-                my.pose.orientation = Quaternion(*quaternion_from_matrix(map_R_y))
-                my.color = ColorRGBA(0, 1, 0, 1)
+                q = quaternion_from_rotation_matrix(map_R_y)
+                my.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+                my.color = ColorRGBA(r=0., g=1., b=0., a=1.)
                 my.scale.x = width / 4
                 my.scale.y = width / 4
                 my.scale.z = width * 2
@@ -335,23 +324,24 @@ class ROSMsgVisualization:
                 d_V_z_offset = np.array([0, 0, width, 0])
                 map_V_z_offset = np.dot(map_T_d, d_V_z_offset)
                 mz = Marker()
-                mz.action = mz.ADD
+                mz.action = Marker.ADD
                 mz.header.frame_id = self.tf_root
                 mz.ns = f'debug/{name}'
                 mz.id = 2 + marker_id_offset
-                mz.type = mz.CYLINDER
+                mz.type = Marker.CYLINDER
                 mz.pose.position.x = map_P_d[0][0] + map_V_z_offset[0]
                 mz.pose.position.y = map_P_d[1][0] + map_V_z_offset[1]
                 mz.pose.position.z = map_P_d[2][0] + map_V_z_offset[2]
-                mz.pose.orientation = Quaternion(*quaternion_from_matrix(map_T_d))
-                mz.color = ColorRGBA(0, 0, 1, 1)
+                q = quaternion_from_rotation_matrix(map_T_d)
+                mz.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+                mz.color = ColorRGBA(r=0., g=0., b=1., a=1.)
                 mz.scale.x = width / 4
                 mz.scale.y = width / 4
                 mz.scale.z = width * 2
                 ms.append(mz)
             else:
                 m = Marker()
-                m.action = m.ADD
+                m.action = Marker.ADD
                 m.ns = f'debug/{name}'
                 m.id = 0 + marker_id_offset
                 m.header.frame_id = self.tf_root
@@ -366,9 +356,9 @@ class ROSMsgVisualization:
                     map_P_vis = map_T_vis[:4, 3:].T[0]
                     map_P_p1 = map_P_vis
                     map_P_p2 = map_P_vis + map_V_d * 0.5
-                    m.points.append(Point(map_P_p1[0], map_P_p1[1], map_P_p1[2]))
-                    m.points.append(Point(map_P_p2[0], map_P_p2[1], map_P_p2[2]))
-                    m.type = m.ARROW
+                    m.points.append(Point(x=map_P_p1[0], y=map_P_p1[1], z=map_P_p1[2]))
+                    m.points.append(Point(x=map_P_p2[0], y=map_P_p2[1], z=map_P_p2[2]))
+                    m.type = Marker.ARROW
                     if expr.color is None:
                         m.color = self.colors[color_counter]
                     else:
@@ -384,7 +374,7 @@ class ROSMsgVisualization:
                     m.pose.position.y = map_P_d[1]
                     m.pose.position.z = map_P_d[2]
                     m.pose.orientation.w = 1
-                    m.type = m.SPHERE
+                    m.type = Marker.SPHERE
                     if expr.color is None:
                         m.color = self.colors[color_counter]
                     else:

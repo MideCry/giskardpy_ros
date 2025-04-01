@@ -8,7 +8,6 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.joints import OneDofJoint
 from giskardpy.utils.math import quaternion_from_axis_angle
-from giskardpy_ros.ros2.interface import ROS2Wrapper
 from giskardpy_ros.ros2 import rospy, ros2_interface
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
@@ -127,7 +126,7 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     return better_pose
 
 @pytest.fixture()
-def dlr_kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
+def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'dlr_kitchen'
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()
@@ -135,6 +134,7 @@ def dlr_kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
         kitchen_pose.pose.position.x = -2
         kitchen_pose.pose.position.y = 2
         kitchen_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle([0,0,1], -np.pi/2))
+        kitchen_urdf = load_xacro('package://iai_kitchen/urdf_obj/iai_kitchen_python.urdf.xacro')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
                                       urdf=kitchen_urdf,
                                       pose=kitchen_pose)
