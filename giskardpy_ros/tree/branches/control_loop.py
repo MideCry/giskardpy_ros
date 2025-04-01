@@ -47,6 +47,7 @@ class ControlLoop(AsyncBehavior):
         super().__init__(name, max_hz=max_hz)
         self.publish_state = PublishState('publish state 2')
         self.publish_state.add_publish_feedback()
+        self.projection_synchronization = Synchronization()
         self.projection_synchronization_sir = SuccessIsRunning('sir', self.projection_synchronization)
         # projection plugins
         self.time = TimePlugin()
@@ -66,7 +67,7 @@ class ControlLoop(AsyncBehavior):
         if god_map.is_collision_checking_enabled():
             self.add_child(CollisionChecker('collision checker'))
 
-        self.add_child(self.evaluate_monitors)
+        self.add_child(self.evaluate_monitors, success_is_running=False)
         self.controller_plugin = ControllerPlugin('controller')
         self.add_child(self.controller_plugin, success_is_running=False)
 

@@ -504,16 +504,16 @@ class GiskardTester:
     }
 
     def add_monitor_for_everything(self):
-        for goal in self.api.motion_goals._goals:
-            if goal.motion_goal_class in self.goal_monitor_map:
-                monitor_class = self.goal_monitor_map[goal.motion_goal_class]
+        for goal_name, goal in self.api.motion_goals.motion_graph_nodes.items():
+            if goal.class_name in self.goal_monitor_map:
+                monitor_class = self.goal_monitor_map[goal.class_name]
                 ros_kwargs = json_str_to_ros_kwargs(goal.kwargs)
                 monitor_kwargs = {}
                 for keyword in inspect.signature(monitor_class.__init__).parameters.keys():
                     if keyword in ros_kwargs:
                         monitor_kwargs[keyword] = ros_kwargs[keyword]
-                new_monitor = self.api.monitors.add_monitor(monitor_class=monitor_class.__name__,
-                                                            name=f'{goal.name}/{monitor_class.__name__}',
+                new_monitor = self.api.monitors.add_monitor(class_name=monitor_class.__name__,
+                                                            name=f'{goal_name}/{monitor_class.__name__}',
                                                             start_condition=goal.start_condition,
                                                             **monitor_kwargs)
                 if goal.end_condition:
