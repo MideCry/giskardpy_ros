@@ -2677,7 +2677,6 @@ class GiskardWrapper:
         #    self.setup_controllers()
 
     def setup_controllers(self):
-        # TODO: create config for robots
         start_con = ['realtime_body_controller_real']
         stop_con = ['arm_trajectory_controller', 'head_trajectory_controller']
         switch_controllers_srv_name = '/hsrb/controller_manager/switch_controller'
