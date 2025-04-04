@@ -36,6 +36,7 @@ from giskardpy.goals.pre_push_door import PrePushDoor
 from giskardpy.goals.set_prediction_horizon import SetPredictionHorizon
 from giskardpy.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, VerticalMotion, Retracting, \
     AlignHeight, TakePose, Tilting, JointRotationGoalContinuous, Mixing, OpenDoorGoal
+from giskardpy.motion_graph.monitors.align_to_push_monitor import AlignToPushDoorMonitor
 from giskardpy.motion_graph.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
     PointingAt, \
     VectorsAligned, DistanceToLine
@@ -1038,7 +1039,7 @@ class MotionGoalWrapper:
                              root_link: Optional[str] = None,
                              camera_link: str = 'head_rgbd_sensor_link',
                              distance_to_target_stop_threshold: float = 1,
-                             cone_theta: float = 0.1, # size of FoV cone
+                             cone_theta: float = 0.1,  # size of FoV cone
                              laser_scan_age_threshold: float = 2,
                              laser_distance_threshold: float = 0.5,
                              laser_distance_threshold_width: float = 0.8,
@@ -1047,8 +1048,8 @@ class MotionGoalWrapper:
                              base_orientation_threshold: float = np.pi / 16,
                              tracked_human_position_topic_name_timeout: int = 30,
                              max_rotation_velocity: float = 0.5,
-                             max_rotation_velocity_head: float = 2.5, # head speed
-                             max_translation_velocity: float = 0.42, # base speed
+                             max_rotation_velocity_head: float = 2.5,  # head speed
+                             max_translation_velocity: float = 0.42,  # base speed
                              traj_tracking_radius: float = 0.4,
                              height_for_camera_target: float = 1,
                              laser_frame_id: str = 'base_range_sensor_link',
@@ -2613,6 +2614,42 @@ class MonitorWrapper:
                                 hold_condition=hold_condition,
                                 end_condition=end_condition)
 
+    def add_align_to_push_door(self,
+                               root_link: str,
+                               tip_link: str,
+                               door_object: str,
+                               door_handle: str,
+                               tip_gripper_axis: Vector3Stamped,
+                               goal_angle: Optional[float] = None,
+                               root_group: Optional[str] = None,
+                               tip_group: Optional[str] = None,
+                               reference_linear_velocity: float = 0.1,
+                               reference_angular_velocity: float = 0.5,
+                               intermediate_point_scale: float = 1,
+                               weight: float = WEIGHT_BELOW_CA,
+                               name: Optional[str] = None,
+                               start_condition: str = '',
+                               hold_condition: str = '',
+                               end_condition: Optional[str] = None) -> str:
+
+        return self.add_monitor(monitor_class=AlignToPushDoorMonitor.__name__,
+                                root_link=root_link,
+                                tip_link=tip_link,
+                                door_object=door_object,
+                                door_handle=door_handle,
+                                tip_gripper_axis=tip_gripper_axis,
+                                goal_angle=goal_angle,
+                                reference_linear_velocity=reference_linear_velocity,
+                                reference_angular_velocity=reference_angular_velocity,
+                                intermediate_point_scale=intermediate_point_scale,
+                                weight=weight,
+                                root_group=root_group,
+                                tip_group=tip_group,
+                                name=name,
+                                start_condition=start_condition,
+                                hold_condition=hold_condition,
+                                end_condition=end_condition)
+
 
 class GiskardWrapper:
     last_feedback: MoveFeedback = None
@@ -2640,7 +2677,6 @@ class GiskardWrapper:
         #    self.setup_controllers()
 
     def setup_controllers(self):
-        # TODO: create config for robots
         start_con = ['realtime_body_controller_real']
         stop_con = ['arm_trajectory_controller', 'head_trajectory_controller']
         switch_controllers_srv_name = '/hsrb/controller_manager/switch_controller'
@@ -3224,8 +3260,8 @@ class GiskardWrapper:
         root_link = 'map'
         tip_link = 'hand_gripper_tool_frame'
         grasp_bar_offset = 0.1
-        goal_angle_half = 0.3
-        goal_angle_full = 1.35
+        goal_angle_half = 0.2
+        goal_angle_full = 1.2
         bar_length = 0.1
         after_force_retract = 0.05
         env_name = 'iai_kitchen'
@@ -3261,8 +3297,8 @@ class GiskardWrapper:
         js = {hinge_joint: goal_angle_half}
 
         hinge_state_monitor = self.monitors.add_joint_position(goal_state=js, name='hinge monitor for preopen')
-        self.motion_goals.add_joint_position(goal_state=js, end_condition=hinge_state_monitor,
-                                             name='hinge goal for preopen')
+        self.monitors.add_set_seed_configuration(seed_configuration=js,
+                                                 name='hinge goal for preopen')
 
         final_close = self.monitors.add_close_hsr_gripper(name='final close gripper',
                                                           start_condition=hinge_state_monitor)
@@ -3278,8 +3314,23 @@ class GiskardWrapper:
                                                       start_condition=final_close,
                                                       end_condition=around_local_min)
 
-        align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
-                                                                            start_condition=around_local_min)
+        js_wrist = {'wrist_flex_joint': -1.3}
+        joint_monitor = self.monitors.add_joint_position(goal_state=js_wrist, start_condition=around_local_min)
+        self.motion_goals.add_joint_position(goal_state=js_wrist, start_condition=around_local_min,
+                                             end_condition=joint_monitor)
+
+        align_push_door_monitor = self.monitors.add_align_to_push_door(root_link=root_link,
+                                                                       tip_link=tip_link,
+                                                                       door_handle=handle_frame_id,
+                                                                       door_object=door_hinge_frame_id,
+                                                                       tip_gripper_axis=tip_grasp_axis_push,
+                                                                       weight=WEIGHT_ABOVE_CA,
+                                                                       goal_angle=goal_angle_half,
+                                                                       intermediate_point_scale=0.95,
+                                                                       start_condition=joint_monitor)
+        # align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
+        #                                                                     start_condition=joint_monitor)
+
         self.motion_goals.add_align_to_push_door(root_link=root_link,
                                                  tip_link=tip_link,
                                                  door_handle=handle_frame_id,
@@ -3287,22 +3338,29 @@ class GiskardWrapper:
                                                  tip_gripper_axis=tip_grasp_axis_push,
                                                  weight=WEIGHT_ABOVE_CA,
                                                  goal_angle=goal_angle_half,
-                                                 intermediate_point_scale=0.96,
-                                                 start_condition=around_local_min,
-                                                 end_condition=align_push_door_local_min)
+                                                 intermediate_point_scale=0.95,
+                                                 start_condition=joint_monitor,
+                                                 end_condition=align_push_door_monitor)
+
+        js_wrist_pre_push = {'wrist_flex_joint': -1.5}
+        joint_monitor_pre_push = self.monitors.add_joint_position(goal_state=js_wrist_pre_push,
+                                                                  start_condition=align_push_door_monitor,
+                                                                  name='js pre push')
+        self.motion_goals.add_joint_position(goal_state=js_wrist_pre_push, start_condition=align_push_door_monitor,
+                                             end_condition=joint_monitor_pre_push, name='js pre push goal')
 
         pre_push_monitor = self.monitors.add_pre_push_door(root_link=root_link,
                                                            tip_link=tip_link,
                                                            door_handle=handle_frame_id,
                                                            door_object=door_hinge_frame_id,
-                                                           start_condition=align_push_door_local_min)
+                                                           start_condition=joint_monitor_pre_push)
 
         self.motion_goals.add_pre_push_door(root_link=root_link,
                                             tip_link=tip_link,
                                             door_handle=handle_frame_id,
                                             weight=WEIGHT_ABOVE_CA,
                                             door_object=door_hinge_frame_id,
-                                            start_condition=align_push_door_local_min,
+                                            start_condition=joint_monitor_pre_push,
                                             end_condition=pre_push_monitor)
 
         full_open_joint = self.monitors.add_joint_position(name='full open joint',
@@ -3331,10 +3389,11 @@ class GiskardWrapper:
         self.motion_goals.add_take_pose(pose_keyword='park', start_condition=full_open_joint,
                                         end_condition=park_joint_monitor)
 
-        self.monitors.add_end_motion(start_condition=park_joint_monitor)
+        set_seed = self.monitors.add_set_seed_configuration(seed_configuration={hinge_joint: 1.6}, start_condition=park_joint_monitor)
+        self.monitors.add_end_motion(start_condition=set_seed)
 
-        self.motion_goals.avoid_all_collisions(end_condition=align_push_door_local_min)
-        self.motion_goals.allow_collision(env_name, allow_collision_group, start_condition=align_push_door_local_min)
+        self.motion_goals.avoid_all_collisions(end_condition=align_push_door_monitor)
+        self.motion_goals.allow_collision(env_name, allow_collision_group, start_condition=align_push_door_monitor)
         self.execute()
 
         # gripper_group = 'gripper'

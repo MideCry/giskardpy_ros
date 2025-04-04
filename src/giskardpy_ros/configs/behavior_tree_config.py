@@ -230,6 +230,12 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             # self.add_debug_trajectory_visualizer()
             self.add_debug_trajectory_plotter(wait=True)
             self.add_debug_marker_publisher()
+            # self.add_qp_data_publisher(
+            #     publish_debug=True,
+            #     publish_xdot=True,
+            #     # publish_lbA=True,
+            #     # publish_ubA=True
+            # )
         # self.add_debug_marker_publisher()
         if self.publish_js:
             self.add_js_publisher(include_prefix=self.include_prefix)
