@@ -231,7 +231,6 @@ class PR2Tester(GiskardTester):
 
 @pytest.fixture(scope='module')
 def giskard(request, ros):
-    # launch_launchfile('package://iai_pr2_description/launch/upload_pr2_calibrated_with_ft2.launch')
     # launch_launchfile('package://iai_pr2_description/launch/upload_pr2_cableguide.launch')
     c = PR2Tester()
     # c = PR2TesterMujoco()
