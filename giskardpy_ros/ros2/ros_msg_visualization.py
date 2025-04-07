@@ -295,9 +295,9 @@ class ROSMsgVisualization:
                 q = quaternion_from_rotation_matrix(map_R_x)
                 mx.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
                 mx.color = ColorRGBA(r=1., g=0., b=0., a=1.)
-                mx.scale.x = width / 4
-                mx.scale.y = width / 4
-                mx.scale.z = width * 2
+                mx.scale.x = width / 4.
+                mx.scale.y = width / 4.
+                mx.scale.z = width * 2.
                 ms.append(mx)
                 # y
                 d_V_y_offset = np.array([0, width, 0, 0])
@@ -316,9 +316,9 @@ class ROSMsgVisualization:
                 q = quaternion_from_rotation_matrix(map_R_y)
                 my.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
                 my.color = ColorRGBA(r=0., g=1., b=0., a=1.)
-                my.scale.x = width / 4
-                my.scale.y = width / 4
-                my.scale.z = width * 2
+                my.scale.x = width / 4.
+                my.scale.y = width / 4.
+                my.scale.z = width * 2.
                 ms.append(my)
                 # z
                 d_V_z_offset = np.array([0, 0, width, 0])
@@ -335,9 +335,9 @@ class ROSMsgVisualization:
                 q = quaternion_from_rotation_matrix(map_T_d)
                 mz.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
                 mz.color = ColorRGBA(r=0., g=0., b=1., a=1.)
-                mz.scale.x = width / 4
-                mz.scale.y = width / 4
-                mz.scale.z = width * 2
+                mz.scale.x = width / 4.
+                mz.scale.y = width / 4.
+                mz.scale.z = width * 2.
                 ms.append(mz)
             else:
                 m = Marker()
@@ -345,7 +345,7 @@ class ROSMsgVisualization:
                 m.ns = f'debug/{name}'
                 m.id = 0 + marker_id_offset
                 m.header.frame_id = self.tf_root
-                m.pose.orientation.w = 1
+                m.pose.orientation.w = 1.
                 if isinstance(expr, cas.Vector3):
                     ref_V_d = value
                     if expr.vis_frame is not None:
@@ -362,10 +362,10 @@ class ROSMsgVisualization:
                     if expr.color is None:
                         m.color = self.colors[color_counter]
                     else:
-                        m.color = expr.color
-                    m.scale.x = width / 2
+                        m.color = ColorRGBA(r=expr.color.r, g=expr.color.g, b=expr.color.b, a=expr.color.a)
+                    m.scale.x = width / 2.
                     m.scale.y = width
-                    m.scale.z = 0
+                    m.scale.z = 0.
                     color_counter += 1
                 elif isinstance(expr, cas.Point3):
                     ref_P_d = value
@@ -373,12 +373,12 @@ class ROSMsgVisualization:
                     m.pose.position.x = map_P_d[0]
                     m.pose.position.y = map_P_d[1]
                     m.pose.position.z = map_P_d[2]
-                    m.pose.orientation.w = 1
+                    m.pose.orientation.w = 1.
                     m.type = Marker.SPHERE
                     if expr.color is None:
                         m.color = self.colors[color_counter]
                     else:
-                        m.color = expr.color
+                        m.color = ColorRGBA(r=expr.color.r, g=expr.color.g, b=expr.color.b, a=expr.color.a)
                     m.scale.x = width
                     m.scale.y = width
                     m.scale.z = width

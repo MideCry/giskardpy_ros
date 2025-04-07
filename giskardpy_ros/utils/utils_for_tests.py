@@ -30,17 +30,13 @@ import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
-from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
-from giskardpy.motion_statechart.goals.cartesian_goals import CartesianPose, CartesianPoseStraight, CartesianOrientation, \
-    CartesianPosition, CartesianPositionStraight
-from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
-from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, AngleGoal, HeightGoal, DistanceGoal
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
-from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import Collisions, Collision, CollisionEntry
 from giskardpy.model.joints import OneDofJoint, OmniDrive, DiffDrive, Joint
+from giskardpy.motion_statechart.goals.cartesian_goals import CartesianPose, CartesianPoseStraight, \
+    CartesianOrientation, \
+    CartesianPosition, CartesianPositionStraight
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
     PositionReached, PointingAt
 from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
@@ -48,11 +44,11 @@ from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularM
 from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetSeedConfiguration
-from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
-    PositionReached, PointingAt
-from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
-from giskardpy.motion_statechart.monitors.monitors import Monitor
-from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetSeedConfiguration
+from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
+from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
+from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, AngleGoal, HeightGoal, DistanceGoal
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
+from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.free_variable import FreeVariable
 from giskardpy.qp.qp_controller import available_solvers
@@ -422,8 +418,8 @@ class GiskardTester:
         if object_name is None:
             object_name = self.default_env_name
         if GiskardBlackboard().tree.is_standalone():
-            self.monitors.add_set_seed_configuration(seed_configuration=joint_state,
-                                                     name='set kitchen state')
+            self.api.monitors.add_set_seed_configuration(seed_configuration=joint_state,
+                                                         name='set kitchen state')
             self.api.motion_goals.allow_all_collisions()
             self.execute()
         else:
@@ -487,46 +483,10 @@ class GiskardTester:
     # GENERAL GOAL STUFF ###############################################################################################
     #
 
-    goal_monitor_map: Dict[str, Monitor] = {
-        JointPositionList.__name__: JointGoalReached,
-        SetSeedConfiguration.__name__: JointGoalReached,
-        CartesianPose.__name__: PoseReached,
-        CartesianPoseStraight.__name__: PoseReached,
-        CartesianOrientation.__name__: OrientationReached,
-        CartesianPosition.__name__: PositionReached,
-        CartesianPositionStraight.__name__: PositionReached,
-        AlignPlanes.__name__: VectorsAligned,
-        Pointing.__name__: PointingAt,
-        AlignPerpendicular.__name__: PerpendicularMonitor,
-        AngleGoal.__name__: AngleMonitor,
-        HeightGoal.__name__: HeightMonitor,
-        DistanceGoal.__name__: DistanceMonitor,
-    }
-
-    def add_monitor_for_everything(self):
-        for goal_name, goal in self.api.motion_goals.motion_graph_nodes.items():
-            if goal.class_name in self.goal_monitor_map:
-                monitor_class = self.goal_monitor_map[goal.class_name]
-                ros_kwargs = json_str_to_ros_kwargs(goal.kwargs)
-                monitor_kwargs = {}
-                for keyword in inspect.signature(monitor_class.__init__).parameters.keys():
-                    if keyword in ros_kwargs:
-                        monitor_kwargs[keyword] = ros_kwargs[keyword]
-                new_monitor = self.api.monitors.add_monitor(class_name=monitor_class.__name__,
-                                                            name=f'{goal_name}/{monitor_class.__name__}',
-                                                            start_condition=goal.start_condition,
-                                                            **monitor_kwargs)
-                if goal.end_condition:
-                    goal.end_condition = f'({goal.end_condition}) and {new_monitor}'
-                else:
-                    goal.end_condition = new_monitor
-        self.api.add_default_end_motion_conditions()
-
     def execute(self, expected_error_type: Optional[type(Exception)] = None, stop_after: float = None,
-                wait: bool = True, add_monitors_for_everything: bool = True) -> Move_Result:
-        if add_monitors_for_everything:
-            self.add_monitor_for_everything()
-            # self.api.add_default_end_motion_conditions()
+                wait: bool = True, local_min_end: bool = True) -> Move_Result:
+        if local_min_end:
+            self.api.add_default_end_motion_conditions()
         return self.async_loop.run_until_complete(self.send_goal(expected_error_type=expected_error_type,
                                                                  stop_after=stop_after, wait=wait))
 
@@ -791,7 +751,7 @@ class GiskardTester:
 
     def add_sphere_to_world(self,
                             name: str,
-                            radius: float = 1,
+                            radius: float = 1.,
                             pose: PoseStamped = None,
                             parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
                             expected_error_type: Optional[type(Exception)] = None) -> None:
@@ -832,11 +792,11 @@ class GiskardTester:
                                      expected_error_type=expected_error_type)
 
     def add_mesh_to_world(self,
+                          pose: PoseStamped,
                           name: str = 'meshy',
                           mesh: str = '',
-                          pose: PoseStamped = None,
                           parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                          scale: Tuple[float, float, float] = (1, 1, 1),
+                          scale: Tuple[float, float, float] = (1., 1., 1.),
                           expected_error_type: Optional[type(Exception)] = None) -> None:
         try:
             response = self.api.world.add_mesh(name=name,
@@ -848,8 +808,6 @@ class GiskardTester:
             assert response.error.type == GiskardError.SUCCESS
         except Exception as e:
             assert type(e) == expected_error_type
-        pose = make_pose_from_parts(pose=pose, frame_id=pose.header.frame_id,
-                                    position=pose.pose.position, orientation=pose.pose.orientation)
         self.check_add_object_result(name=name,
                                      pose=pose,
                                      parent_link=parent_link,
@@ -906,10 +864,10 @@ class GiskardTester:
         collision_goals = []
         for robot_name in self.robot_names:
             collision_goals.append(CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                                  distance=-1,
+                                                  distance=-1.,
                                                   group1=robot_name))
             collision_goals.append(CollisionEntry(type_=CollisionEntry.ALLOW_COLLISION,
-                                                  distance=-1,
+                                                  distance=-1.,
                                                   group1=robot_name,
                                                   group2=robot_name))
         return self.compute_collisions(collision_goals)
@@ -918,7 +876,7 @@ class GiskardTester:
         if group_name is None:
             group_name = self.robot_names[0]
         collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1,
+                                            distance=-1.,
                                             group1=group_name,
                                             group2=group_name)]
         return self.compute_collisions(collision_entries)
@@ -932,7 +890,7 @@ class GiskardTester:
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1)]
+                                            distance=-1.)]
         return self.compute_collisions(collision_entries)
 
     def check_cpi_geq(self, links, distance_threshold, check_external=True, check_self=True):
@@ -967,8 +925,9 @@ class GiskardTester:
     def move_base(self, goal_pose) -> None:
         tip = self.get_odometry_joint().child_link_name
         self.api.motion_goals.add_cartesian_pose(goal_pose=goal_pose, tip_link=tip.short_name, root_link='map',
-                                             name='base goal')
-        self.execute()
+                                                 name='base goal')
+        self.api.add_default_end_motion_conditions()
+        self.execute(add_monitors_for_everything=False)
 
     def reset(self):
         pass
@@ -976,15 +935,5 @@ class GiskardTester:
     def reset_base(self):
         p = PoseStamped()
         p.header.frame_id = god_map.world.root_link_name
-        p.pose.orientation.w = 1
+        p.pose.orientation.w = 1.
         self.teleport_base(p)
-
-
-def launch_launchfile(file_name: str):
-    launch_file = get_middleware().resolve_iri(file_name)
-    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-    roslaunch.configure_logging(uuid)
-    launch = roslaunch.parent.ROSLaunchParent(uuid, [launch_file])
-    with suppress_stderr():
-        launch.start()
-        # launch.shutdown()

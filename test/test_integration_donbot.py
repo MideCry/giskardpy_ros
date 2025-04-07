@@ -10,7 +10,6 @@ from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig, Don
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
-from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 # TODO roslaunch iai_donbot_sim ros_control_sim.launch

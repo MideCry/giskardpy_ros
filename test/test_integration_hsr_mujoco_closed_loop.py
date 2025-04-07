@@ -11,7 +11,6 @@ from giskardpy_ros.configs.iai_robots.hsr import WorldWithHSRConfig, HSRCollisio
     HSRMujocoVelocityInterface
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
-from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 
 

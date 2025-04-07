@@ -122,7 +122,7 @@ class WorldWrapper:
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
-        req.body = make_world_body_box(size[0], size[1], size[2])
+        req.body = make_world_body_box(float(size[0]), float(size[1]), float(size[2]))
         req.parent_link = parent_link or giskard_msgs.LinkName()
         req.pose = pose
         return self._send_goal(req)
@@ -141,7 +141,7 @@ class WorldWrapper:
         world_body = WorldBody()
         world_body.type = WorldBody.PRIMITIVE_BODY
         world_body.shape.type = SolidPrimitive.SPHERE
-        world_body.shape.dimensions.append(radius)
+        world_body.shape.dimensions.append(float(radius))
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
@@ -155,7 +155,7 @@ class WorldWrapper:
                  mesh: str,
                  pose: PoseStamped,
                  parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                 scale: Tuple[float, float, float] = (1, 1, 1)) -> World_Result:
+                 scale: Tuple[float, float, float] = (1., 1., 1.)) -> World_Result:
         """
         See add_box.
         :param mesh: path to the mesh location, can be ros package path, e.g.,
@@ -172,9 +172,9 @@ class WorldWrapper:
         req.operation = World_Goal.ADD
         req.body = world_body
         req.pose = pose
-        req.body.scale.x = scale[0]
-        req.body.scale.y = scale[1]
-        req.body.scale.z = scale[2]
+        req.body.scale.x = float(scale[0])
+        req.body.scale.y = float(scale[1])
+        req.body.scale.z = float(scale[2])
         req.parent_link = parent_link
         return self._send_goal(req)
 
@@ -193,9 +193,9 @@ class WorldWrapper:
         world_body = WorldBody()
         world_body.type = WorldBody.PRIMITIVE_BODY
         world_body.shape.type = SolidPrimitive.CYLINDER
-        world_body.shape.dimensions = [0, 0]
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = height
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = radius
+        world_body.shape.dimensions = [0., 0.]
+        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = float(height)
+        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = float(radius)
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
@@ -888,7 +888,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param group2: name of the second group
         """
         if min_distance is None:
-            min_distance = - 1
+            min_distance = - 1.
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.distance = min_distance
@@ -952,7 +952,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_avoid_joint_limits(self,
                                name: Optional[str] = None,
-                               percentage: int = 15,
+                               percentage: int = 15.,
                                joint_list: Optional[List[str]] = None,
                                weight: Optional[float] = None,
                                start_condition: str = '',
