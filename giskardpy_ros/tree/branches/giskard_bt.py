@@ -145,9 +145,9 @@ class GiskardBT(BehaviourTree):
         #             attribute.shutdown(reason='life is pain')
 
     def render(self):
-        path = god_map.tmp_folder + 'tree'
-        create_path(path)
+        path = 'tmp/tree'
         render_dot_tree(self.root, name=path)
+        print(f'rendered tree to {path}')
 
 
 def render_dot_tree(
@@ -205,18 +205,15 @@ def render_dot_tree(
         with_blackboard_variables=with_blackboard_variables,
         with_qualified_names=with_qualified_names,
     )
-    filename_wo_extension_to_convert = root.name if name is None else name
-    filename_wo_extension = utilities.get_valid_filename(
-        filename_wo_extension_to_convert
-    )
     filenames: Dict[str, str] = {}
     for extension, writer in {
         # "dot": graph.write,
         "png": graph.write_png,
         # "svg": graph.write_svg,
     }.items():
-        filename = filename_wo_extension + "." + extension
+        filename = name + "." + extension
         pathname = os.path.join(target_directory, filename)
+        create_path(pathname)
         get_middleware().loginfo("Writing {}".format(pathname))
         writer(pathname)
         filenames[extension] = pathname

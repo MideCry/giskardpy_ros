@@ -39,7 +39,7 @@ from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerCon
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface
+from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface, WorldWithPR2Config
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
@@ -163,7 +163,7 @@ class PR2Tester(GiskardTester):
         drive_joint_name = 'brumbrum'
         robot_desc = load_xacro('package://iai_pr2_description/robots/pr2_with_ft2_cableguide.xacro')
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithOmniDriveRobot(drive_joint_name=drive_joint_name,
+            giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name,
                                                                    urdf=robot_desc),
                               robot_interface_config=PR2StandaloneInterface(drive_joint_name=drive_joint_name),
                               collision_avoidance_config=PR2CollisionAvoidance(drive_joint_name=drive_joint_name,

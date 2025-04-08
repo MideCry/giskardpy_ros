@@ -44,7 +44,7 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def add_child(self, child: behaviour.Behaviour, success_is_running: bool = True) -> uuid.UUID:
         if success_is_running:
-            success_is_running_child = SuccessIsRunning('success is running', child)
+            success_is_running_child = SuccessIsRunning(f'success is running\n{child.name}', child)
             return super().add_child(success_is_running_child)
         return super().add_child(child)
 
@@ -75,7 +75,7 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def insert_behind(self, node: Behaviour, left_sibling_name: Behaviour, success_is_running: bool = True) -> None:
         if success_is_running:
-            node = SuccessIsRunning('success is running', node)
+            node = SuccessIsRunning(f'success is running\n{node.name}', node)
         try:
             sibling_id = self.children.index(left_sibling_name)
         except:
