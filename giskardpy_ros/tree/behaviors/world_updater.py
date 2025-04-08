@@ -6,6 +6,7 @@ from giskard_msgs.action import World
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.srv import GetGroupNames, GetGroupInfo, DyeGroup, GetGroupInfo_Response, GetGroupInfo_Request, \
     GetGroupNames_Request, GetGroupNames_Response, DyeGroup_Response, DyeGroup_Request
+from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray
 
@@ -86,8 +87,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         try:
             god_map.world.dye_group(req.group_name, req.color)
             res.error_codes = DyeGroup_Response.SUCCESS
-            for link_name in god_map.world.groups[req.group_name].links:
-                god_map.world.links[link_name].reset_cache()
+            GiskardBlackboard().ros_visualizer.clear_marker_cache()
             get_middleware().loginfo(
                 f'dyed group \'{req.group_name}\' to r:{req.color.r} g:{req.color.g} b:{req.color.b} a:{req.color.a}')
         except UnknownGroupException:

@@ -3,7 +3,7 @@ import numpy as np
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig, StandAloneRobotInterfaceConfig
-from giskardpy.data_types.data_types import Derivatives
+from giskardpy.data_types.data_types import Derivatives, PrefixName
 
 
 class WorldWithBoxyBaseConfig(WorldConfig):
@@ -18,9 +18,9 @@ class WorldWithBoxyBaseConfig(WorldConfig):
     def setup(self):
         self.set_default_limits({Derivatives.velocity: 0.5,
                                  Derivatives.acceleration: np.inf,
-                                 Derivatives.jerk: 15})
-        self.add_empty_link(self.map_name)
-        self.add_robot_from_parameter_server()
+                                 Derivatives.jerk: None})
+        self.add_empty_link(PrefixName(self.map_name))
+        self.add_robot_urdf(urdf=rospy.get_param('robot_description'))
         root_link_name = self.get_root_link_of_group(self.robot_group_name)
         self.add_6dof_joint(parent_link=self.map_name, child_link=root_link_name,
                             joint_name=self.localization_joint_name)
@@ -32,7 +32,7 @@ class WorldWithBoxyBaseConfig(WorldConfig):
 class DonbotCollisionAvoidanceConfig(CollisionAvoidanceConfig):
     def setup(self):
         self.load_self_collision_matrix(
-            'package://giskardpy/self_collision_matrices/iai/iai_donbot.srdf')
+            'package://giskardpy_ros/self_collision_matrices/iai/iai_donbot.srdf')
         self.set_default_external_collision_avoidance(soft_threshold=0.1,
                                                       hard_threshold=0.0)
         self.overwrite_external_collision_avoidance('odom_z_joint',

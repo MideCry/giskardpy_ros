@@ -1,5 +1,6 @@
 from typing import List
 
+from line_profiler import profile
 from py_trees.common import Status
 from std_msgs.msg import Float64
 

@@ -1,5 +1,6 @@
 from typing import Optional
 
+from line_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
@@ -14,7 +15,7 @@ class TimePlugin(GiskardBehavior):
 
     @profile
     def update(self):
-        god_map.time += god_map.qp_controller.sample_period
+        god_map.time += god_map.qp_controller.mpc_dt
         return Status.SUCCESS
 
 

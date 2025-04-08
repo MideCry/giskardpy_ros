@@ -3,6 +3,8 @@ import uuid
 from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Type, Optional, Dict, Tuple
+from itertools import zip_longest
+from typing import Any, Type, Tuple
 
 import numpy as np
 import py_trees
@@ -60,11 +62,7 @@ class GiskardBT(BehaviourTree):
         self.prepare_control_loop = PrepareControlLoop()
         self.prepare_control_loop_failure_is_success = FailureIsSuccess('ignore failure',
                                                                         self.prepare_control_loop)
-        if self.is_closed_loop():
-            max_hz = GiskardBlackboard().control_loop_max_hz
-        else:
-            max_hz = GiskardBlackboard().simulation_max_hz
-        self.control_loop_branch = ControlLoop(max_hz=max_hz)
+        self.control_loop_branch = ControlLoop()
         self.control_loop_branch_failure_is_success = FailureIsSuccess('ignore failure', self.control_loop_branch)
         if self.is_closed_loop():
             self.control_loop_branch.add_closed_loop_behaviors()
@@ -126,12 +124,12 @@ class GiskardBT(BehaviourTree):
         self.cleanup_control_loop.remove_reset_world_state()
 
     def live(self):
-        get_middleware().loginfo('Giskard is ready.')
+        get_middleware().loginfo('giskard is ready')
         self.tick_tock(period_ms=1000.0)
         rospy.spinner_thread.join()
         self.shutdown()
         rclpy.try_shutdown()
-        get_middleware().loginfo('Giskard died.')
+        get_middleware().loginfo('giskard died')
 
     def stop_spinning(self):
         self.executer.shutdown()
@@ -219,7 +217,7 @@ def render_dot_tree(
     }.items():
         filename = filename_wo_extension + "." + extension
         pathname = os.path.join(target_directory, filename)
-        print("Writing {}".format(pathname))
+        get_middleware().loginfo("Writing {}".format(pathname))
         writer(pathname)
         filenames[extension] = pathname
     return filenames

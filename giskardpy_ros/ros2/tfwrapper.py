@@ -10,6 +10,7 @@ from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, Transfo
 from graphviz import Source
 from networkx import MultiDiGraph
 from networkx.drawing.nx_pydot import read_dot
+from line_profiler import profile
 from rclpy.duration import Duration
 from rclpy.time import Time
 from tf2_geometry_msgs import do_transform_pose, do_transform_vector3, do_transform_point, do_transform_pose_stamped

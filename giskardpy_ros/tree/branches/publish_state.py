@@ -2,7 +2,7 @@ from typing import Optional
 
 from py_trees.composites import Sequence
 
-from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from giskardpy_ros.ros2.ros_msg_visualization import VisualizationMode
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisher
 from giskardpy_ros.tree.behaviors.publish_debug_expressions import PublishDebugExpressions
 from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback
@@ -19,6 +19,7 @@ class PublishState(Sequence):
     def __init__(self, name: str = 'publish state'):
         super().__init__(name, memory=True)
         self.visualization_behavior = None
+        self.debug_marker_publisher = None
 
     @toggle_on('visualization_marker_behavior')
     def add_visualization_marker_behavior(self, mode: VisualizationMode):

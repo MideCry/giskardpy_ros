@@ -1,5 +1,5 @@
 from typing import Optional
-
+from line_profiler import profile
 from sensor_msgs.msg import JointState
 from py_trees.common import Status
 

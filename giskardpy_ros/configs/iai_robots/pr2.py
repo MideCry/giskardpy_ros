@@ -49,10 +49,10 @@ class WorldWithPR2Config(GenericWorldConfig):
                                   robot_group_name=self.robot_group_name)
 
         self.set_joint_limits(limit_map={Derivatives.velocity: 2,
-                                         Derivatives.jerk: 60},
+                                         Derivatives.jerk: None},
                               joint_name='head_pan_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 4,
-                                         Derivatives.jerk: 120},
+        self.set_joint_limits(limit_map={Derivatives.velocity: 3.5,
+                                         Derivatives.jerk: None},
                               joint_name='head_tilt_joint')
 
 

@@ -1,6 +1,8 @@
+from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray, Marker
 
+from giskardpy.debug_expression_manager import DebugExpressionManager
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy_ros.ros2 import rospy
@@ -31,18 +33,17 @@ class CleanUp(GiskardBehavior):
     def initialise(self):
         if self.clear_markers_:
             self.clear_markers()
-        GiskardBlackboard().giskard.set_defaults()
         if GiskardBlackboard().tree.control_loop_branch.publish_state.debug_marker_publisher is not None:
             self.clear_markers()
             GiskardBlackboard().ros_visualizer.publish_markers(force=True)
+        GiskardBlackboard().giskard.set_defaults()
         god_map.world.compiled_all_fks = None
         god_map.collision_scene.reset_cache()
         god_map.collision_scene.clear_collision_matrix()
         god_map.closest_point = Collisions(1)
         god_map.time = 0
         god_map.control_cycle_counter = 1
-        god_map.monitor_manager.reset()
-        god_map.motion_goal_manager.reset()
+        god_map.motion_statechart_manager.reset()
         god_map.debug_expression_manager.reset()
 
         self.get_blackboard().runtime = None

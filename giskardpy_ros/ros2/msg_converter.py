@@ -2,6 +2,12 @@ import builtins
 import json
 from typing import Optional, Union, List, Dict, Any
 from line_profiler import profile
+
+import numpy as np
+from geometry_msgs.msg import TransformStamped
+from line_profiler import profile
+
+import giskardpy.casadi_wrapper as cas
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
@@ -10,7 +16,6 @@ import std_msgs.msg as std_msgs
 import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
-from geometry_msgs.msg import TransformStamped
 from giskard_msgs.msg import GiskardError
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -20,15 +25,16 @@ from rclpy_message_converter.message_converter import \
 
 import giskardpy.casadi_wrapper as cas
 from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
-from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException
+from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
+    UnknownJointException
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionEntry
 from giskardpy.model.joints import MovableJoint
 from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.model.world import WorldTree
-from giskardpy.motion_graph.monitors.monitors import EndMotion, CancelMotion, Monitor
-from giskardpy.motion_graph.tasks.task import Task
+from giskardpy.motion_statechart.monitors.monitors import EndMotion, CancelMotion, Monitor
+from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
@@ -285,25 +291,14 @@ def convert_dictionary_to_ros_message(json):
     return original_convert_dictionary_to_ros_message(json['message_type'], json['message'])
 
 
-def monitor_to_ros_msg(monitor: Monitor) -> giskard_msgs.Monitor:
-    msg = giskard_msgs.Monitor()
-    msg.name = str(monitor.name)
-    msg.monitor_class = monitor.__class__.__name__
-    msg.start_condition = god_map.monitor_manager.format_condition(monitor.start_condition, new_line=' ')
-    msg.kwargs = kwargs_to_json({'hold_condition': god_map.monitor_manager.format_condition(monitor.hold_condition,
-                                                                                            new_line=' '),
-                                 'end_condition': god_map.monitor_manager.format_condition(monitor.end_condition,
-                                                                                           new_line=' ')})
-    return msg
-
-
-def task_to_ros_msg(task: Task) -> giskard_msgs.MotionGoal:
-    msg = giskard_msgs.MotionGoal()
-    msg.name = str(task.name)
-    msg.motion_goal_class = task.__class__.__name__
-    msg.start_condition = god_map.monitor_manager.format_condition(task.start_condition, new_line=' ')
-    msg.hold_condition = god_map.monitor_manager.format_condition(task.hold_condition, new_line=' ')
-    msg.end_condition = god_map.monitor_manager.format_condition(task.end_condition, new_line=' ')
+def motion_statechart_node_to_ros_msg(motion_graph_node: Union[Monitor, Task]) -> giskard_msgs.MotionStatechartNode:
+    msg = giskard_msgs.MotionStatechartNode()
+    msg.name = str(motion_graph_node.name)
+    msg.class_name = motion_graph_node.__class__.__name__
+    msg.start_condition = motion_graph_node.start_condition
+    msg.pause_condition = motion_graph_node.pause_condition
+    msg.end_condition = motion_graph_node.end_condition
+    msg.reset_condition = motion_graph_node.reset_condition
     return msg
 
 
@@ -335,6 +330,10 @@ def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception
 
 def link_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: WorldTree) -> PrefixName:
     return world.search_for_link_name(msg.name, msg.group_name)
+
+
+def joint_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: WorldTree) -> PrefixName:
+    return world.search_for_joint_name(msg.name, msg.group_name)
 
 
 def replace_prefix_name_with_str(d: dict) -> dict:
@@ -420,11 +419,16 @@ def ros_msg_to_giskard_obj(msg, world: WorldTree):
     elif isinstance(msg, giskard_msgs.CollisionEntry):
         return collision_entry_msg_to_giskard(msg)
     elif isinstance(msg, giskard_msgs.LinkName):
-        return link_name_msg_to_prefix_name(msg, world)
+        try:
+            return link_name_msg_to_prefix_name(msg, world)
+        except UnknownLinkException as e:
+            try:
+                return joint_name_msg_to_prefix_name(msg, world)
+            except UnknownJointException:
+                raise e
     elif isinstance(msg, GiskardError):
         return error_msg_to_exception(msg)
-    else:
-        raise ValueError(f'Can\'t convert msg of type \'{type(msg)}\'')
+    return msg
 
 
 def ros_joint_state_to_giskard_joint_state(msg: sensor_msgs.JointState, prefix: Optional[str] = None) -> JointStates:
@@ -490,6 +494,16 @@ def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: WorldTre
     result = cas.TransMatrix.from_point_rotation_matrix(point=p,
                                                         rotation_matrix=R,
                                                         reference_frame=world.search_for_link_name(msg.header.frame_id))
+    return result
+
+
+def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
+    p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
+    R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
+                                 msg.orientation.z, msg.orientation.w).to_rotation_matrix()
+    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
+                                                        rotation_matrix=R,
+                                                        reference_frame=None)
     return result
 
 

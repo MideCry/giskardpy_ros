@@ -5,7 +5,6 @@ import numpy as np
 from giskardpy_ros.python_interface.old_python_interface import OldGiskardWrapper
 
 
-
 class MUH:
     cancel_msg = 'Canceling all Giskard goals.'
 
@@ -33,5 +32,5 @@ num_buttons = len(joy_msg.buttons)
 
 button_ids = rospy.get_param('~button_ids', default=list(range(num_buttons)))
 muh = MUH(button_ids)
-logging.loginfo('giskard joystick e stop is running')
+rospy.loginfo('giskard joystick e stop is running')
 rospy.spin()

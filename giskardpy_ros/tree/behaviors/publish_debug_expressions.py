@@ -1,4 +1,5 @@
 import numpy as np
+from line_profiler import profile
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 

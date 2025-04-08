@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from giskardpy.model.collision_avoidance_config import LoadSelfCollisionMatrixConfig
@@ -8,15 +10,20 @@ from giskardpy.data_types.data_types import Derivatives
 
 
 class TracyWorldConfig(WorldWithFixedRobot):
-    def __init__(self):
-        super().__init__({Derivatives.velocity: 0.2,
-                          Derivatives.acceleration: np.inf,
-                          Derivatives.jerk: 15})
+
+    def __init__(self, map_name: str = 'map'):
+        super().__init__(urdf=rospy.get_param('robot_description'), map_name=map_name)
+
+    def setup(self, robot_name: Optional[str] = None) -> None:
+        super().setup(robot_name)
+        self.set_default_limits({Derivatives.velocity: 0.2,
+                                 Derivatives.acceleration: np.inf,
+                                 Derivatives.jerk: None})
 
 
 class TracyCollisionAvoidanceConfig(LoadSelfCollisionMatrixConfig):
     def __init__(self, collision_checker: CollisionCheckerLib = CollisionCheckerLib.bpb):
-        super().__init__('package://giskardpy/self_collision_matrices/iai/tracy.srdf',
+        super().__init__('package://giskardpy_ros/self_collision_matrices/iai/tracy.srdf',
                          collision_checker)
 
 

@@ -59,11 +59,11 @@ def heart():
     try:
         while rclpy.ok():
             rclpy.spin_once(node, executor=executor, timeout_sec=0.1)
-    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException) as e:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     except Exception as e:
         traceback.print_exc()
-    node.get_logger().info('rclpy died.')
+    node.get_logger().info('Giskard died.')
 
 
 def init_node(node_name: str) -> None:

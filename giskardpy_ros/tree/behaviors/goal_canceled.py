@@ -1,3 +1,4 @@
+from line_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import PreemptedException

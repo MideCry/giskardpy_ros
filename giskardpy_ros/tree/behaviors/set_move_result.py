@@ -1,12 +1,13 @@
 from giskard_msgs.action import Move
-from giskardpy_ros.tree.behaviors.publish_feedback import giskard_state_to_execution_state
 from py_trees.common import Status
+from line_profiler import profile
 
 from giskard_msgs.msg import GiskardError
 from giskardpy.data_types.exceptions import *
 from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.middleware import get_middleware
+from giskardpy_ros.tree.behaviors.publish_feedback import giskard_state_to_execution_state
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy.utils.decorators import record_time
 import giskardpy_ros.ros2.msg_converter as msg_converter
@@ -34,7 +35,7 @@ class SetMoveResult(GiskardBehavior):
 
         trajectory = god_map.trajectory
         joints = [god_map.world.joints[joint_name] for joint_name in god_map.world.movable_joint_names]
-        sample_period = god_map.qp_controller.sample_period
+        sample_period = god_map.qp_controller.mpc_dt
         move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(trajectory,
                                                                             sample_period=sample_period,
                                                                             start_time=0,
@@ -49,6 +50,6 @@ class SetMoveResult(GiskardBehavior):
                     get_middleware().logwarn(f'{self.context} failed: {move_result.error.msg}.')
 
         move_result.execution_state = giskard_state_to_execution_state()
-
         GiskardBlackboard().move_action_server.result_msg = move_result
+        move_result.execution_state = giskard_state_to_execution_state()
         return Status.SUCCESS

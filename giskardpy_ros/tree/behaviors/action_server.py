@@ -4,6 +4,7 @@ from typing import Any, Optional
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.timer import Timer
+from line_profiler import profile
 
 from giskard_msgs.action import Move
 from giskardpy.data_types.exceptions import GiskardException

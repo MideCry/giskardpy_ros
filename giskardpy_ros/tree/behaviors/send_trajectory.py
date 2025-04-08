@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 
+from line_profiler import profile
 from giskardpy.data_types.exceptions import ExecutionException, FollowJointTrajectory_INVALID_JOINTS, \
     FollowJointTrajectory_INVALID_GOAL, FollowJointTrajectory_OLD_HEADER_TIMESTAMP, \
     FollowJointTrajectory_PATH_TOLERANCE_VIOLATED, FollowJointTrajectory_GOAL_TOLERANCE_VIOLATED, \
@@ -100,7 +101,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         if fill_velocity_values is None:
             fill_velocity_values = self.fill_velocity_values
         goal.trajectory = msg_converter.trajectory_to_ros_trajectory(trajectory,
-                                                                     god_map.qp_controller.sample_period,
+                                                                     god_map.qp_controller.mpc_dt,
                                                                      start_time,
                                                                      self.controlled_joints,
                                                                      fill_velocity_values)
@@ -178,7 +179,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
 
         result = self.action_client.get_result()
         if result:
-            if current_time < self.min_deadline:
+            if current_time.to_sec() < self.min_deadline.to_sec():
                 msg = f'\'{self.namespace}\' executed too quickly, stopping execution.'
                 e = ExecutionSucceededPrematurely(msg)
                 raise_to_blackboard(e)
@@ -187,7 +188,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
             get_middleware().loginfo(f'\'{self.namespace}\' successfully executed the trajectory.')
             return py_trees.Status.SUCCESS
 
-        if current_time > self.max_deadline:
+        if current_time.to_sec() > self.max_deadline.to_sec():
             self.action_client.cancel_goal()
             msg = f'Cancelling \'{self.namespace}\' because it took to long to execute the goal.'
             get_middleware().logerr(msg)

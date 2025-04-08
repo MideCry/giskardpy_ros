@@ -9,7 +9,7 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface, TiagoCollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
-from giskardpy.motion_graph.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 from giskardpy.god_map import god_map
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy_ros.utils.utils_for_tests import launch_launchfile
@@ -94,11 +94,11 @@ class TiagoTester(GiskardTester):
 
     def __init__(self, giskard=None):
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithDiffDriveRobot(),
+            giskard = Giskard(world_config=WorldWithDiffDriveRobot(urdf=rospy.get_param('robot_description')),
                               collision_avoidance_config=TiagoCollisionAvoidanceConfig(),
                               robot_interface_config=TiagoStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True),
-                              qp_controller_config=QPControllerConfig())
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05))
         super().__init__(giskard)
 
     def move_base(self, goal_pose: PoseStamped, add_monitor: bool = True):
@@ -245,14 +245,14 @@ class TestCartGoals:
         countertip_P_goal.point.y = -0.3
 
         base_pose = PoseStamped()
-        base_pose.header.frame_id = countertop_frame
+        base_pose.header.frame_id = countertop_frame.split('/')[1]
         base_pose.pose.position.x = 1.3
         base_pose.pose.position.y = -0.3
         base_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
                                                                          [0, -1, 0, 0],
                                                                          [0, 0, 1, 0],
                                                                          [0, 0, 0, 1]]))
-        base_pose = god_map.world.transform_pose(apartment_setup.default_root, base_pose)
+        base_pose = tf.transform_pose(apartment_setup.default_root, base_pose)
         base_pose.pose.position.z = 0
         # apartment_setup.allow_all_collisions()
         apartment_setup.move_base(base_pose)
@@ -274,8 +274,7 @@ class TestCollisionAvoidance:
         better_pose.add_box_to_world(box_name,
                                      (0.1, 0.1, 0.1),
                                      pose=box_pose,
-                                     parent_link=parent_link,
-                                     parent_link_group=better_pose.robot_name)
+                                     parent_link=parent_link)
         better_pose.set_joint_goal(better_pose.default_pose)
         better_pose.execute()
 
@@ -301,8 +300,7 @@ class TestCollisionAvoidance:
         apartment_setup.add_box_to_world(name=cup_name,
                                          size=(0.0753, 0.0753, cup_height),
                                          pose=cup_pose,
-                                         parent_link=cupboard_floor,
-                                         parent_link_group=apartment_name)
+                                         parent_link=cupboard_floor)
 
         # open cupboard
         goal_angle = np.pi / 2
@@ -446,8 +444,7 @@ class TestCollisionAvoidance:
         zero_pose.add_box_to_world('box1',
                                    size=(0.1, 0.1, 0.01),
                                    pose=box_pose,
-                                   parent_link='base_link',
-                                   parent_link_group=zero_pose.robot_name)
+                                   parent_link='base_link')
         box_pose = PoseStamped()
         box_pose.header.frame_id = 'base_link'
         box_pose.pose.position.x = 0.6
@@ -457,8 +454,7 @@ class TestCollisionAvoidance:
         zero_pose.add_box_to_world('box2',
                                    size=(0.1, 0.01, 0.1),
                                    pose=box_pose,
-                                   parent_link='base_link',
-                                   parent_link_group=zero_pose.robot_name)
+                                   parent_link='base_link')
         box_pose = PoseStamped()
         box_pose.header.frame_id = 'base_link'
         box_pose.pose.position.x = 0.6
@@ -468,8 +464,7 @@ class TestCollisionAvoidance:
         zero_pose.add_box_to_world('box3',
                                    size=(0.1, 0.01, 0.1),
                                    pose=box_pose,
-                                   parent_link='base_link',
-                                   parent_link_group=zero_pose.robot_name)
+                                   parent_link='base_link')
         # box_pose = PoseStamped()
         # box_pose.header.frame_id = 'base_link'
         # box_pose.pose.position.x = 0.6
@@ -511,15 +506,15 @@ class TestCollisionAvoidance:
         apartment_setup.execute()
 
         apartment_setup.set_open_container_goal(tip_link=tcp,
-                                      environment_link=handle_name,
-                                      goal_joint_state=goal_angle)
+                                                environment_link=handle_name,
+                                                goal_joint_state=goal_angle)
         apartment_setup.set_diff_drive_tangential_to_point(goal_point=goal_point)
         apartment_setup.set_avoid_joint_limits_goal(50)
         apartment_setup.execute()
 
         apartment_setup.set_open_container_goal(tip_link=tcp,
-                                      environment_link=handle_name,
-                                      goal_joint_state=0)
+                                                environment_link=handle_name,
+                                                goal_joint_state=0)
         apartment_setup.set_diff_drive_tangential_to_point(goal_point=goal_point)
         apartment_setup.set_avoid_joint_limits_goal(50)
         apartment_setup.execute()

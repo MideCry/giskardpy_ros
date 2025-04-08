@@ -13,7 +13,6 @@ from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
 from giskardpy_ros.tree.behaviors.real_kinematic_sim import RealKinSimPlugin
 from giskardpy_ros.tree.behaviors.time import TimePlugin, RosTime, ControlCycleCounter
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy_ros.tree.branches.check_monitors import CheckMonitors
 from giskardpy_ros.tree.branches.publish_state import PublishState
 from giskardpy_ros.tree.branches.send_controls import SendControls
 from giskardpy_ros.tree.branches.synchronization import Synchronization
@@ -25,7 +24,6 @@ class ControlLoop(AsyncBehavior):
     publish_state: PublishState
     projection_synchronization: Synchronization
     closed_loop_synchronization: Synchronization
-    check_monitors: CheckMonitors
     debug_added: bool = False
     in_projection: bool
     controller_active: bool = True
@@ -37,15 +35,20 @@ class ControlLoop(AsyncBehavior):
     send_controls: SendControls
     log_traj: LogTrajPlugin
     controller_plugin: ControllerPlugin
+    evaluate_monitors: EvaluateMonitors
 
-    def __init__(self, name: str = 'control_loop', log_traj: bool = True, max_hz: Optional[float] = None):
+    def __init__(self, name: str = 'control_loop', log_traj: bool = True):
+        control_dt = GiskardBlackboard().giskard.qp_controller_config.control_dt
+        if control_dt is not None:
+            max_hz = 1/control_dt
+        else:
+            max_hz = None
         name = f'{name}\nmax_hz -- {max_hz}'
         super().__init__(name, max_hz=max_hz)
         self.publish_state = PublishState('publish state 2')
         self.publish_state.add_publish_feedback()
         self.projection_synchronization = Synchronization()
         self.projection_synchronization_sir = SuccessIsRunning('sir', self.projection_synchronization)
-        self.check_monitors = CheckMonitors()
         # projection plugins
         self.time = TimePlugin()
         self.kin_sim = KinSimPlugin('kin sim')
@@ -55,6 +58,7 @@ class ControlLoop(AsyncBehavior):
         self.send_controls = SendControls()
         self.closed_loop_synchronization = Synchronization()
         self.closed_loop_synchronization_sir = SuccessIsRunning('sir', self.closed_loop_synchronization)
+        self.evaluate_monitors = EvaluateMonitors()
 
         goal_canceled = GoalCanceled(GiskardBlackboard().move_action_server)
 
@@ -63,8 +67,7 @@ class ControlLoop(AsyncBehavior):
         if god_map.is_collision_checking_enabled():
             self.add_child(CollisionChecker('collision checker'))
 
-        self.add_child(EvaluateMonitors())
-        self.add_child(self.check_monitors, success_is_running=False)
+        self.add_child(self.evaluate_monitors, success_is_running=False)
         self.controller_plugin = ControllerPlugin('controller')
         self.add_child(self.controller_plugin, success_is_running=False)
 
@@ -89,7 +92,7 @@ class ControlLoop(AsyncBehavior):
 
     @toggle_on('controller_active')
     def add_qp_controller(self):
-        self.insert_behind(self.controller_plugin, self.check_monitors)
+        self.insert_behind(self.controller_plugin, self.evaluate_monitors)
         self.insert_behind(self.kin_sim, self.time)
 
     @toggle_off('controller_active')

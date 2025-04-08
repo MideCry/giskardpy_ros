@@ -1,3 +1,4 @@
+from line_profiler import profile
 from py_trees.common import Status
 from rclpy.duration import Duration
 

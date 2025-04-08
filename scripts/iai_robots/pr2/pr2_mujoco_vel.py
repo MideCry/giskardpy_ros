@@ -5,6 +5,11 @@ from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import WorldWithPR2Config, PR2VelocityMujocoInterface
 
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy.qp.qp_solver_ids import SupportedQPSolver
+from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
+from giskardpy_ros.configs.giskard import Giskard
+from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, WorldWithPR2Config, PR2VelocityMujocoInterface
 
 def main():
     rospy.init_node('giskard')

@@ -2,7 +2,7 @@ from py_trees.composites import Sequence
 from py_trees.decorators import FailureIsSuccess
 
 from giskardpy_ros.tree.behaviors.append_zero_velocity import SetZeroVelocity
-from giskardpy_ros.tree.behaviors.delete_monitors_behaviors import DeleteMonitors
+from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisherTrajectory
 from giskardpy_ros.tree.behaviors.goal_cleanup import GoalCleanUp
 from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
 from giskardpy_ros.tree.behaviors.plot_debug_expressions import PlotDebugExpressions
@@ -20,12 +20,11 @@ class CleanupControlLoop(Sequence):
 
     def __init__(self, name: str = 'clean up control loop'):
         super().__init__(name, memory=True)
-        self.add_child(PublishFeedback())
         self.add_child(TimePlugin())
+        self.add_child(PublishFeedback())
         self.add_child(SetZeroVelocity('set zero vel 1'))
         self.add_child(LogTrajPlugin('log post processing'))
         self.add_child(GoalCleanUp('clean up goals'))
-        self.add_child(DeleteMonitors())
         self.reset_world_state = ResetWorldState()
         self.reset_world_state_failure_is_success = FailureIsSuccess('ignore failure', self.reset_world_state)
         self.remove_reset_world_state()
@@ -40,8 +39,11 @@ class CleanupControlLoop(Sequence):
     def add_visualize_trajectory(self):
         self.add_child(VisualizeTrajectory())
 
+    def add_debug_visualize_trajectory(self):
+        self.add_child(DebugMarkerPublisherTrajectory())
+
     def add_plot_gantt_chart(self):
-        self.insert_child(PlotGanttChart(), 0)
+        self.insert_child(PlotGanttChart(), 2)
 
     @toggle_on('has_reset_world_state')
     def add_reset_world_state(self):

@@ -1,3 +1,4 @@
+from line_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
@@ -24,9 +25,10 @@ class RealKinSimPlugin(GiskardBehavior):
             self.last_time = next_time
             return Status.RUNNING
         next_cmds = god_map.qp_solver_solution
-        dt = next_time - self.last_time
-        if dt > god_map.qp_controller.sample_period:
-            dt = god_map.qp_controller.sample_period
+        # dt = next_time - self.last_time
+        # if dt > god_map.qp_controller.mpc_dt:
+        #     dt = god_map.qp_controller.mpc_dt
+        dt = god_map.qp_controller.control_dt
         god_map.world.update_state(next_cmds, dt, max_derivative=god_map.qp_controller.max_derivative)
         self.last_time = next_time
         return Status.RUNNING

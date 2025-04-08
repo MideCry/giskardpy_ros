@@ -8,6 +8,7 @@ from line_profiler import profile
 import rclpy
 from py_trees import behaviour
 from py_trees.behaviour import Behaviour
+from line_profiler import profile
 from py_trees.common import Status
 from py_trees.composites import Composite
 from py_trees.decorators import RunningIsSuccess, SuccessIsRunning

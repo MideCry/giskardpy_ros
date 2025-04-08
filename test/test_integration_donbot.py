@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
 
-from giskard_msgs.msg import GiskardError
+from giskardpy.data_types.exceptions import GoalInitalizationException
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig, DonbotCollisionAvoidanceConfig, DonbotStandaloneInterfaceConfig
 from giskardpy_ros.configs.giskard import Giskard
@@ -63,7 +63,7 @@ class DonbotTester(GiskardTester):
         giskard = Giskard(world_config=WorldWithBoxyBaseConfig(),
                           collision_avoidance_config=DonbotCollisionAvoidanceConfig(),
                           robot_interface_config=DonbotStandaloneInterfaceConfig(),
-                          behavior_tree_config=StandAloneBTConfig(),
+                          behavior_tree_config=StandAloneBTConfig(debug_mode=True),
                           qp_controller_config=QPControllerConfig())
         super().__init__(giskard)
 
@@ -165,7 +165,7 @@ class TestJointGoals:
             'ur5_wrist_3_joint': -2.5249870459186,
         })
         zero_pose.set_joint_goal({})
-        zero_pose.execute(expected_error_code=GiskardError.GOAL_INITIALIZATION_ERROR)
+        zero_pose.execute(expected_error_type=GoalInitalizationException)
 
     def test_joint_movement2(self, zero_pose: DonbotTester):
         js = {
@@ -218,7 +218,7 @@ class TestJointGoals:
 class TestConstraints:
     def test_pointing(self, better_pose: DonbotTester):
         tip = 'rs_camera_link'
-        goal_point = god_map.world.compute_fk_point('map', 'base_footprint')
+        goal_point = better_pose.compute_fk_point('map', 'base_footprint')
         z = Vector3Stamped()
         z.header.frame_id = 'rs_camera_link'
         z.vector.z = 1
@@ -226,9 +226,10 @@ class TestConstraints:
                                       root_link=better_pose.default_root)
         better_pose.execute()
 
-        goal_point = god_map.world.compute_fk_point('map', tip)
+        goal_point = better_pose.compute_fk_point('map', tip)
+        goal_point.point.z -= 0.1
         better_pose.set_pointing_goal(goal_point=goal_point, tip_link=tip, pointing_axis=z,
-                                      root_link=tip)
+                                      root_link=better_pose.default_root)
         better_pose.execute()
 
     def test_open_fridge(self, kitchen_setup: DonbotTester):
@@ -320,7 +321,7 @@ class TestCartGoals:
         zero_pose.execute()
         p = PoseStamped()
         p.header.frame_id = 'camera_link'
-        p.pose.position = Point(0, 1, 0)
+        p.pose.position = Point(0, 0.8, 0)
         p.pose.orientation.w = 1
         # zero_pose.allow_self_collision()
         zero_pose.set_straight_cart_goal(goal_pose=p,
