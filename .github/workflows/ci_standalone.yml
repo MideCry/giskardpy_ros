@@ -38,6 +38,14 @@ on:
         hidden: true
 jobs:
   docker:
+      name: Docker Build and Dependent Tasks
+      runs-on: ubuntu-latest
+
+      permissions:
+        contents: read
+        packages: write
+
+      steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
