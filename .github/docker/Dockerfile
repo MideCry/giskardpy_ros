@@ -29,7 +29,7 @@ RUN apt-get install -y curl \
             ros-noetic-joint-trajectory-controller \
             git-all
 
-# Install gh cli for github workflow commands (can't use apt normally unlike ubuntu24.04)
+# Install gh cli for github workflow commands (can't use apt normally unlike ubuntu:24.04)
 RUN sudo mkdir -p -m 755 /etc/apt/keyrings \
     && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
