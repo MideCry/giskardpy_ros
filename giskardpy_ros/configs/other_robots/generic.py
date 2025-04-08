@@ -41,7 +41,7 @@ class GenericWorldConfig(WorldConfig):
     def setup(self):
         self.set_default_limits({Derivatives.velocity: 0.2,
                                  Derivatives.acceleration: np.inf,
-                                 Derivatives.jerk: 30})
+                                 Derivatives.jerk: None})
         global_tf_frame = self.get_tf_root_that_is_not_in_world()
         self.map_name = PrefixName(global_tf_frame)
         self.urdf = self.robot_description or ros2_interface.get_robot_description()
@@ -66,13 +66,13 @@ class GenericWorldConfig(WorldConfig):
                                           child_link_name=link2,
                                           translation_limits={
                                               Derivatives.velocity: 0.2,
-                                              Derivatives.acceleration: 1,
-                                              Derivatives.jerk: 5,
+                                              Derivatives.acceleration: np.inf,
+                                              Derivatives.jerk: None,
                                           },
                                           rotation_limits={
                                               Derivatives.velocity: 0.2,
-                                              Derivatives.acceleration: 1,
-                                              Derivatives.jerk: 5
+                                              Derivatives.acceleration: np.inf,
+                                              Derivatives.jerk: None
                                           },
                                           robot_group_name=self.robot_group_name)
             else:
