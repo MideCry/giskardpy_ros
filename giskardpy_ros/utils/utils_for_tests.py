@@ -303,7 +303,7 @@ class GiskardTester:
 
         # rospy.sleep(1)
         self.original_number_of_links = len(god_map.world.links)
-        self.heart = Thread(target=GiskardBlackboard().tree.live)
+        self.heart = Thread(target=GiskardBlackboard().tree.live, name='bt ticker')
         self.heart.start()
         self.api = GiskardWrapperNode(node_name='tests')
         self.api.spin_in_background()

@@ -73,6 +73,6 @@ def init_node(node_name: str) -> None:
         return
     rclpy.init()
     node = Node(node_name)
-    spinner_thread = Thread(target=heart, daemon=True)
+    spinner_thread = Thread(target=heart, daemon=True, name='rclpy spin')
     set_middleware(ROS2Wrapper())
     spinner_thread.start()

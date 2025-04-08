@@ -2478,5 +2478,5 @@ class GiskardWrapperNode(Node, GiskardWrapper):
         self.is_spinning = False
 
     def spin_in_background(self):
-        self.spinner = Thread(target=self.__spin)
+        self.spinner = Thread(target=self.__spin, name='background giskard wrapper spinner')
         self.spinner.start()
