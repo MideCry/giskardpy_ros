@@ -78,7 +78,8 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'ros_ws/src/giskardpy_ros'
-          repository: ${{ github.repository_owner }}/giskardpy_ros
+          repository: SemRoCo/giskardpy_ros
+          branch: ros1-lib_motion_graph_reset
       - name: Find Corresponding PR in giskardpy
         # searches for pull-request in giskardpy match the pull-request that triggered the workflow.
         # Uses the pr-url, pr-number or pr-title to search the open pr's on giskardpy to find a description,
@@ -137,7 +138,7 @@ jobs:
         # fallback repo and branch, if event is push or no merge-able pr is found
         with:
           path: 'giskardpy'
-          repository: ${{ github.repository_owner }}/giskardpy
+          repository: SemRoCo/giskardpy
           ref: library_standalone
       - name: install pip dependencies
         run: |
