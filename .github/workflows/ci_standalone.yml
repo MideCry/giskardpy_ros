@@ -55,14 +55,13 @@ jobs:
         run: |
           DOCKERFILE_CHANGED=false
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # For manual triggers, always build Docker images
-            echo "Manual workflow trigger, will build Docker images"
-            DOCKERFILE_CHANGED=true
-
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # For PRs, check if any Dockerfiles changed in the PR
             echo "Checking for Dockerfile changes in PR"
+            
+            # Fetch the PR head for PRs from forks
+            git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-${{ github.event.pull_request.number }}
+            
             if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q "Dockerfile"; then
               echo "Dockerfile changes detected in PR"
               DOCKERFILE_CHANGED=true
