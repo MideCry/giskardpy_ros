@@ -15,7 +15,6 @@ import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.msg import WorldBody, CollisionEntry, WorldGoal, LinkName
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
-    LocalMinimumException, \
     DuplicateNameException, CorruptMeshException, UnknownGroupException, UnknownLinkException, \
     InvalidWorldOperationException, CorruptShapeException, TransformException, CorruptURDFException, \
     SelfCollisionViolatedException, HardConstraintsViolatedException, SetupException, EmptyProblemException, \
@@ -39,8 +38,8 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface, WorldWithPR2Config
 from giskardpy_ros.python_interface.old_python_interface import OldGiskardWrapper
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from utils_for_tests import compare_poses, publish_marker_vector, GiskardTestWrapper, compare_points
-from utils_for_tests import launch_launchfile
+from giskardpy_ros.utils.utils_for_tests import compare_poses, publish_marker_vector, GiskardTestWrapper, compare_points
+from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
@@ -167,7 +166,10 @@ class PR2TestWrapper(GiskardTestWrapper):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      retries_with_relaxed_constraints=10,
+                                                                      # qp_solver=SupportedQPSolver.gurobi,
+                                                                      ))
         super().__init__(giskard)
         self.robot = god_map.world.groups[self.robot_name]
 
@@ -4145,7 +4147,8 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.allow_collision(kitchen_setup.robot_name, tray_name)
         kitchen_setup.set_avoid_joint_limits_goal(percentage=percentage)
         # grasp tray
-        kitchen_setup.execute()
+        kitchen_setup.add_end_on_local_minimum()
+        kitchen_setup.execute(add_local_minimum_reached=False)
 
         kitchen_setup.update_parent_link_of_group(tray_name, kitchen_setup.r_tip)
 
@@ -4191,7 +4194,8 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.allow_collision(group1=tray_name,
                                       group2=kitchen_setup.l_gripper_group)
         kitchen_setup.set_cart_goal(tray_goal, tray_name, 'base_footprint', add_monitor=False)
-        kitchen_setup.execute()
+        kitchen_setup.add_end_on_local_minimum()
+        kitchen_setup.execute(add_local_minimum_reached=False)
 
     # TODO FIXME attaching and detach of urdf objects that listen to joint states
 
