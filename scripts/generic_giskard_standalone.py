@@ -20,9 +20,9 @@ def main():
     giskard = Giskard(world_config=GenericWorldConfig(robot_description=robot_description),
                       collision_avoidance_config=DisableCollisionAvoidanceConfig(),
                       robot_interface_config=GenericRobotInterface(),
-                      behavior_tree_config=StandAloneBTConfig(publish_free_variables=True,
-                                                              publish_tf=False,
-                                                              debug_mode=True),
+                      behavior_tree_config=StandAloneBTConfig(publish_free_variables=False,
+                                                              publish_tf=True,
+                                                              debug_mode=True, publish_js=True),
                       qp_controller_config=QPControllerConfig())
     giskard.live()
 
