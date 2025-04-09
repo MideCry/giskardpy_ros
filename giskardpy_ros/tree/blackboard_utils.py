@@ -4,7 +4,6 @@ import typing
 from functools import wraps
 from typing import TypeVar, Callable, TYPE_CHECKING, Optional
 
-from py_trees.blackboard import Blackboard, Client
 from py_trees.common import Status, Access
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
     from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 
 
-class GiskardBlackboard(Client):
+class GiskardBlackboard:
     giskard: Giskard
     tree: GiskardBT
     runtime: float
@@ -27,19 +26,10 @@ class GiskardBlackboard(Client):
     control_loop_max_hz: float
     simulation_max_hz: float
     exception: Optional[Exception]
+    __shared_state = {}
 
-    def __init__(self, *, name: typing.Optional[str] = None, namespace: typing.Optional[str] = None):
-        super().__init__(name=name, namespace=namespace)
-        self.register_key('giskard', access=Access.WRITE)
-        self.register_key('tree', access=Access.WRITE)
-        self.register_key('runtime', access=Access.WRITE)
-        self.register_key('move_action_server', access=Access.WRITE)
-        self.register_key('world_action_server', access=Access.WRITE)
-        self.register_key('ros_visualizer', access=Access.WRITE)
-        self.register_key('fill_trajectory_velocity_values', access=Access.WRITE)
-        self.register_key('control_loop_max_hz', access=Access.WRITE)
-        self.register_key('simulation_max_hz', access=Access.WRITE)
-        self.register_key('exception', access=Access.WRITE)
+    def __init__(self):
+        self.__dict__ = self.__shared_state
 
 
 def raise_to_blackboard(exception):
@@ -50,10 +40,11 @@ def has_blackboard_exception():
     return get_blackboard_exception() is not None
 
 
-def get_blackboard_exception():
-    if not GiskardBlackboard().exists('exception'):
-        GiskardBlackboard().exception = None
-    return GiskardBlackboard().exception
+def get_blackboard_exception() -> Optional[Exception]:
+    try:
+        return GiskardBlackboard().exception
+    except Exception:
+        return None
 
 
 def clear_blackboard_exception():
@@ -63,18 +54,35 @@ def clear_blackboard_exception():
 T = TypeVar("T", bound=Callable)
 
 
-def catch_and_raise_to_blackboard(function: T) -> T:
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if has_blackboard_exception():
-            return Status.FAILURE
-        try:
-            r = function(*args, **kwargs)
-        except Exception as e:
-            if not isinstance(e, DontPrintStackTrace):
-                traceback.print_exc()
-            raise_to_blackboard(e)
-            return Status.FAILURE
-        return r
+def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
+    def decorator(func):
+        if skip_on_exception:
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                if has_blackboard_exception():
+                    return Status.FAILURE
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if not isinstance(e, DontPrintStackTrace):
+                        traceback.print_exc()
+                    raise_to_blackboard(e)
+                    return Status.FAILURE
+            return wrapper
+        else:
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if not isinstance(e, DontPrintStackTrace):
+                        traceback.print_exc()
+                    if not has_blackboard_exception():
+                        raise_to_blackboard(e)
+                    return Status.FAILURE
+            return wrapper
 
-    return wrapper
+    if function is None:
+        return decorator
+    else:
+        return decorator(function)

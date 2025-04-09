@@ -19,7 +19,7 @@ class CompileMonitors(GiskardBehavior):
         god_map.motion_statechart_manager.compile_node_state_updaters()
         return Status.SUCCESS
 
-    @profile
+
     def add_payload_monitors_to_behavior_tree(self, traj_tracking: bool = False) -> None:
         payload_monitors = sorted(god_map.monitor_manager.payload_monitors, key=lambda x: isinstance(x, CancelMotion))
         for monitor in payload_monitors:

@@ -1,25 +1,23 @@
 import os
 import uuid
 from collections import defaultdict
-from copy import deepcopy
-from typing import Any, Type, Optional, Dict, Tuple
-from itertools import zip_longest
 from typing import Any, Type, Tuple
+from typing import Optional, Dict
 
 import numpy as np
-import py_trees
 import pydot
 import rclpy
 from py_trees import common, behaviour, utilities, console, composites, decorators
 from py_trees.behaviour import Behaviour
 from py_trees.blackboard import Blackboard
-from py_trees.composites import Sequence, Selector, Composite
+from py_trees.composites import Sequence, Composite
 from py_trees.decorators import FailureIsSuccess, Decorator
 from py_trees.display import unicode_symbols, ascii_symbols
 from py_trees_ros.trees import BehaviourTree
-from rclpy.executors import MultiThreadedExecutor
 
-from giskardpy.god_map import god_map
+from giskardpy.middleware import get_middleware
+from giskardpy.utils.decorators import toggle_on, toggle_off
+from giskardpy.utils.utils import create_path
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.send_result import SendResult
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -30,11 +28,7 @@ from giskardpy_ros.tree.branches.prepare_control_loop import PrepareControlLoop
 from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
 from giskardpy_ros.tree.branches.wait_for_goal import WaitForGoal
 from giskardpy_ros.tree.composites.async_composite import AsyncBehavior
-from giskardpy_ros.tree.composites.better_parallel import Parallel
 from giskardpy_ros.tree.control_modes import ControlModes
-from giskardpy.middleware import get_middleware
-from giskardpy.utils.decorators import toggle_on, toggle_off
-from giskardpy.utils.utils import create_path
 
 
 def behavior_is_instance_of(obj: Any, type_: Type) -> bool:
@@ -125,7 +119,7 @@ class GiskardBT(BehaviourTree):
 
     def live(self):
         get_middleware().loginfo('giskard is ready')
-        self.tick_tock(period_ms=1000.0)
+        self.tick_tock(period_ms=50.0)
         rospy.spinner_thread.join()
         self.shutdown()
         rclpy.try_shutdown()

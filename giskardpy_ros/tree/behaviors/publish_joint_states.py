@@ -10,7 +10,7 @@ from line_profiler import profile
 
 
 class PublishJointState(GiskardBehavior):
-    @profile
+    
     def __init__(self, name: Optional[str] = None, topic_name: Optional[str] = None, include_prefix: bool = False,
                  only_prismatic_and_revolute: bool = True):
         if name is None:

@@ -1,13 +1,9 @@
 import builtins
 import json
+import threading
+from time import sleep
 from typing import Optional, Union, List, Dict, Any
-from line_profiler import profile
 
-import numpy as np
-from geometry_msgs.msg import TransformStamped
-from line_profiler import profile
-
-import giskardpy.casadi_wrapper as cas
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
@@ -16,6 +12,7 @@ import std_msgs.msg as std_msgs
 import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
+from geometry_msgs.msg import TransformStamped
 from giskard_msgs.msg import GiskardError
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -27,13 +24,12 @@ import giskardpy.casadi_wrapper as cas
 from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException
-from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionEntry
 from giskardpy.model.joints import MovableJoint
 from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.model.world import WorldTree
-from giskardpy.motion_statechart.monitors.monitors import EndMotion, CancelMotion, Monitor
+from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
@@ -65,7 +61,6 @@ def to_visualization_marker(data):
         return link_geometry_to_visualization_marker(data)
 
 
-@profile
 def link_to_visualization_marker(data: Link, mode: VisualizationMode) -> visualization_msgs.MarkerArray:
     markers = visualization_msgs.MarkerArray()
     if mode.is_visual():
@@ -90,7 +85,6 @@ def link_to_visualization_marker(data: Link, mode: VisualizationMode) -> visuali
     return markers
 
 
-@profile
 def link_geometry_to_visualization_marker(data: LinkGeometry) -> visualization_msgs.Marker:
     marker = visualization_msgs.Marker()
     marker.color = color_rgba_to_ros_msg(data.color)
@@ -224,7 +218,6 @@ def trajectory_to_ros_trajectory(data: Trajectory,
     return trajectory_msg
 
 
-@profile
 def world_to_tf_message(world: WorldTree, include_prefix: bool) -> tf2_msgs.TFMessage:
     tf_msg = tf2_msgs.TFMessage()
     tf = world._fk_computer.compute_tf()
@@ -536,9 +529,19 @@ def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry) -> Collisio
     return CollisionEntry(msg.type, msg.distance, msg.group1, msg.group2)
 
 
-__tf_messages: List[TransformStamped] = [TransformStamped() for _ in range(10000)]
+__tf_messages: List[TransformStamped] = None
+
+
+def __create_tf_messages():
+    global __tf_messages
+    __tf_messages = [TransformStamped() for _ in range(10000)]
+
+
+threading.Thread(target=__create_tf_messages, daemon=True).start()
 
 
 def create_tf_message_batch(size: int) -> List[TransformStamped]:
     global __tf_messages
+    while __tf_messages is None:
+        sleep(0.01)
     return __tf_messages[:size]

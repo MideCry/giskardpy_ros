@@ -88,7 +88,7 @@ def did_state_change() -> bool:
 
 
 class PublishFeedback(GiskardBehavior):
-    @profile
+    
     def __init__(self, name: Optional[str] = None, topic_name: Optional[str] = None):
         if name is None:
             name = self.__class__.__name__
@@ -102,7 +102,7 @@ class PublishFeedback(GiskardBehavior):
                                                         durability=QoSDurabilityPolicy.TRANSIENT_LOCAL))
 
     @record_time
-    @profile
+    
     def update(self):
         if did_state_change():
             msg = giskard_state_to_execution_state()

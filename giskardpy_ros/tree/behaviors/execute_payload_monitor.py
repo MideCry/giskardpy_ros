@@ -14,7 +14,7 @@ class ExecutePayloadMonitor(GiskardBehavior):
     monitor: PayloadMonitor
     started: bool
 
-    @profile
+
     def __init__(self, monitor: PayloadMonitor):
         super().__init__('execute\npayload')
         self.monitor = monitor
@@ -22,7 +22,7 @@ class ExecutePayloadMonitor(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         if self.monitor.run_call_in_thread:
             if not self.started:

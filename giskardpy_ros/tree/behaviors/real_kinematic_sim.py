@@ -18,7 +18,7 @@ class RealKinSimPlugin(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+    
     def update(self):
         next_time = god_map.time
         if next_time <= 0.0 or self.last_time is None:

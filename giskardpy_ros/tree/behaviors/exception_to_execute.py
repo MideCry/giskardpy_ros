@@ -8,7 +8,7 @@ from line_profiler import profile
 
 class ClearBlackboardException(GiskardBehavior):
     @record_time
-    @profile
+
     def update(self):
         if self.get_blackboard_exception() is not None:
             self.clear_blackboard_exception()

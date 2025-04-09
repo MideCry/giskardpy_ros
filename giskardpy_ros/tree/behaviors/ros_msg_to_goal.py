@@ -23,13 +23,13 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, G
 
 class ParseActionGoal(GiskardBehavior):
     @record_time
-    @profile
+    
     def __init__(self, name):
         super().__init__(name)
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+    
     def update(self):
         move_goal: Move.Goal = GiskardBlackboard().move_action_server.goal_msg
         get_middleware().loginfo(f'Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message.')
@@ -93,13 +93,13 @@ def get_ros_msgs_constant_name_by_value(ros_msg_class, value: Union[str, int, fl
 
 class SetExecutionMode(GiskardBehavior):
     @record_time
-    @profile
+    
     def __init__(self, name: str = 'set execution mode'):
         super().__init__(name)
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+    
     def update(self):
         get_middleware().loginfo(
             f'Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg), GiskardBlackboard().move_action_server.goal_msg.type)}')
@@ -121,7 +121,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+    
     def update(self):
         local_min = LocalMinimumReached('local min')
         god_map.motion_statechart_manager.add_monitor(local_min)

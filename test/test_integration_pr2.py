@@ -172,7 +172,9 @@ class PR2Tester(GiskardTester):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      # qp_solver=SupportedQPSolver.gurobi,
+                                                                      ))
         super().__init__(giskard)
         self.robot = god_map.world.groups[self.api.robot_name]
 

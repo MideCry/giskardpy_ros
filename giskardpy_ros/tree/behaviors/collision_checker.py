@@ -9,8 +9,9 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
 from line_profiler import profile
 
+
 class CollisionChecker(GiskardBehavior):
-    @profile
+
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -29,9 +30,8 @@ class CollisionChecker(GiskardBehavior):
                                                          f'{self_collision.original_link_b} violate distance threshold:'
                                                          f'{self_collision.contact_distance} < {0}')
 
-    @catch_and_raise_to_blackboard
+    @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
-    @profile
     def update(self) -> Status:
         """
         Computes closest point info for all robot links and safes it to the god map.

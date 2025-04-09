@@ -1,16 +1,13 @@
 from typing import List, Dict, Any
 
-from line_profiler import profile
+from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.data_types.exceptions import ExecutionException, FollowJointTrajectory_INVALID_JOINTS, \
     FollowJointTrajectory_INVALID_GOAL, FollowJointTrajectory_OLD_HEADER_TIMESTAMP, \
     FollowJointTrajectory_PATH_TOLERANCE_VIOLATED, FollowJointTrajectory_GOAL_TOLERANCE_VIOLATED, \
     ExecutionTimeoutException, ExecutionSucceededPrematurely, ExecutionPreemptedException
 from giskardpy.god_map import god_map
-from giskardpy_ros.ros2.ros2_interface import wait_for_topic_to_appear
 from giskardpy.model.joints import OneDofJoint, OmniDrive
-from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy_ros.ros2 import rospy
-from line_profiler import profile
 
 try:
     import pr2_controllers_msgs.msg
@@ -44,7 +41,6 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
     # action_client: SimpleActionClient
 
     @record_time
-    @profile
     def __init__(self, namespace: str, group_name: str,
                  goal_time_tolerance: float = 1, fill_velocity_values: bool = True,
                  path_tolerance: Dict[Derivatives, float] = None):
@@ -91,7 +87,6 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         god_map.world.register_controlled_joints(controlled_joint_names)
 
     @record_time
-    @profile
     def initialise(self):
         super().initialise()
         trajectory = god_map.trajectory
@@ -125,7 +120,6 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
     def update(self):
         """
         Check only to see whether the underlying action server has

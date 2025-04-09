@@ -14,7 +14,7 @@ from line_profiler import profile
 class PlotTrajectory(GiskardBehavior):
     plot_thread: Thread
 
-    @profile
+
     def __init__(self, name, wait=False, joint_filter=None, normalize_position: bool = False, **kwargs):
         super().__init__(name)
         self.wait = wait
@@ -22,7 +22,7 @@ class PlotTrajectory(GiskardBehavior):
         self.kwargs = kwargs
         self.path_to_data_folder = god_map.tmp_folder
 
-    @profile
+
     def initialise(self):
         self.plot_thread = Thread(target=self.plot, name=self.name)
         self.plot_thread.start()
@@ -42,7 +42,7 @@ class PlotTrajectory(GiskardBehavior):
                 get_middleware().logwarn('failed to save trajectory.pdf')
 
     @record_time
-    @profile
+    
     def update(self):
         if self.wait and self.plot_thread.is_alive():
             return Status.RUNNING

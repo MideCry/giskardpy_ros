@@ -30,7 +30,7 @@ class DebugMarkerPublisher(GiskardBehavior):
               ColorRGBA(r=0.0, g=0.0, b=0.0, a=1.0),  # black
               ]
 
-    @profile
+
     def __init__(self, name: str = 'debug marker', tf_topic: str = '/tf', map_frame: Optional[str] = None):
         super().__init__(name)
         if map_frame is None:
@@ -180,7 +180,7 @@ class DebugMarkerPublisher(GiskardBehavior):
         self.marker_pub.publish(msg)
 
     @record_time
-    @profile
+
     def update(self):
         debug_exprs = god_map.debug_expression_manager.debug_expressions
         if len(debug_exprs) > 0:
@@ -193,7 +193,7 @@ class DebugMarkerPublisher(GiskardBehavior):
 
 
 class DebugMarkerPublisherTrajectory(GiskardBehavior):
-    @profile
+
     def __init__(self,
                  name: Optional[str] = None,
                  ensure_publish: bool = False):
@@ -203,7 +203,7 @@ class DebugMarkerPublisherTrajectory(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+    
     def update(self):
         debug_exprs = god_map.debug_expression_manager.debug_expressions
         if len(debug_exprs) > 0:

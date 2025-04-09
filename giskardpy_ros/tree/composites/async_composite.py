@@ -80,7 +80,7 @@ class AsyncBehavior(GiskardBehavior, Composite):
             sibling_id = self.children.index(left_sibling_name)
         except:
             sibling_id = self.children.index(left_sibling_name.parent)
-        self.insert_child(node, sibling_id+1)
+        self.insert_child(node, sibling_id + 1)
 
     def tick(self):
         self.logger.debug("%s.tick()" % self.__class__.__name__)
@@ -105,7 +105,6 @@ class AsyncBehavior(GiskardBehavior, Composite):
     def tip(self):
         return GiskardBehavior.tip(self)
 
-    @profile
     def loop_over_plugins(self) -> None:
         try:
             self.get_blackboard().runtime = time()

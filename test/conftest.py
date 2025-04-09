@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import rclpy
 from geometry_msgs.msg import PoseStamped, Quaternion
 
 import giskardpy_ros.ros2.tfwrapper as tf
@@ -23,6 +22,7 @@ def ros(request):
     get_middleware().loginfo('done tf init')
 
     def kill_ros():
+        import rclpy
         try:
             GiskardBlackboard().tree.render()
         except KeyError as e:

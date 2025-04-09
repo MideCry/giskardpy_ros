@@ -11,7 +11,7 @@ from line_profiler import profile
 
 class LogTrajPlugin(GiskardBehavior):
     @record_time
-    @profile
+
     def update(self):
         god_map.trajectory.set(god_map.control_cycle_counter, god_map.world.state)
         return Status.SUCCESS

@@ -1,34 +1,31 @@
 import traceback
 from copy import copy
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
-from line_profiler import profile
 from py_trees.common import Status
-from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
-from giskardpy.middleware import get_middleware
-from giskardpy.motion_statechart.graph_node import MotionStatechartNode
+
 from giskardpy.god_map import god_map
+from giskardpy.middleware import get_middleware
+from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
+from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.motion_statechart.tasks.task import LifeCycleState
+from giskardpy.utils.decorators import record_time
+from giskardpy.utils.utils import create_path, cm_to_inch
 from giskardpy_ros.tree.behaviors import plot_motion_graph
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy.utils.decorators import record_time
-from giskardpy.utils.utils import create_path
-from line_profiler import profile
-from giskardpy.utils.utils import create_path, cm_to_inch
 
 
 class PlotGanttChart(GiskardBehavior):
 
-    @profile
+
     def __init__(self, name: str = 'plot gantt chart'):
         super().__init__(name)
 
     def plot_gantt_chart(self, tasks: List[MotionStatechartNode], monitors: List[MotionStatechartNode],
                          goals: List[MotionStatechartNode], file_name: str):
+        import matplotlib.pyplot as plt
         monitor_plot_filter = np.array([monitor.plot for monitor in god_map.motion_statechart_manager.monitor_state.nodes])
         goal_plot_filter = np.array([goal.plot for goal in god_map.motion_statechart_manager.goal_state.nodes])
         task_plot_filter = np.array([not isinstance(g, CollisionAvoidance) for g in tasks])
@@ -90,6 +87,7 @@ class PlotGanttChart(GiskardBehavior):
                      filter: np.ndarray,
                      thing_positions: Dict[str, float],
                      bar_height: float = 0.8):
+        import matplotlib.pyplot as plt
         state = {t.name: (0, 0, LifeCycleState.not_started) for t in things}
         for end_time, (bool_states, history_states) in history:
             for thing_id, status in enumerate(history_states):
@@ -137,7 +135,7 @@ class PlotGanttChart(GiskardBehavior):
         return monitor_history, task_history, goal_history
 
     @record_time
-    @profile
+
     def update(self):
         if not god_map.motion_statechart_manager.monitor_state_history:
             return Status.SUCCESS

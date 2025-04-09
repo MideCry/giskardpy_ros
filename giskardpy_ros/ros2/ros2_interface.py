@@ -1,17 +1,12 @@
-import os
 import asyncio
-from typing import List, Type, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Union, Any
 
-import rclpy
 import xacro
-from ament_index_python import get_package_share_directory
-from controller_manager import controller_manager_services
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from rcl_interfaces.srv import GetParameters_Request, GetParameters_Response, GetParameters
 from rclpy import Future
+from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
 from rclpy.node import Node
-from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.wait_for_message import wait_for_message as rclpy_wait_for_message
 from std_msgs.msg import String
@@ -20,29 +15,6 @@ from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
 from giskardpy_ros.utils.asynio_utils import wait_until_not_none
-
-
-def wait_for_topic_to_appear(topic_name: str,
-                             supported_types=None,
-                             sleep_time: float = 1):
-    rclpy.wait_for_message.wait_for_message()
-    waiting_message = f'Waiting for topic \'{topic_name}\' to appear...'
-    msg_type = None
-    while msg_type is None and not rospy.is_shutdown():
-        get_middleware().loginfo(waiting_message)
-        try:
-            rostopic.get_info_text(topic_name)
-            msg_type, _, _ = rostopic.get_topic_class(topic_name)
-            if msg_type is None:
-                raise ROSTopicException()
-            if supported_types is not None and msg_type not in supported_types:
-                raise TypeError(f'Topic of type \'{msg_type}\' is not supported. '
-                                f'Must be one of: \'{supported_types}\'')
-            else:
-                get_middleware().loginfo(f'\'{topic_name}\' appeared.')
-                return msg_type
-        except (ROSException, ROSTopicException) as e:
-            rospy.sleep(sleep_time)
 
 
 def wait_for_message(msg_type,
@@ -107,6 +79,7 @@ def search_for_subscribers_of_type(topic_type) -> List[str]:
 
 
 def get_parameters(parameters: List[str], node_name: str = 'controller_manager') -> GetParameters_Response:
+    from controller_manager import controller_manager_services
     req = GetParameters_Request()
     req.names = parameters
     return controller_manager_services.service_caller(node=rospy.node,

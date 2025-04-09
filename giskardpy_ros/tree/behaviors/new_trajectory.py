@@ -12,7 +12,7 @@ from line_profiler import profile
 
 class NewTrajectory(GiskardBehavior):
     @record_time
-    @profile
+
     def initialise(self):
         current_js = deepcopy(god_map.world.state)
         trajectory = Trajectory()

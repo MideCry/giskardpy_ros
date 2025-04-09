@@ -1,17 +1,16 @@
 from enum import Enum
 
 from geometry_msgs.msg import TransformStamped
-from line_profiler import profile
 from py_trees.common import Status
 from tf2_msgs.msg import TFMessage
 
-from giskardpy.god_map import god_map
-from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from line_profiler import profile
+from giskardpy.god_map import god_map
+from giskardpy.utils.decorators import record_time
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+
 
 class TfPublishingModes(Enum):
     nothing = 0
@@ -27,7 +26,6 @@ class TFPublisher(GiskardBehavior):
     Published tf for attached and environment objects.
     """
 
-    @profile
     def __init__(self, name: str, mode: TfPublishingModes, tf_topic: str = 'tf', include_prefix: bool = True):
         super().__init__(name)
         self.original_links = set(god_map.world.link_names_as_set)
@@ -48,7 +46,6 @@ class TFPublisher(GiskardBehavior):
         return tf
 
     @record_time
-    @profile
     def update(self):
         try:
             if self.mode == TfPublishingModes.all:

@@ -39,7 +39,7 @@ class ROSMsgVisualization:
     frame_locked: bool
     world_version: int
 
-    @profile
+
     def __init__(self, tf_frame: Optional[str] = None,
                  visualization_topic: str = '~visualization_marker_array',
                  mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
@@ -72,7 +72,7 @@ class ROSMsgVisualization:
             return True
         return False
 
-    @profile
+
     def create_world_markers(self, name_space: str = 'world', marker_id_offset: int = 0) -> List[Marker]:
         markers = []
         time_stamp = rospy.node.get_clock().now().to_msg()
@@ -102,7 +102,7 @@ class ROSMsgVisualization:
                 markers.append(marker)
         return markers
 
-    @profile
+
     def create_collision_markers(self, name_space: str = 'collisions') -> List[Marker]:
         try:
             collisions: Collisions = god_map.closest_point
@@ -154,7 +154,7 @@ class ROSMsgVisualization:
             return []
         return [m]
 
-    @profile
+
     def publish_markers(self, world_ns: str = 'world', collision_ns: str = 'collisions', force: bool = False) -> None:
         if not self.mode == VisualizationMode.Nothing:
             marker_array = MarkerArray()

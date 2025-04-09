@@ -1,24 +1,22 @@
-from line_profiler import profile
+from line_profiler.explicit_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
 from giskardpy.qp.qp_controller import QPController
 from giskardpy.symbol_manager import symbol_manager
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from line_profiler import profile
 
 
 class ControllerPlugin(GiskardBehavior):
     controller: QPController = None
 
     @catch_and_raise_to_blackboard
-    @profile
     def initialise(self):
         self.controller = god_map.qp_controller
 
-    @catch_and_raise_to_blackboard
+    @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
     @profile
     def update(self):
@@ -31,4 +29,3 @@ class ControllerPlugin(GiskardBehavior):
         # if (goal_reached_panda.loc[non_negative_entries]['data'] == 0).any():
         #     return Status.RUNNING
         return Status.RUNNING
-

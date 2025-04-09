@@ -1,26 +1,20 @@
 from typing import Optional
 
-from geometry_msgs.msg import PoseWithCovarianceStamped
-from line_profiler import profile
 from nav_msgs.msg import Odometry
 from py_trees.common import Status
 
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
-from giskardpy_ros.ros2 import msg_converter
 from giskardpy.middleware import get_middleware
-from giskardpy_ros.ros2.ros2_interface import wait_for_topic_to_appear
-from giskardpy.model.joints import OmniDrive
+from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy, msg_converter
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from giskardpy.utils.decorators import record_time
-from line_profiler import profile
 
 
 class SyncOdometry(GiskardBehavior):
 
-    @profile
+
     def __init__(self, odometry_topic: str, joint_name: Optional[PrefixName] = None, name_suffix: str = ''):
         self.odometry_topic = odometry_topic
         if not self.odometry_topic.startswith('/'):
@@ -38,7 +32,7 @@ class SyncOdometry(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         trans_matrix = msg_converter.ros_msg_to_giskard_obj(self.odom.pose.pose, god_map.world)
         self.joint.update_transform(trans_matrix)

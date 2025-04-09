@@ -76,7 +76,7 @@ class ActionServerHandler:
     def is_client_alive(self) -> bool:
         return True
 
-    @profile
+
     def ping_client(self, time):
         client_name = self._as.current_goal.goal.goal_id.id.split('-')[0]
         self.client_alive = rospy.node.rosnode_ping(client_name, max_count=1)
