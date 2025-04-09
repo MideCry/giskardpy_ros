@@ -10,23 +10,23 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, PointStamped, Vect
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
-import giskardpy_ros.ros1.tfwrapper as tf
 from giskard_msgs.msg import LinkName
-from giskardpy.data_types.exceptions import EmptyProblemException
-from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds, ObjectTypes, TakePoseTypes
-from giskardpy.data_types.suturo_types import GraspTypes
-from giskardpy.goals.pointing import PointingCone
+from giskardpy.data_types.exceptions import EmptyProblemException, ObjectForceTorqueThresholdException
+from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
+from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
+from giskardpy.motion_statechart.tasks.pointing import PointingCone, Pointing
+
+from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes
 from giskardpy.god_map import god_map
 from giskardpy.motion_graph.monitors.lidar_monitor import LidarPayloadMonitor
 from giskardpy.motion_graph.tasks.task import WEIGHT_ABOVE_CA
-from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from utils_for_tests import compare_poses, GiskardTestWrapper
 from utils_for_tests import launch_launchfile
+import tf.transformations as tf
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from giskardpy.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing
@@ -53,7 +53,7 @@ class HSRTestWrapper(GiskardTestWrapper):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,
                                                                       publish_js=False),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125))
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
@@ -69,8 +69,8 @@ class HSRTestWrapper(GiskardTestWrapper):
 
     def command_gripper(self, width):
         js = {'hand_motor_joint': width}
-        self.set_joint_goal(js)
-        self.allow_all_collisions()
+        self.monitors.add_set_seed_configuration(seed_configuration=js,
+                                                 name='move gripper')
         self.execute()
 
     def reset(self):
@@ -389,15 +389,15 @@ class TestConstraints:
         tip_link = 'head_center_camera_frame'
         goal_point = PointStamped()
         goal_point.header.frame_id = 'map'
-        goal_point.point.x = -0.5
-        goal_point.point.y = -0.1
+        goal_point.point.x = 0.5
+        goal_point.point.y = -0.5
         goal_point.point.z = 1
 
         pointing_axis = Vector3Stamped()
         pointing_axis.header.frame_id = tip_link
         pointing_axis.vector.z = 1
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=PointingCone.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=Pointing.__name__,
                                                name='pointy_cone',
                                                tip_link=LinkName(tip_link, ''),
                                                root_link=LinkName('map', ''),
@@ -552,9 +552,10 @@ class TestConstraints:
         kitchen_setup.allow_self_collision()
         kitchen_setup.execute()
 
-    def test_open_fridge_sequence(self, kitchen_setup: HSRTestWrapper):
+    def test_open_fridge_sequence_simple(self, kitchen_setup: HSRTestWrapper):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
         handle_name = 'iai_fridge_door_handle'
+        camera_link = 'head_rgbd_sensor_link'
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
@@ -574,21 +575,167 @@ class TestConstraints:
         tip_grasp_axis.header.frame_id = kitchen_setup.tip
         tip_grasp_axis.vector.x = 1
 
-        # %% phase 1
-        bar_grasped = kitchen_setup.monitors.add_distance_to_line(name='bar grasped',
-                                                                  root_link=kitchen_setup.default_root,
-                                                                  tip_link=kitchen_setup.tip,
-                                                                  center_point=bar_center,
-                                                                  line_axis=bar_axis,
-                                                                  line_length=.4)
-        kitchen_setup.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
-                                                 tip_link=kitchen_setup.tip,
-                                                 tip_grasp_axis=tip_grasp_axis,
-                                                 bar_center=bar_center,
-                                                 bar_axis=bar_axis,
-                                                 bar_length=.4,
-                                                 name='grasp bar',
-                                                 end_condition=bar_grasped)
+        # %% phase 1 grasp handle
+        bar_grasped = kitchen_setup.tasks.add_grasp_bar(root_link=kitchen_setup.default_root,
+                                                        tip_link=kitchen_setup.tip,
+                                                        tip_grasp_axis=tip_grasp_axis,
+                                                        bar_center=bar_center,
+                                                        bar_axis=bar_axis,
+                                                        bar_length=.4,
+                                                        name='grasp handle')
+
+        # %% close gripper
+        gripper_closed = kitchen_setup.tasks.add_joint_position(name='close gripper',
+                                                                goal_state={'hand_motor_joint': 0})
+        gripper_opened = kitchen_setup.tasks.add_joint_position(name='open gripper',
+                                                                goal_state={'hand_motor_joint': 1.23})
+
+        # %% phase 2 open door
+        door_open = kitchen_setup.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
+                                                                  environment_link=handle_name,
+                                                                  goal_joint_state=1.5,
+                                                                  name='open door')
+
+        kitchen_setup.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
+
+        kitchen_setup.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
+
+        kitchen_setup.update_start_condition(node_name=door_open, condition=gripper_closed)
+        kitchen_setup.update_start_condition(node_name=gripper_opened, condition=f'{door_open}')
+
+        kitchen_setup.update_end_condition(node_name=door_open, condition=f'{door_open}')
+
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.monitors.add_end_motion(start_condition=f'{gripper_opened}')
+        kitchen_setup.execute(add_local_minimum_reached=False)
+
+    def test_open_fridge_sequence_semi_simple(self, kitchen_setup: HSRTestWrapper):
+        handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
+        handle_name = 'iai_fridge_door_handle'
+        camera_link = 'head_rgbd_sensor_link'
+        kitchen_setup.open_gripper()
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'map'
+        base_goal.pose.position = Point(0.3, -0.5, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.move_base(base_goal)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = kitchen_setup.tip
+        tip_grasp_axis.vector.x = 1
+
+        handle_detected = kitchen_setup.monitors.add_const_true(name='Detect Handle')
+
+        # %% phase 1 grasp handle
+        laser_violated = kitchen_setup.monitors.add_pulse(after_ticks=20,
+                                                          name='laser violated')
+        camera_z = Vector3Stamped()
+        camera_z.header.frame_id = camera_link
+        camera_z.vector.z = 1
+
+        bar_grasped = kitchen_setup.tasks.add_grasp_bar(root_link=kitchen_setup.default_root,
+                                                        tip_link=kitchen_setup.tip,
+                                                        tip_grasp_axis=tip_grasp_axis,
+                                                        bar_center=bar_center,
+                                                        bar_axis=bar_axis,
+                                                        bar_length=.4,
+                                                        name='grasp handle')
+
+        # %% close gripper
+        gripper_closed = kitchen_setup.tasks.add_joint_position(name='close gripper',
+                                                                goal_state={'hand_motor_joint': 0})
+        gripper_opened = kitchen_setup.tasks.add_joint_position(name='open gripper',
+                                                                goal_state={'hand_motor_joint': 1.23})
+
+        # %% phase 2 open door
+        slipped = kitchen_setup.monitors.add_pulse(name='slipped', after_ticks=20)
+        door_open = kitchen_setup.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
+                                                                  environment_link=handle_name,
+                                                                  goal_joint_state=1.5,
+                                                                  name='open door')
+        reset = kitchen_setup.monitors.add_monitor(class_name=TrueMonitor.__name__, name='The Great Reset')
+
+        kitchen_setup.update_start_condition(node_name=laser_violated, condition=handle_detected)
+        kitchen_setup.update_start_condition(node_name=bar_grasped, condition=handle_detected)
+        kitchen_setup.update_end_condition(node_name=handle_name, condition=handle_detected)
+
+        kitchen_setup.update_end_condition(node_name=laser_violated, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
+        kitchen_setup.update_pause_condition(node_name=bar_grasped, condition=laser_violated)
+
+        # kitchen_setup.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
+
+        kitchen_setup.update_start_condition(node_name=door_open, condition=gripper_closed)
+        kitchen_setup.update_start_condition(node_name=slipped, condition=gripper_closed)
+        kitchen_setup.update_start_condition(node_name=gripper_opened, condition=f'{slipped} or {door_open}')
+        kitchen_setup.update_end_condition(node_name=slipped, condition=f'{slipped} or {door_open}')
+
+        kitchen_setup.update_end_condition(node_name=door_open, condition=f'{slipped} or {door_open}')
+        reset_condition = f'{gripper_opened} and {slipped}'
+        kitchen_setup.update_start_condition(node_name=reset, condition=reset_condition)
+
+        kitchen_setup.update_reset_condition(node_name=bar_grasped, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=laser_violated, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=gripper_closed, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=door_open, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=slipped, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=gripper_opened, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=reset, condition=reset)
+
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.monitors.add_end_motion(start_condition=f'{door_open} and {gripper_opened} and not {slipped}')
+        kitchen_setup.execute(add_local_minimum_reached=False)
+
+    def test_open_fridge_sequence(self, kitchen_setup: HSRTestWrapper):
+        handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
+        handle_name = 'iai_fridge_door_handle'
+        camera_link = 'head_rgbd_sensor_link'
+        kitchen_setup.open_gripper()
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'map'
+        base_goal.pose.position = Point(0.3, -0.5, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.move_base(base_goal)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = kitchen_setup.tip
+        tip_grasp_axis.vector.x = 1
+
+        # %% phase 1 grasp handle
+        laser_violated = kitchen_setup.monitors.add_pulse(after_ticks=20,
+                                                          name='laser violated')
+        camera_z = Vector3Stamped()
+        camera_z.header.frame_id = camera_link
+        camera_z.vector.z = 1
+        pointing_at = kitchen_setup.motion_goals.add_pointing(goal_point=bar_center,
+                                                              tip_link=camera_link,
+                                                              name='look at handle',
+                                                              root_link='torso_lift_link',
+                                                              pointing_axis=camera_z)
+
+        bar_grasped = kitchen_setup.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
+                                                               tip_link=kitchen_setup.tip,
+                                                               tip_grasp_axis=tip_grasp_axis,
+                                                               bar_center=bar_center,
+                                                               bar_axis=bar_axis,
+                                                               bar_length=.4,
+                                                               name='grasp handle')
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = kitchen_setup.tip
         x_gripper.vector.z = 1
@@ -596,25 +743,61 @@ class TestConstraints:
         x_goal = Vector3Stamped()
         x_goal.header.frame_id = handle_frame_id
         x_goal.vector.x = -1
-        kitchen_setup.motion_goals.add_align_planes(tip_link=kitchen_setup.tip,
-                                                    tip_normal=x_gripper,
-                                                    goal_normal=x_goal,
-                                                    root_link='map',
-                                                    name='orient to door',
-                                                    end_condition=bar_grasped)
+        align_planes = kitchen_setup.motion_goals.add_align_planes(tip_link=kitchen_setup.tip,
+                                                                   tip_normal=x_gripper,
+                                                                   goal_normal=x_goal,
+                                                                   root_link='map',
+                                                                   name='align gripper')
+
+        # %% close gripper
+        gripper_closed = 'close gripper'
+        kitchen_setup.motion_goals.add_joint_position(name=gripper_closed,
+                                                      goal_state={'hand_motor_joint': 0},
+                                                      end_condition=gripper_closed)
+        gripper_opened = kitchen_setup.motion_goals.add_joint_position(name='open gripper',
+                                                                       goal_state={'hand_motor_joint': 1.23})
 
         # %% phase 2 open door
-        door_open = kitchen_setup.monitors.add_local_minimum_reached(name='door open',
-                                                                     start_condition=bar_grasped)
-        kitchen_setup.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
-                                                      environment_link=handle_name,
-                                                      goal_joint_state=1.5,
-                                                      name='open door',
-                                                      start_condition=bar_grasped,
-                                                      end_condition=door_open)
+        slipped = kitchen_setup.monitors.add_pulse(name='slipped', after_ticks=20)
+        door_open = kitchen_setup.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
+                                                                  environment_link=handle_name,
+                                                                  goal_joint_state=1.5,
+                                                                  name='open door')
+        reset = kitchen_setup.monitors.add_monitor(class_name=TrueMonitor.__name__, name='The Great Reset')
+
+        kitchen_setup.update_start_condition(node_name=bar_grasped, condition=pointing_at)
+        kitchen_setup.update_start_condition(node_name=align_planes, condition=pointing_at)
+        kitchen_setup.update_start_condition(node_name=laser_violated, condition=pointing_at)
+
+        kitchen_setup.update_end_condition(node_name=pointing_at, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=align_planes, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=laser_violated, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
+        kitchen_setup.update_pause_condition(node_name=bar_grasped, condition=laser_violated)
+
+        kitchen_setup.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
+
+        kitchen_setup.update_start_condition(node_name=door_open, condition=gripper_closed)
+        kitchen_setup.update_start_condition(node_name=slipped, condition=gripper_closed)
+        kitchen_setup.update_start_condition(node_name=gripper_opened, condition=f'{slipped} or {door_open}')
+        kitchen_setup.update_end_condition(node_name=slipped, condition=f'{slipped} or {door_open}')
+
+        kitchen_setup.update_end_condition(node_name=door_open, condition=f'{slipped} or {door_open}')
+        reset_condition = f'{gripper_opened} and {slipped}'
+        kitchen_setup.update_start_condition(node_name=reset, condition=reset_condition)
+
+        kitchen_setup.update_reset_condition(node_name=pointing_at, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=bar_grasped, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=align_planes, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=laser_violated, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=gripper_closed, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=door_open, condition=reset)
+        # kitchen_setup.update_reset_condition(node_name=slipped, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=gripper_opened, condition=reset)
+        kitchen_setup.update_reset_condition(node_name=reset, condition=reset)
 
         kitchen_setup.allow_all_collisions()
-        kitchen_setup.monitors.add_end_motion(start_condition=door_open)
+        kitchen_setup.monitors.add_end_motion(start_condition=f'{door_open} and {gripper_opened} and not {slipped}')
         kitchen_setup.execute(add_local_minimum_reached=False)
 
         kitchen_setup.close_gripper()
@@ -868,7 +1051,7 @@ class TestCollisionAvoidanceGoals:
 
     def test_self_collision_avoidance_empty(self, zero_pose: HSRTestWrapper):
         zero_pose.allow_all_collisions()
-        zero_pose.execute(expected_error_type=EmptyProblemException)
+        zero_pose.execute(expected_error_type=EmptyProblemException, add_local_minimum_reached=False)
         current_state = god_map.world.state.to_position_dict()
         current_state = {k.short_name: v for k, v in current_state.items()}
         zero_pose.compare_joint_state(current_state, zero_pose.default_pose)
@@ -918,8 +1101,38 @@ class TestCollisionAvoidanceGoals:
                                                                           [0, -1, 0, 0],
                                                                           [1, 0, 0, 0],
                                                                           [0, 0, 0, 1]]))
-        box_setup.set_cart_goal(goal_pose=grasp_pose, tip_link=box_setup.tip, root_link='map')
-        box_setup.execute()
+        grasp = box_setup.motion_goals.add_motion_goal(class_name=GraspSequence.__name__,
+                                                       name='pick up',
+                                                       tip_link=LinkName(name=box_setup.tip),
+                                                       root_link='map',
+                                                       gripper_joint='hand_motor_joint',
+                                                       goal_pose=grasp_pose)
+        detected = box_setup.monitors.add_pulse(name='Detect Object',
+                                                after_ticks=5)
+        success = box_setup.monitors.add_time_above(name='Obj in Hand?',
+                                                    threshold=10)
+        stop_retry = box_setup.monitors.add_pulse(name='Above 5 Retries',
+                                                  after_ticks=100000)
+
+        not_obj_in_hand = f'not {success}'
+        box_setup.update_end_condition(node_name=detected, condition=detected)
+        box_setup.update_reset_condition(node_name=detected, condition=not_obj_in_hand)
+
+        box_setup.update_start_condition(node_name=grasp, condition=detected)
+        box_setup.update_end_condition(node_name=grasp, condition=grasp)
+        box_setup.update_reset_condition(node_name=grasp, condition=not_obj_in_hand)
+
+        box_setup.update_start_condition(node_name=success, condition=grasp)
+        box_setup.update_end_condition(node_name=success, condition=success)
+        box_setup.update_reset_condition(node_name=success, condition=not_obj_in_hand)
+
+        box_setup.update_start_condition(node_name=stop_retry, condition=f'{grasp} and not {success}')
+        box_setup.update_reset_condition(node_name=stop_retry, condition=f'not {stop_retry}')
+
+        box_setup.monitors.add_end_motion(start_condition=success)
+        box_setup.monitors.add_cancel_motion(start_condition=stop_retry, error=Exception('too many retries'))
+        box_setup.allow_all_collisions()
+        box_setup.execute(add_local_minimum_reached=False)
         box_setup.update_parent_link_of_group(box_name, box_setup.tip)
 
         base_goal = PoseStamped()
@@ -929,6 +1142,71 @@ class TestCollisionAvoidanceGoals:
         box_setup.move_base(base_goal)
 
         box_setup.close_gripper()
+
+    def test_schnibbeln_sequence(self, box_setup: HSRTestWrapper):
+        box_name = 'Schnibbler'
+        box_pose = PoseStamped()
+        box_pose.header.frame_id = box_setup.tip
+        box_pose.pose.position = Point(0.0, 0.0, 0.06)
+        box_pose.pose.orientation.w = 1.0
+        bread_name = 'Bernd'
+        bread_pose = PoseStamped()
+        bread_pose.header.frame_id = 'map'
+        bread_pose.pose.position = Point(0.91, 0.25, .62)
+        bread_pose.pose.orientation.w = 1.0
+
+        box_setup.add_box_to_world(name=box_name, size=(0.05, 0.01, 0.15), pose=box_pose, parent_link=box_setup.tip)
+        box_setup.add_box_to_world(name=bread_name, size=(0.1, 0.2, 0.06), pose=bread_pose, parent_link='box')
+        box_setup.dye_group(group_name=box_name, rgba=(0.0, 0.588, 0.784, 1.0))
+        box_setup.dye_group(group_name=bread_name, rgba=(0.784, 0.588, 0.0, 1.0))
+        box_setup.close_gripper()
+
+        pre_schnibble_pose = PoseStamped()
+        pre_schnibble_pose.header.frame_id = 'map'
+        pre_schnibble_pose.pose.position = Point(0.85, 0.2, .75)
+        pre_schnibble_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+                                                                                  [0, -1, 0, 0],
+                                                                                  [1, 0, 0, 0],
+                                                                                  [0, 0, 0, 1]]))
+        pre_schnibble = 'Position Knife'
+        box_setup.motion_goals.add_cartesian_pose(name=pre_schnibble,
+                                                  goal_pose=pre_schnibble_pose,
+                                                  tip_link=box_setup.tip,
+                                                  root_link='map',
+                                                  end_condition=pre_schnibble)
+        human_close = box_setup.monitors.add_pulse(name='Human Close?',
+                                                   after_ticks=50,
+                                                   true_for_ticks=50,
+                                                   start_condition=pre_schnibble,
+                                                   end_condition='')
+
+        cut = box_setup.motion_goals.add_motion_goal(class_name=Cutting.__name__,
+                                                     name='Cut',
+                                                     root_link=LinkName(name='map'),
+                                                     tip_link=LinkName(name=box_name),
+                                                     depth=0.1,
+                                                     right_shift=-0.1,
+                                                     start_condition=pre_schnibble)
+
+        # no_contact = box_setup.monitors.add_const_true(name='Made Contact?',
+        #                                                start_condition=schnibble_down)
+
+        schnibbel_done = box_setup.monitors.add_time_above(name='Done?',
+                                                           threshold=5,
+                                                           start_condition=cut)
+
+        reset = f'not {schnibbel_done}'
+        box_setup.update_reset_condition(node_name=cut, condition=reset)
+        box_setup.update_reset_condition(node_name=schnibbel_done, condition=reset)
+        box_setup.update_end_condition(node_name=human_close, condition=schnibbel_done)
+
+        box_setup.update_pause_condition(node_name=cut, condition=human_close)
+
+        box_setup.monitors.add_end_motion(start_condition=schnibbel_done)
+        # box_setup.monitors.add_cancel_motion(start_condition=f'not {no_contact}', error=Exception('no contact'))
+        box_setup.allow_all_collisions()
+        box_setup.execute(add_local_minimum_reached=False)
+        # box_setup.update_parent_link_of_group(box_name, box_setup.tip)
 
     def test_collision_avoidance(self, zero_pose: HSRTestWrapper):
         js = {'arm_flex_joint': -np.pi / 2}
