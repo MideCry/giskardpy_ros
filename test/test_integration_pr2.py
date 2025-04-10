@@ -521,7 +521,7 @@ class TestMonitors:
                                                               end_condition=None)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=' and '.join([pose2, end_monitor]))
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
         current_pose = zero_pose.compute_fk_pose(root_link=root_link, tip_link=tip_link)
         np.testing.assert_almost_equal(current_pose.pose.position.x, 1, decimal=2)
@@ -633,7 +633,7 @@ class TestMonitors:
                                                               end_condition=None)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=' and '.join([pose2, end_monitor]))
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
 
         current_pose = zero_pose.compute_fk_pose(root_link=root_link, tip_link=tip_link)
@@ -1024,7 +1024,7 @@ class TestMonitors:
 
         end = zero_pose.api.monitors.add_end_motion(start_condition=local_min)
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
 
     def test_hold_monitors2(self, zero_pose: PR2Tester):
@@ -1057,7 +1057,7 @@ class TestMonitors:
 
         end = zero_pose.api.monitors.add_end_motion(start_condition=f'{local_min} and {stayed_put} and {joint_reached}')
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
 
     def test_pause_condition_of_monitor(self, zero_pose: PR2Tester):
@@ -1156,7 +1156,7 @@ class TestMonitors:
                                                           tip_link=LinkName(name='base_footprint'))
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=done)
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
         current_pose = zero_pose.compute_fk_pose(root_link='map', tip_link='base_footprint')
         np.testing.assert_almost_equal(current_pose.pose.position.x, 0, decimal=2)
@@ -1180,7 +1180,7 @@ class TestMonitors:
                                                           tip_link=LinkName(name='base_footprint'))
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=done)
-        zero_pose.api.monitors.set_max_traj_length(30)
+        zero_pose.api.monitors.add_check_trajectory_length(30)
         zero_pose.execute()
         current_pose = zero_pose.compute_fk_pose(root_link='map', tip_link='base_footprint')
         np.testing.assert_almost_equal(current_pose.pose.position.x, 0, decimal=2)
@@ -4726,10 +4726,9 @@ class TestEndMotionReason:
                                                 tip_point=controlled_point, lower_limit=0, upper_limit=0,
                                                 name='reach distance')
 
-        zero_pose.api.monitors.set_max_traj_length(1)
+        zero_pose.api.monitors.add_check_trajectory_length(1)
         zero_pose.api.monitors.add_end_motion(mon_distance)
-        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException,
-                                   )
+        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException, local_min_end=False)
         reason = zero_pose.api.get_end_motion_reason(move_result=result)
         assert len(reason) == 1. and list(reason.keys())[0] == mon_distance
 
@@ -4752,10 +4751,9 @@ class TestEndMotionReason:
                                                 name='distance',
                                                 tip_point=controlled_point, lower_limit=0, upper_limit=0)
 
-        zero_pose.api.monitors.set_max_traj_length(1)
+        zero_pose.api.monitors.add_check_trajectory_length(1)
         zero_pose.api.monitors.add_end_motion(mon_distance)
-        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException,
-                                   )
+        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException, local_min_end=False)
         reason = zero_pose.api.get_end_motion_reason(move_result=result)
         print(reason)
         assert len(reason) == 3 and list(reason.keys())[0] == mon_distance \
@@ -4780,14 +4778,14 @@ class TestEndMotionReason:
                                                 name='g2',
                                                 tip_point=controlled_point, lower_limit=0, upper_limit=0)
 
-        zero_pose.api.monitors.set_max_traj_length(1)
+        zero_pose.api.monitors.add_check_trajectory_length(1)
         zero_pose.api.monitors.add_end_motion(mon_distance, name='endmotion 1')
 
         mon_sleep3 = zero_pose.api.monitors.add_sleep(seconds=20, name='sleep3')
         mon_sleep4 = zero_pose.api.monitors.add_sleep(seconds=20, start_condition=mon_sleep3, name='sleep4')
         zero_pose.api.monitors.add_end_motion(mon_sleep4)
 
-        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException)
+        result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException, local_min_end=False)
         reason = zero_pose.api.get_end_motion_reason(move_result=result)
         print(reason)
         assert len(reason) == 5 and list(reason.keys())[0] == mon_distance \
