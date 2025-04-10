@@ -173,6 +173,7 @@ class PR2Tester(GiskardTester):
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
                               qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      retries_with_relaxed_constraints=10,
                                                                       # qp_solver=SupportedQPSolver.gurobi,
                                                                       ))
         super().__init__(giskard)
@@ -4207,7 +4208,8 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.allow_collision(kitchen_setup.api.world.robot_name, tray_name)
         kitchen_setup.api.motion_goals.add_avoid_joint_limits(percentage=percentage)
         # grasp tray
-        kitchen_setup.execute()
+        kitchen_setup.add_end_on_local_minimum()
+        kitchen_setup.execute(add_local_minimum_reached=False)
 
         kitchen_setup.update_parent_link_of_group(tray_name, kitchen_setup.r_tip)
 
@@ -4255,7 +4257,8 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.allow_collision(group1=tray_name,
                                                        group2=kitchen_setup.l_gripper_group)
         kitchen_setup.api.motion_goals.add_cartesian_pose(tray_goal, tray_name, 'base_footprint')
-        kitchen_setup.execute()
+        kitchen_setup.add_end_on_local_minimum()
+        kitchen_setup.execute(add_local_minimum_reached=False)
 
     # TODO FIXME attaching and detach of urdf objects that listen to joint states
 

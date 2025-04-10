@@ -1,17 +1,13 @@
 from copy import deepcopy
-from typing import Optional
 
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, PointStamped, Vector3Stamped
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
-from giskardpy.god_map import god_map
-from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
 from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig, JustinStandaloneInterface, \

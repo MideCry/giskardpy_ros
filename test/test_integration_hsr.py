@@ -409,6 +409,7 @@ class TestConstraints:
         kitchen_setup.api.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
 
         kitchen_setup.api.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=gripper_closed, condition=gripper_closed)
 
         kitchen_setup.api.update_start_condition(node_name=door_open, condition=gripper_closed)
         kitchen_setup.api.update_start_condition(node_name=gripper_opened, condition=f'{door_open}')
