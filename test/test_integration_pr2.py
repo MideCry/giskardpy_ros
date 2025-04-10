@@ -460,7 +460,7 @@ class TestMonitors:
 
         zero_pose.api.motion_goals.add_joint_position(goal_state=zero_pose.default_pose)
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
         assert god_map.trajectory.length_in_seconds > 4
 
     def test_joint_sequence(self, zero_pose: PR2Tester):
@@ -473,7 +473,7 @@ class TestMonitors:
         zero_pose.api.update_end_condition(node_name=g2, condition=f'{end_monitor} and {g2}')
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=end_monitor)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
 
     def test_reset(self, zero_pose: PR2Tester):
         g1 = zero_pose.api.motion_goals.add_joint_position(name='joint goal 1',
@@ -490,7 +490,7 @@ class TestMonitors:
         zero_pose.api.motion_goals.update_reset_condition(g1, pulse)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=local_min)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
 
     def test_cart_goal_sequence_relative(self, zero_pose: PR2Tester):
         pose1 = PoseStamped()
@@ -522,7 +522,7 @@ class TestMonitors:
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=' and '.join([pose2, end_monitor]))
         zero_pose.api.monitors.add_check_trajectory_length(30)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
         current_pose = zero_pose.compute_fk_pose(root_link=root_link, tip_link=tip_link)
         np.testing.assert_almost_equal(current_pose.pose.position.x, 1, decimal=2)
         np.testing.assert_almost_equal(current_pose.pose.position.y, 1, decimal=2)
@@ -634,7 +634,7 @@ class TestMonitors:
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.monitors.add_end_motion(start_condition=' and '.join([pose2, end_monitor]))
         zero_pose.api.monitors.add_check_trajectory_length(30)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
 
         current_pose = zero_pose.compute_fk_pose(root_link=root_link, tip_link=tip_link)
         np.testing.assert_almost_equal(current_pose.pose.position.x, 0, decimal=2)
@@ -660,7 +660,7 @@ class TestMonitors:
                                           radius=0.0225,
                                           pose=pose,
                                           parent_link=giskard_msgs.LinkName(name='r_gripper_tool_frame'))
-        better_pose.dye_group(cylinder_name, (0, 0, 1, 1))
+        better_pose.dye_group(cylinder_name, (0., 0., 1., 1.))
 
         inserted = better_pose.api.motion_goals.add_motion_goal(class_name=InsertCylinder.__name__,
                                                                 name='Insert Cyclinder',
@@ -669,13 +669,13 @@ class TestMonitors:
                                                                 hole_point=hole_point)
         better_pose.api.motion_goals.allow_all_collisions()
         better_pose.api.monitors.add_end_motion(start_condition=inserted)
-        better_pose.execute()
+        better_pose.execute(local_min_end=False)
 
     def test_bowl_and_cup_sequence(self, kitchen_setup: PR2Tester):
         # %% setup
         bowl_name = 'bowl'
         cup_name = 'cup'
-        percentage = 50
+        percentage = 50.
         drawer_handle = 'sink_area_left_middle_drawer_handle'
         drawer_joint = 'sink_area_left_middle_drawer_main_joint'
         # spawn cup
@@ -816,13 +816,13 @@ class TestMonitors:
                                                                       start_condition=' and '.join([r_grasp_pose,
                                                                                                     l_grasp_pose]))
         kitchen_setup.api.monitors.add_end_motion(start_condition=phase4)
-        kitchen_setup.api.monitors.add_check_trajectory_length(60)
+        kitchen_setup.api.monitors.add_check_trajectory_length(60.)
         kitchen_setup.api.motion_goals.allow_all_collisions()
         # kitchen_setup.api.motion_goals.allow_collision(group1=kitchen_setup.l_gripper_group,
         #                               group2=bowl_name)
         # kitchen_setup.api.motion_goals.allow_collision(group1=kitchen_setup.r_gripper_group,
         #                               group2=cup_name)
-        kitchen_setup.execute()
+        kitchen_setup.execute(local_min_end=False)
 
         kitchen_setup.update_parent_link_of_group(name=bowl_name,
                                                   parent_link=kitchen_setup.l_tip)
@@ -862,7 +862,7 @@ class TestMonitors:
                                                                       start_condition=phase5)
         bowl_goal = PoseStamped()
         bowl_goal.header.frame_id = 'kitchen_island_surface'
-        bowl_goal.pose.position = Point(x=.2, y=0, z=.05)
+        bowl_goal.pose.position = Point(x=.2, y=0., z=.05)
         q = quaternion_from_rotation_matrix([[0, 1, 0, 0],
                                              [0, 0, -1, 0],
                                              [-1, 0, 0, 0],
@@ -896,8 +896,8 @@ class TestMonitors:
                                                               start_condition=phase5,
                                                               end_condition=' and '.join([cup_placed, bowl_placed]))
         kitchen_setup.api.monitors.add_end_motion(start_condition=' and '.join([cup_placed, bowl_placed]))
-        kitchen_setup.api.monitors.add_check_trajectory_length(60)
-        kitchen_setup.execute()
+        kitchen_setup.api.monitors.add_check_trajectory_length(60.)
+        kitchen_setup.execute(local_min_end=False)
         # %% next goal
         kitchen_setup.update_parent_link_of_group(name=bowl_name, parent_link='map')
         kitchen_setup.update_parent_link_of_group(name=cup_name, parent_link='map')
@@ -909,17 +909,17 @@ class TestMonitors:
         kitchen_setup.api.update_end_condition(final_pose_monitor, ' and '.join([final_pose_monitor, phase7]))
 
         kitchen_setup.api.monitors.add_end_motion(start_condition=phase7)
-        kitchen_setup.api.monitors.add_check_trajectory_length(60)
+        kitchen_setup.api.monitors.add_check_trajectory_length(60.)
         kitchen_setup.api.motion_goals.avoid_all_collisions()
         kitchen_setup.api.motion_goals.allow_collision(group1=kitchen_setup.l_gripper_group,
                                                        group2=bowl_name)
         kitchen_setup.api.motion_goals.allow_collision(group1=kitchen_setup.r_gripper_group,
                                                        group2=cup_name)
-        kitchen_setup.execute()
+        kitchen_setup.execute(local_min_end=False)
 
     def test_sleep(self, zero_pose: PR2Tester):
         alternator = zero_pose.api.monitors.add_alternator(name='alternator')
-        sleep1 = zero_pose.api.monitors.add_sleep(name='sleep1', seconds=1)
+        sleep1 = zero_pose.api.monitors.add_sleep(name='sleep1', seconds=1.)
         print1 = zero_pose.api.monitors.add_print(message=f'{sleep1} done', start_condition=sleep1, name='print')
         sleep2 = zero_pose.api.monitors.add_sleep(name='sleep2', seconds=1.5,
                                                   start_condition=f'{print1} or not {sleep1}')
@@ -965,7 +965,7 @@ class TestMonitors:
                                                                                   left_monitor,
                                                                                   base_monitor]))
         zero_pose.api.monitors.add_check_trajectory_length(120)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
         assert god_map.trajectory.length_in_seconds > 6
         current_pose = zero_pose.compute_fk_pose(root_link='map',
                                                  tip_link='base_footprint')
@@ -1075,7 +1075,7 @@ class TestMonitors:
         sleep2 = zero_pose.api.monitors.add_sleep(1, name='sleep2', start_condition=sleep)
         joint_goal = zero_pose.api.monitors.add_joint_position(name='joint reached',
                                                                goal_state=zero_pose.better_pose)
-        teleport = zero_pose.api.monitors.add_api.monitors.add_set_seed_configuration(
+        teleport = zero_pose.api.monitors.add_set_seed_configuration(
             seed_configuration=zero_pose.default_pose)
         joint_goal2 = zero_pose.api.monitors.add_joint_position(name='joint reached2',
                                                                 goal_state=zero_pose.default_pose,
@@ -1089,7 +1089,7 @@ class TestMonitors:
         zero_pose.api.monitors.add_cancel_motion(start_condition=f'not {joint_goal2} and {sleep2}',
                                                  error=Exception('fail'))
         zero_pose.api.monitors.add_check_trajectory_length(30)
-        zero_pose.execute()
+        zero_pose.execute(local_min_end=False)
 
     def test_end_plus_false_monitor(self, zero_pose: PR2Tester):
         sleep = zero_pose.api.monitors.add_sleep(0.5, name='sleep')
@@ -1110,7 +1110,7 @@ class TestMonitors:
         sleep = zero_pose.api.monitors.add_sleep(5)
         zero_pose.api.monitors.add_cancel_motion(start_condition=sleep, error=SetupException('Time is up'))
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute(expected_error_type=SetupException)
+        zero_pose.execute(expected_error_type=SetupException, local_min_end=False)
         zero_pose.api.motion_goals.add_joint_position(zero_pose.better_pose)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
