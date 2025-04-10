@@ -3,14 +3,12 @@ import os
 os.environ['ROS_PYTHON_CHECK_FIELDS'] = '1'
 os.environ['LINE_PROFILE'] = '0'
 
-# import builtins
-#
-# try:
-#     builtins.profile  # type: ignore
-# except AttributeError:
-#     # No line profiler, provide a pass-through version
-#     def profile(func):
-#         return func
+import threading
 
+def preload_matplotlib():
+    # preload costly imports that are not used immediately
+    from networkx.algorithms.shortest_paths.generic import shortest_path
+    from networkx.drawing.nx_pydot import read_dot
 
-    # builtins.profile = profile  # type: ignore
+# Start preloading in the background
+threading.Thread(target=preload_matplotlib, daemon=True).start()

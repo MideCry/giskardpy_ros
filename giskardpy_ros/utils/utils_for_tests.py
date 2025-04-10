@@ -293,7 +293,7 @@ class GiskardTester:
         done = self.api.monitors.add_set_seed_odometry(base_pose=goal_pose, group_name=group_name, name='teleport base')
         self.api.motion_goals.allow_all_collisions()
         self.api.monitors.add_end_motion(start_condition=done)
-        self.execute(add_monitors_for_everything=False)
+        self.execute()
 
     def set_keep_hand_in_workspace(self, tip_link: Union[str, giskard_msgs.LinkName], map_frame=None,
                                    base_footprint=None):
@@ -757,8 +757,7 @@ class GiskardTester:
         tip = self.get_odometry_joint().child_link_name
         self.api.motion_goals.add_cartesian_pose(goal_pose=goal_pose, tip_link=tip.short_name, root_link='map',
                                                  name='base goal')
-        self.api.add_default_end_motion_conditions()
-        self.execute(add_monitors_for_everything=False)
+        self.execute()
 
     def reset(self):
         pass

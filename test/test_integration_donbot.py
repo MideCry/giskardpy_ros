@@ -90,7 +90,7 @@ class DonbotTester(GiskardTester):
         self.allow_all_collisions()
         done = self.monitors.add_set_seed_configuration(js)
         self.monitors.add_end_motion(start_condition=done)
-        self.execute(add_monitors_for_everything=False)
+        self.execute()
 
     def reset(self):
         self.open_gripper()
