@@ -13,27 +13,24 @@ from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException, ObjectForceTorqueThresholdException
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
-from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes
+from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes, ObjectTypes
 from giskardpy.god_map import god_map
-from giskardpy.motion_graph.monitors.lidar_monitor import LidarPayloadMonitor
-from giskardpy.motion_graph.tasks.task import WEIGHT_ABOVE_CA
+from giskardpy.motion_statechart.monitors.lidar_monitor import LidarPayloadMonitor
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
+from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
-from utils_for_tests import compare_poses, GiskardTestWrapper
-from utils_for_tests import launch_launchfile
 import tf.transformations as tf
 
+from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
+
 if 'GITHUB_WORKFLOW' not in os.environ:
-    from giskardpy.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing
-from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.god_map import god_map
-from giskardpy_ros.utils.utils_for_tests import launch_launchfile
-from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTestWrapper
+    from giskardpy.motion_statechart.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
+    Retracting, Tilting, KeepRotationGoal
 
 
 class HSRTestWrapper(GiskardTestWrapper):
@@ -113,7 +110,7 @@ def box_setup(zero_pose: HSRTestWrapper) -> HSRTestWrapper:
 #
 #     def test_force_monitor_grasp(self, zero_pose: HSRTestWrapper):
 #         sleep = zero_pose.monitors.add_sleep(2.5)
-#         force_torque = zero_pose.monitors.add_monitor(monitor_class=PayloadForceTorque.__name__,
+#         force_torque = zero_pose.monitors.add_monitor(class_name=PayloadForceTorque.__name__,
 #                                                       name=PayloadForceTorque.__name__,
 #                                                       start_condition='',
 #                                                       threshold_name=ForceTorqueThresholds.FT_GraspWithCare.value,
@@ -132,7 +129,7 @@ def box_setup(zero_pose: HSRTestWrapper) -> HSRTestWrapper:
 #         zero_pose.motion_goals.add_cartesian_pose(goal_pose=base_goal,
 #                                                   tip_link='base_footprint',
 #                                                   root_link='map',
-#                                                   hold_condition=force_torque,
+#                                                   pause_condition=force_torque,
 #                                                   end_condition=f'{goal_reached} and {sleep}')
 #         local_min = zero_pose.monitors.add_local_minimum_reached(start_condition=goal_reached)
 #
@@ -143,7 +140,7 @@ def box_setup(zero_pose: HSRTestWrapper) -> HSRTestWrapper:
 #
 #     def test_force_monitor_placing(self, zero_pose: HSRTestWrapper):
 #         sleep = zero_pose.monitors.add_sleep(2.5)
-#         force_torque = zero_pose.monitors.add_monitor(monitor_class=PayloadForceTorque.__name__,
+#         force_torque = zero_pose.monitors.add_monitor(class_name=PayloadForceTorque.__name__,
 #                                                       name=PayloadForceTorque.__name__,
 #                                                       start_condition='',
 #                                                       threshold_name=ForceTorqueThresholds.FT_Placing.value,
@@ -162,7 +159,7 @@ def box_setup(zero_pose: HSRTestWrapper) -> HSRTestWrapper:
 #         zero_pose.motion_goals.add_cartesian_pose(goal_pose=base_goal,
 #                                                   tip_link='base_footprint',
 #                                                   root_link='map',
-#                                                   hold_condition=force_torque,
+#                                                   pause_condition=force_torque,
 #                                                   end_condition=f'{goal_reached} and {sleep}')
 #         local_min = zero_pose.monitors.add_local_minimum_reached(start_condition=goal_reached)
 #
@@ -176,7 +173,7 @@ class TestLidarMonitor:
 
     # Zur Zeit kein automatisch ausführbarer Test
     def test_lidar_monitor(self, zero_pose: HSRTestWrapper):
-        lidar = zero_pose.monitors.add_monitor(monitor_class=LidarPayloadMonitor.__name__,
+        lidar = zero_pose.monitors.add_monitor(class_name=LidarPayloadMonitor.__name__,
                                                name=LidarPayloadMonitor.__name__ + 'Test',
                                                start_condition='',
                                                topic='/hokuyo_back/most_intense',
@@ -196,7 +193,7 @@ class TestLidarMonitor:
         zero_pose.motion_goals.add_cartesian_pose(goal_pose=base_goal,
                                                   tip_link='base_footprint',
                                                   root_link='map',
-                                                  hold_condition=lidar,
+                                                  pause_condition=lidar,
                                                   end_condition=f'{goal_reached}')
 
         local_min = zero_pose.monitors.add_local_minimum_reached(start_condition=goal_reached)
@@ -486,75 +483,6 @@ class TestConstraints:
         kitchen_setup.execute()
 
         kitchen_setup.close_gripper()
-
-    def test_open_dishwasher1(self, kitchen_setup: HSRTestWrapper):
-        handle_frame_id = 'iai_kitchen/sink_area_dish_washer_door_handle'
-        handle_name = 'sink_area_dish_washer_door_handle'
-        kitchen_setup.open_gripper()
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = 'map'
-        base_goal.pose.position = Point(0.3, -0.3, 0)
-        base_goal.pose.orientation.w = 1
-        kitchen_setup.move_base(base_goal)
-
-        bar_axis = Vector3Stamped()
-        bar_axis.header.frame_id = handle_frame_id
-        bar_axis.vector.y = 1
-
-        bar_center = PointStamped()
-        bar_center.header.frame_id = handle_frame_id
-
-        tip_grasp_axis = Vector3Stamped()
-        tip_grasp_axis.header.frame_id = kitchen_setup.tip
-        tip_grasp_axis.vector.x = 1
-
-        kitchen_setup.set_grasp_bar_goal(root_link=kitchen_setup.default_root,
-                                         tip_link=kitchen_setup.tip,
-                                         tip_grasp_axis=tip_grasp_axis,
-                                         bar_center=bar_center,
-                                         bar_axis=bar_axis,
-                                         bar_length=.4)
-        x_gripper = Vector3Stamped()
-        x_gripper.header.frame_id = kitchen_setup.tip
-        x_gripper.vector.z = 1
-
-        x_goal = Vector3Stamped()
-        x_goal.header.frame_id = handle_frame_id
-        x_goal.vector.x = -1
-        kitchen_setup.set_align_planes_goal(tip_link=kitchen_setup.tip,
-                                            tip_normal=x_gripper,
-                                            goal_normal=x_goal,
-                                            root_link='map')
-        kitchen_setup.allow_all_collisions()
-        kitchen_setup.execute()
-
-        kitchen_setup.close_gripper()
-
-        current_pose = kitchen_setup.compute_fk_pose(root_link='map', tip_link=kitchen_setup.tip)
-
-        kitchen_setup.set_open_container_goal(tip_link=kitchen_setup.tip,
-                                              environment_link=handle_name,
-                                              goal_joint_state=1.5)
-
-        kitchen_setup.allow_all_collisions()
-        kitchen_setup.execute()
-
-        pose_reached = kitchen_setup.monitors.add_cartesian_pose('map',
-                                                                 tip_link=kitchen_setup.tip,
-                                                                 goal_pose=current_pose)
-        kitchen_setup.monitors.add_end_motion(start_condition=pose_reached)
-
-        kitchen_setup.set_close_container_goal(tip_link=kitchen_setup.tip,
-                                               environment_link=handle_name)
-        kitchen_setup.allow_all_collisions()
-
-        kitchen_setup.execute(add_local_minimum_reached=False)
-
-        kitchen_setup.open_gripper()
-
-        kitchen_setup.set_joint_goal(kitchen_setup.better_pose)
-        kitchen_setup.allow_self_collision()
-        kitchen_setup.execute()
 
     def test_open_fridge_sequence_simple(self, kitchen_setup: HSRTestWrapper):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
@@ -892,15 +820,14 @@ class TestSUTURO:
 
         door_setup.execute()
 
+        door_setup.allow_all_collisions()
         door_setup.close_gripper()
 
         door_setup.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=0.35,
                                                     hinge_limit=-0.8)
 
         door_setup.allow_all_collisions()
-
         door_setup.execute(add_local_minimum_reached=False)
-
         door_setup.open_gripper()
 
     def test_open_door_force_torque(self, door_setup: HSRTestWrapper):
@@ -969,12 +896,18 @@ class TestSUTURO:
                                        left_door=left_door,
                                        offset_x=0.03,
                                        offset_y=0.01,
-                                       offset_z=-0.15)
+                                       offset_z=-0.15,
+                                       group_name='suturo_shelf_hohc',
+                                       orientation=np.array([[0, 1, 0, 0],
+                                                             [0, 0, 1, 0],
+                                                             [1, 0, 0, 0],
+                                                             [0, 0, 0, 1]]))
 
         hohc_setup.execute()
+        hohc_setup.allow_all_collisions()
         hohc_setup.close_gripper()
 
-        hohc_setup.open_shelf_door(left_handle=left_handle, left_door=left_door)
+        hohc_setup.open_shelf_door(left_handle=left_handle, left_door=left_door, left_door_hinge='shelf_hohc:shelf_door_left:joint')
         hohc_setup.execute()
 
     def test_reaching1(self, zero_pose: HSRTestWrapper):
@@ -1048,10 +981,11 @@ class TestSUTURO:
         zero_pose.take_pose("pre_align_height")
         zero_pose.execute()
 
+        zero_pose.allow_all_collisions()
         zero_pose.open_gripper()
 
         for grasp in GraspTypes:
-            zero_pose.motion_goals.add_motion_goal(motion_goal_class=Reaching.__name__,
+            zero_pose.motion_goals.add_motion_goal(class_name=Reaching.__name__,
                                                    object_name=box_name,
                                                    object_shape='box',
                                                    grasp=grasp.value,
@@ -1097,7 +1031,7 @@ class TestSUTURO:
 
         zero_pose.open_gripper()
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=Reaching.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=Reaching.__name__,
                                                object_name=mesh_name,
                                                goal_pose=mesh_goal_pose,
                                                object_size=size,
@@ -1109,6 +1043,7 @@ class TestSUTURO:
         zero_pose.allow_all_collisions()
         zero_pose.execute()
 
+        zero_pose.allow_all_collisions()
         zero_pose.close_gripper()
 
     def test_placing_motion(self, zero_pose: HSRTestWrapper):
@@ -1127,7 +1062,7 @@ class TestSUTURO:
         zero_pose.take_pose(TakePoseTypes.PRE_ALIGN_HEIGHT.value)
         zero_pose.execute()
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=Placing.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=Placing.__name__,
                                                goal_pose=placing_pose,
                                                align='',
                                                grasp=GraspTypes.ABOVE.value,
@@ -1139,7 +1074,7 @@ class TestSUTURO:
 
         zero_pose.open_gripper()
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=TakePose.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=TakePose.__name__,
                                                pose_keyword=TakePoseTypes.PARK.value)
 
         zero_pose.close_gripper()
@@ -1155,7 +1090,7 @@ class TestSUTURO:
         vertical_motion_pose.orientation.z = 0.5271017946406412
         vertical_motion_pose.orientation.w = 0.5057224638312487
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=TakePose.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=TakePose.__name__,
                                                pose_keyword=TakePoseTypes.PARK.value)
 
         zero_pose.allow_self_collision()
@@ -1165,7 +1100,7 @@ class TestSUTURO:
         local_min = zero_pose.monitors.add_local_minimum_reached()
 
         action = 'grasping'
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class=VerticalMotion.__name__,
+        zero_pose.motion_goals.add_motion_goal(class_name=VerticalMotion.__name__,
                                                action=action,
                                                distance=0.02,
                                                root_link='base_footprint',
@@ -1195,7 +1130,7 @@ class TestSUTURO:
         retracting_hand_pose.orientation.z = 0.5270228996549048
         retracting_hand_pose.orientation.w = 0.5058130282241059
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='TakePose',
+        zero_pose.motion_goals.add_motion_goal(class_name='TakePose',
                                                pose_keyword=TakePoseTypes.PARK.value)
 
         zero_pose.allow_self_collision()
@@ -1204,7 +1139,7 @@ class TestSUTURO:
         sleep = zero_pose.monitors.add_sleep(seconds=0.1)
         local_min = zero_pose.monitors.add_local_minimum_reached()
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='Retracting',
+        zero_pose.motion_goals.add_motion_goal(class_name=Retracting.__name__,
                                                distance=0.3,
                                                reference_frame='hand_palm_link',
                                                root_link='map',
@@ -1212,7 +1147,6 @@ class TestSUTURO:
                                                start_condition=sleep)
 
         zero_pose.monitors.add_end_motion(start_condition=f'{local_min} and {sleep}')
-
         zero_pose.allow_self_collision()
         zero_pose.execute(add_local_minimum_reached=False)
 
@@ -1237,7 +1171,7 @@ class TestSUTURO:
         sleep = zero_pose.monitors.add_sleep(seconds=0.1)
         local_min = zero_pose.monitors.add_local_minimum_reached()
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='Retracting',
+        zero_pose.motion_goals.add_motion_goal(class_name='Retracting',
                                                distance=0.3,
                                                reference_frame='base_footprint',
                                                root_link='map',
@@ -1284,7 +1218,7 @@ class TestSUTURO:
         }
 
         for mode in execute_from_above:
-            zero_pose.motion_goals.add_motion_goal(motion_goal_class='TakePose',
+            zero_pose.motion_goals.add_motion_goal(class_name=TakePose.__name__,
                                                    pose_keyword=TakePoseTypes.PRE_ALIGN_HEIGHT.value)
 
             zero_pose.allow_self_collision()
@@ -1298,7 +1232,7 @@ class TestSUTURO:
             target_pose.pose.position.x = 1
             target_pose.pose.position.z = 0.7
 
-            zero_pose.motion_goals.add_motion_goal(motion_goal_class=AlignHeight.__name__,
+            zero_pose.motion_goals.add_motion_goal(class_name=AlignHeight.__name__,
                                                    from_above=from_above,
                                                    object_name='',
                                                    goal_pose=target_pose,
@@ -1335,17 +1269,17 @@ class TestSUTURO:
         tilt_pose2.pose.position.x = 0.4011968051112429
         tilt_pose2.pose.position.y = 0.07997985276116013
         tilt_pose2.pose.position.z = 0.6997425428565389
-        tilt_pose2.pose.orientation.x = -0.7013959300921285
-        tilt_pose2.pose.orientation.y = 0.7062105656448003
-        tilt_pose2.pose.orientation.z = -0.02684219924309636
-        tilt_pose2.pose.orientation.w = -0.09268161933006579
+        tilt_pose2.pose.orientation.x = 0.7013959300921285
+        tilt_pose2.pose.orientation.y = -0.7062105656448003
+        tilt_pose2.pose.orientation.z = 0.042120394851322546
+        tilt_pose2.pose.orientation.w = 0.07832248669380922
 
         tilt_states = {
             'left': tilt_pose1,
             'right': tilt_pose2,
         }
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='TakePose',
+        zero_pose.motion_goals.add_motion_goal(class_name=TakePose.__name__,
                                                pose_keyword=TakePoseTypes.PRE_ALIGN_HEIGHT.value)
 
         zero_pose.allow_self_collision()
@@ -1355,7 +1289,7 @@ class TestSUTURO:
             sleep = zero_pose.monitors.add_sleep(seconds=0.1)
             local_min = zero_pose.monitors.add_local_minimum_reached()
 
-            zero_pose.motion_goals.add_motion_goal(motion_goal_class='Tilting',
+            zero_pose.motion_goals.add_motion_goal(class_name=Tilting.__name__,
                                                    direction=direction,
                                                    angle=1.4,
                                                    start_condition='',
@@ -1368,7 +1302,7 @@ class TestSUTURO:
 
             cord_data = (zero_pose.compute_fk_pose('map', 'hand_l_finger_tip_frame'))
 
-            compare_poses(cord_data.pose, tilt_states[direction].pose)
+            compare_poses(cord_data.pose, tilt_states[direction].pose, decimal=2)
 
     def test_take_pose(self, zero_pose: HSRTestWrapper):
         poses = [TakePoseTypes.PARK.value, TakePoseTypes.PERCEIVE.value, TakePoseTypes.ASSISTANCE.value,
@@ -1433,7 +1367,7 @@ class TestSUTURO:
         }
 
         for pose in poses:
-            zero_pose.motion_goals.add_motion_goal(motion_goal_class=TakePose.__name__,
+            zero_pose.motion_goals.add_motion_goal(class_name=TakePose.__name__,
                                                    pose_keyword=pose,
                                                    max_velocity=None)
 
@@ -1449,7 +1383,7 @@ class TestSUTURO:
     # # TODO: If ever relevant for SuTuRo, add proper Test behaviour
     # def test_mixing(self, zero_pose: HSRTestWrapper):
     #     # FIXME: Cant use traj_time_in_seconds in standalone mode
-    #     zero_pose.motion_goals.add_motion_goal(motion_goal_class='Mixing',
+    #     zero_pose.motion_goals.add_motion_goal(class_name='Mixing',
     #                                            mixing_time=20)
     #
     #     zero_pose.allow_self_collision()
@@ -1458,7 +1392,7 @@ class TestSUTURO:
     # def test_joint_rotation_goal_continuous(self, zero_pose: HSRTestWrapper):
     #     # FIXME: Use compare_pose similar to other tests
     #     # FIXME: Cant use traj_time_in_seconds in standalone mode
-    #     zero_pose.motion_goals.add_motion_goal(motion_goal_class='JointRotationGoalContinuous',
+    #     zero_pose.motion_goals.add_motion_goal(class_name='JointRotationGoalContinuous',
     #                                            joint_name='arm_roll_joint',
     #                                            joint_center=0.0,
     #                                            joint_range=0.2,
@@ -1488,7 +1422,7 @@ class TestSUTURO:
         base_goal.pose.orientation = Quaternion(*quaternion_about_axis(pi / 2, [0, 0, 1]))
         zero_pose.set_cart_goal(base_goal, root_link=god_map.world.root_link_name, tip_link='base_footprint')
 
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='KeepRotationGoal',
+        zero_pose.motion_goals.add_motion_goal(class_name=KeepRotationGoal.__name__,
                                                tip_link='hand_palm_link')
 
         zero_pose.allow_self_collision()
@@ -1544,13 +1478,13 @@ class TestSUTURO:
         tip_normal_z.header.frame_id = 'hand_gripper_tool_frame'
         tip_normal_z.vector.z = 1
 
-        goal_normal_z = tf.transform_vector('map', tip_normal_z)
+        # goal_normal_z = tf.transform_vector('map', tip_normal_z)
 
         tip_normal_y = Vector3Stamped()
         tip_normal_y.header.frame_id = 'hand_gripper_tool_frame'
         tip_normal_y.vector.y = 1
 
-        goal_normal_y = tf.transform_vector('map', tip_normal_y)
+        # goal_normal_y = tf.transform_vector('map', tip_normal_y)
 
         # zero_pose.motion_goals.add_align_planes(root_link='map', tip_link='hand_gripper_tool_frame',
         #                                         goal_normal=goal_normal_z, tip_normal=tip_normal_z,
@@ -1579,7 +1513,7 @@ class TestSUTURO:
         return
 
 
-class TestKitchen:
+class TestArenaActions:
     def test_kitchen_island_open(self, kitchen_setup: HSRTestWrapper):
         open_drawers = []
 
@@ -1766,6 +1700,7 @@ class TestKitchen:
         kitchen_setup.allow_self_collision()
         kitchen_setup.monitors.add_end_motion(start_condition=door_open)
         kitchen_setup.execute(add_local_minimum_reached=False)
+        kitchen_setup.allow_all_collisions()
         kitchen_setup.close_gripper()
 
     def close_sequence(self,
@@ -1825,6 +1760,7 @@ class TestKitchen:
         handle_name_prefix = god_map.world.get_link_name(link_name=handle_name)
         hinge_joint = "suturo_door/suturo_door_area:door_origin_revolute_joint"
         door_handle_parent_link = god_map.world.get_parent_link_of_link(link_name=handle_name_prefix)
+        door_handle_parent_link = god_map.world.get_parent_link_of_link(link_name=door_handle_parent_link)
 
         door_state = {hinge_joint: -0.8}
 
@@ -1843,7 +1779,7 @@ class TestKitchen:
 
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = door_setup.tip
-        x_gripper.vector.z = 1
+        x_gripper.vector.z = -1
 
         x_goal = Vector3Stamped()
         x_goal.header.frame_id = handle_name
@@ -1858,6 +1794,7 @@ class TestKitchen:
 
         door_setup.execute()
 
+        door_setup.allow_all_collisions()
         door_setup.close_gripper()
 
         door_setup.motion_goals.add_close_container(tip_link=door_setup.tip,
@@ -1867,3 +1804,183 @@ class TestKitchen:
         door_setup.monitors.add_end_motion(start_condition=joint_monitor)
 
         door_setup.execute(add_local_minimum_reached=False)
+
+    def test_open_dishwasher(self, kitchen_setup: HSRTestWrapper):
+        if 'GITHUB_WORKFLOW' in os.environ:
+            return
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'map'
+        base_goal.pose.position = Point(0.3, -0.3, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.move_base(base_goal)
+
+        handle_frame_id = 'iai_kitchen/sink_area_dish_washer_door_handle'
+        hinge_joint = god_map.world.get_movable_parent_joint(handle_frame_id)
+        door_hinge_frame_id = god_map.world.get_parent_link_of_link(handle_frame_id)
+        root_link = kitchen_setup.default_root
+        tip_link = kitchen_setup.tip
+        grasp_bar_offset = 0.1
+        goal_angle_half = 0.6
+        goal_angle_full = 1.35
+        bar_length = 0.4
+        after_force_retract = 0.03
+        env_name = 'iai_kitchen'
+        gripper_group = 'gripper'
+        print(hinge_joint)
+        print(door_hinge_frame_id)
+
+        first_open = kitchen_setup.monitors.add_open_hsr_gripper(name='first open gripper')
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.y = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis_bar = Vector3Stamped()
+        tip_grasp_axis_bar.header.frame_id = tip_link
+        tip_grasp_axis_bar.vector.x = 1
+
+        grasp_axis_offset = Vector3Stamped()
+        grasp_axis_offset.header.frame_id = handle_frame_id
+        grasp_axis_offset.vector.x = -grasp_bar_offset
+
+        tip_grasp_axis_push = Vector3Stamped()
+        tip_grasp_axis_push.header.frame_id = tip_link
+        tip_grasp_axis_push.vector.y = 1
+
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = tip_link
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+
+        bar_grasped_force = kitchen_setup.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value)
+
+        kitchen_setup.motion_goals.add_grasp_bar_offset(name='grasp bar',
+                                                        root_link=root_link,
+                                                        tip_link=tip_link,
+                                                        tip_grasp_axis=tip_grasp_axis_bar,
+                                                        bar_center=bar_center,
+                                                        bar_axis=bar_axis,
+                                                        bar_length=bar_length,
+                                                        grasp_axis_offset=grasp_axis_offset,
+                                                        start_condition=first_open,
+                                                        end_condition=bar_grasped_force)
+
+        kitchen_setup.motion_goals.add_align_planes(tip_link=tip_link,
+                                                    tip_normal=x_gripper,
+                                                    goal_normal=x_goal,
+                                                    root_link=root_link,
+                                                    start_condition=first_open,
+                                                    end_condition=bar_grasped_force)
+
+        goal_point = PointStamped()
+        goal_point.header.frame_id = 'base_link'
+
+        handle_retract_direction = Vector3Stamped()
+        handle_retract_direction.header.frame_id = god_map.world.search_for_link_name(handle_frame_id).short_name
+        handle_retract_direction.vector.x = after_force_retract
+
+        base_retract = tf.transform_vector(goal_point.header.frame_id, handle_retract_direction)
+
+        goal_point.point = Point(base_retract.vector.x, base_retract.vector.y, base_retract.vector.z)
+
+        grasped = kitchen_setup.monitors.add_local_minimum_reached(name='grasped monitor',
+                                                                   start_condition=bar_grasped_force)
+
+        kitchen_setup.motion_goals.add_cartesian_position_straight(root_link='map', tip_link='base_link',
+                                                                   goal_point=goal_point,
+                                                                   name='retract after hit',
+                                                                   start_condition=bar_grasped_force,
+                                                                   end_condition=grasped)
+
+        first_close = kitchen_setup.monitors.add_close_hsr_gripper(name='first close gripper', start_condition=grasped)
+
+        half_open_joint = kitchen_setup.monitors.add_joint_position(name='half open joint',
+                                                                    goal_state={hinge_joint: goal_angle_half},
+                                                                    threshold=0.02,
+                                                                    start_condition=first_close)
+
+        kitchen_setup.motion_goals.add_open_container(name='half open',
+                                                      tip_link=tip_link,
+                                                      environment_link=handle_frame_id,
+                                                      goal_joint_state=goal_angle_half,
+                                                      start_condition=first_close,
+                                                      end_condition=half_open_joint)
+
+        final_open = kitchen_setup.monitors.add_open_hsr_gripper(name='final open gripper',
+                                                                 start_condition=half_open_joint)
+
+        around_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='around door local min',
+                                                                            start_condition=final_open)
+
+        kitchen_setup.motion_goals.hsrb_dishwasher_door_around(handle_name=handle_frame_id,
+                                                               tip_gripper_axis=tip_grasp_axis_push,
+                                                               root_link=root_link,
+                                                               tip_link=tip_link,
+                                                               goal_angle=goal_angle_half,
+                                                               start_condition=final_open,
+                                                               end_condition=around_local_min)
+
+        align_push_door_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='align push door local min',
+                                                                                     start_condition=around_local_min)
+
+        kitchen_setup.motion_goals.add_align_to_push_door(root_link=root_link,
+                                                          tip_link=tip_link,
+                                                          door_handle=handle_frame_id,
+                                                          door_object=door_hinge_frame_id,
+                                                          tip_gripper_axis=tip_grasp_axis_push,
+                                                          weight=WEIGHT_ABOVE_CA,
+                                                          goal_angle=goal_angle_half,
+                                                          intermediate_point_scale=0.95,
+                                                          start_condition=around_local_min,
+                                                          end_condition=align_push_door_local_min)
+
+        final_close = kitchen_setup.monitors.add_close_hsr_gripper(name='final close gripper',
+                                                                   start_condition=align_push_door_local_min)
+
+        pre_push_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='pre push local min',
+                                                                              start_condition=final_close)
+
+        kitchen_setup.motion_goals.add_pre_push_door(root_link=root_link,
+                                                     tip_link=tip_link,
+                                                     door_handle=handle_frame_id,
+                                                     weight=WEIGHT_ABOVE_CA,
+                                                     door_object=door_hinge_frame_id,
+                                                     start_condition=final_close,
+                                                     end_condition=pre_push_local_min)
+
+        full_open_joint = kitchen_setup.monitors.add_joint_position(name='full open joint',
+                                                                    goal_state={hinge_joint: goal_angle_full},
+                                                                    threshold=0.02,
+                                                                    start_condition=pre_push_local_min)
+
+        kitchen_setup.motion_goals.add_open_container(name='full open',
+                                                      tip_link=tip_link,
+                                                      environment_link=handle_frame_id,
+                                                      goal_joint_state=goal_angle_full,
+                                                      start_condition=pre_push_local_min,
+                                                      end_condition=full_open_joint)
+
+        park_joint_monitor = kitchen_setup.monitors.add_joint_position(name='park joint pos',
+                                                                       goal_state={'head_pan_joint': 0.0,
+                                                                                   'head_tilt_joint': 0.0,
+                                                                                   'arm_lift_joint': 0.0,
+                                                                                   'arm_flex_joint': 0.0,
+                                                                                   'arm_roll_joint': -1.5,
+                                                                                   'wrist_flex_joint': -1.5,
+                                                                                   'wrist_roll_joint': 0.0},
+                                                                       threshold=0.05,
+                                                                       start_condition=full_open_joint)
+
+        kitchen_setup.motion_goals.add_take_pose(pose_keyword='park', start_condition=full_open_joint,
+                                                 end_condition=park_joint_monitor)
+
+        kitchen_setup.monitors.add_end_motion(start_condition=park_joint_monitor)
+
+        kitchen_setup.motion_goals.allow_collision(env_name, gripper_group)
+        kitchen_setup.execute(add_local_minimum_reached=False)

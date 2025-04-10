@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import re
 from collections import defaultdict
 from typing import Dict, Tuple, Optional, List, Union
@@ -14,57 +15,56 @@ from shape_msgs.msg import SolidPrimitive
 from tf.transformations import quaternion_from_matrix
 
 import giskard_msgs.msg as giskard_msgs
+from giskard_msgs.msg import ExecutionState
 from giskard_msgs.msg import (MoveAction, MoveGoal, WorldBody, CollisionEntry, MoveResult, MoveFeedback,
                               WorldGoal, WorldAction, WorldResult, MotionStatechartNode)
 from giskard_msgs.srv import DyeGroupRequest, DyeGroup, GetGroupInfoRequest, DyeGroupResponse
 from giskard_msgs.srv import GetGroupInfo, GetGroupNames
 from giskard_msgs.srv import GetGroupNamesResponse, GetGroupInfoResponse
 from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import LocalMinimumException, MaxTrajectoryLengthException, \
+from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, \
     MonitorInitalizationException, ObjectForceTorqueThresholdException
-from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
+from giskardpy.data_types.suturo_types import ForceTorqueThresholds, TakePoseTypes
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
-    CartesianPoseStraight, CartesianPositionStraight
+    CartesianPoseStraight, CartesianPositionStraight, CartesianPose
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
-from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
 from giskardpy.motion_statechart.goals.open_close import Close, Open
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits, \
-    MirrorJointPosition
-from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
+from giskardpy.motion_statechart.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, \
+    OpenDoorGoal, Mixing, \
+    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
     PointingAt, VectorsAligned, DistanceToLine
+from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
+    DistanceMonitor
+from giskardpy.motion_statechart.monitors.force_torque_monitor import PayloadForceTorque
 from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
+from giskardpy.motion_statechart.monitors.lidar_monitor import LidarPayloadMonitor
 from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached, TimeAbove, Alternator, CancelMotion, \
     EndMotion, TrueMonitor, FalseMonitor
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry, SetSeedConfiguration
 from giskardpy.motion_statechart.monitors.payload_monitors import Print, Sleep, \
-    PayloadAlternator, Pulse, CheckMaxTrajectoryLength
+    Pulse, CheckMaxTrajectoryLength
+from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation, \
-    CartesianPose, \
-    JustinTorsoLimitCart, CartesianVelocityLimit
+    JustinTorsoLimitCart
+from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
+from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionListStop
+from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
+from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
-
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds, TakePoseTypes
-from giskardpy.goals.joint_goals import JointPositionListStop
-from giskardpy.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, OpenDoorGoal, Mixing, \
-    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion
-from giskardpy.motion_graph.monitors.force_torque_monitor import PayloadForceTorque
-from giskardpy.motion_graph.monitors.lidar_monitor import LidarPayloadMonitor
-from giskardpy.motion_graph.tasks.task import WEIGHT_BELOW_CA
+from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath, RealTimeConePointing
 from giskardpy_ros.ros1 import msg_converter
 from giskardpy_ros.ros1 import tfwrapper as tf
 from giskardpy_ros.ros1.msg_converter import kwargs_to_json
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy_ros.utils.utils import make_world_body_box
-from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
-from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
-from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
-    DistanceMonitor
-from giskard_msgs.msg import ExecutionState
+from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 
 
 class WorldWrapper:
@@ -646,30 +646,30 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     end_condition=end_condition,
                                     **kwargs)
 
-    def add_mirror_joint_position(self,
-                                  mapping: Dict[str, str],
-                                  name: Optional[str] = None,
-                                  weight: Optional[float] = None,
-                                  max_velocity: Optional[float] = None,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  **kwargs: goal_parameter) -> str:
-        """
-        Sets joint position goals for all pairs in goal_state
-        :param goal_state: maps joint_name to goal position
-        :param weight: None = use default weight
-        :param max_velocity: will be applied to all joints
-        """
-        return self.add_motion_goal(class_name=MirrorJointPosition.__name__,
-                                    mapping=mapping,
-                                    weight=weight,
-                                    max_velocity=max_velocity,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    # def add_mirror_joint_position(self,
+    #                               mapping: Dict[str, str],
+    #                               name: Optional[str] = None,
+    #                               weight: Optional[float] = None,
+    #                               max_velocity: Optional[float] = None,
+    #                               start_condition: str = '',
+    #                               pause_condition: str = '',
+    #                               end_condition: str = '',
+    #                               **kwargs: goal_parameter) -> str:
+    #     """
+    #     Sets joint position goals for all pairs in goal_state
+    #     :param goal_state: maps joint_name to goal position
+    #     :param weight: None = use default weight
+    #     :param max_velocity: will be applied to all joints
+    #     """
+    #     return self.add_motion_goal(class_name=MirrorJointPosition.__name__,
+    #                                 mapping=mapping,
+    #                                 weight=weight,
+    #                                 max_velocity=max_velocity,
+    #                                 name=name,
+    #                                 start_condition=start_condition,
+    #                                 pause_condition=pause_condition,
+    #                                 end_condition=end_condition,
+    #                                 **kwargs)
 
     def add_joint_position_limit(self,
                                  lower_upper_limits: Dict[str, Tuple[float, float]],
@@ -1012,7 +1012,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                            tip_link: Union[str, giskard_msgs.LinkName],
                            environment_link: Union[str, giskard_msgs.LinkName],
                            name: Optional[str] = None,
-                           special_door: Optional[bool] = False,
                            goal_joint_state: Optional[float] = None,
                            weight: Optional[float] = None,
                            start_condition: str = '',
@@ -1033,15 +1032,14 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=Open.__name__,
-                             tip_link=tip_link,
-                             environment_link=environment_link,
-                             special_door=special_door,
-                             goal_joint_state=goal_joint_state,
-                             weight=weight,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
+                                    tip_link=tip_link,
+                                    environment_link=environment_link,
+                                    goal_joint_state=goal_joint_state,
+                                    weight=weight,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def add_align_to_push_door(self,
                                root_link: str,
@@ -1071,20 +1069,20 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         : param object_rotation_axis: door rotation axis w.r.t root
         """
         return self.add_motion_goal(class_name=AlignToPushDoor.__name__,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             door_handle=door_handle,
-                             door_object=door_object,
-                             tip_gripper_axis=tip_gripper_axis,
-                             goal_angle=goal_angle,
-                             tip_group=tip_group,
-                             root_group=root_group,
-                             intermediate_point_scale=intermediate_point_scale,
-                             weight=weight,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    door_handle=door_handle,
+                                    door_object=door_object,
+                                    tip_gripper_axis=tip_gripper_axis,
+                                    goal_angle=goal_angle,
+                                    tip_group=tip_group,
+                                    root_group=root_group,
+                                    intermediate_point_scale=intermediate_point_scale,
+                                    weight=weight,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def add_pre_push_door(self,
                           root_link: str,
@@ -1230,19 +1228,19 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             root_link = giskard_msgs.LinkName(name=root_link)
 
         return self.add_motion_goal(class_name=RealTimePointing.__name__,
-                             tip_link=tip_link,
-                             tip_group=tip_group,
-                             root_link=root_link,
-                             topic_name=topic_name,
-                             root_group=root_group,
-                             pointing_axis=pointing_axis,
-                             max_velocity=max_velocity,
-                             weight=weight,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition,
-                             **kwargs)
+                                    tip_link=tip_link,
+                                    tip_group=tip_group,
+                                    root_link=root_link,
+                                    topic_name=topic_name,
+                                    root_group=root_group,
+                                    pointing_axis=pointing_axis,
+                                    max_velocity=max_velocity,
+                                    weight=weight,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
     def add_real_time_cone_pointing(self,
                                     tip_link: Union[str, giskard_msgs.LinkName],
@@ -1278,20 +1276,20 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             root_link = giskard_msgs.LinkName(name=root_link)
 
         return self.add_motion_goal(class_name=RealTimeConePointing.__name__,
-                                 tip_link=tip_link,
-                                 tip_group=tip_group,
-                                 root_link=root_link,
-                                 topic_name=topic_name,
-                                 root_group=root_group,
-                                 pointing_axis=pointing_axis,
-                                 cone_theta=cone_theta,
-                                 max_velocity=max_velocity,
-                                 threshold=threshold,
-                                 weight=weight,
-                                 start_condition=start_condition,
-                                 pause_condition=pause_condition,
-                                 end_condition=end_condition,
-                                 **kwargs)
+                                    tip_link=tip_link,
+                                    tip_group=tip_group,
+                                    root_link=root_link,
+                                    topic_name=topic_name,
+                                    root_group=root_group,
+                                    pointing_axis=pointing_axis,
+                                    cone_theta=cone_theta,
+                                    max_velocity=max_velocity,
+                                    threshold=threshold,
+                                    weight=weight,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
     def add_carry_my_luggage(self,
                              name: Optional[str] = None,
@@ -1516,18 +1514,18 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=CartesianPoseStraight.__name__,
-                             goal_pose=goal_pose,
-                             tip_link=tip_link,
-                             root_link=root_link,
-                             weight=weight,
-                             reference_linear_velocity=reference_linear_velocity,
-                             reference_angular_velocity=reference_angular_velocity,
-                             name=name,
-                             absolute=absolute,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition,
-                             **kwargs)
+                                    goal_pose=goal_pose,
+                                    tip_link=tip_link,
+                                    root_link=root_link,
+                                    weight=weight,
+                                    reference_linear_velocity=reference_linear_velocity,
+                                    reference_angular_velocity=reference_angular_velocity,
+                                    name=name,
+                                    absolute=absolute,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
     def add_cartesian_position_straight(self,
                                         goal_point: PointStamped,
@@ -1675,19 +1673,19 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=AngleGoal.__name__,
-                             tip_vector=tip_vector,
-                             reference_vector=reference_vector,
-                             tip_link=tip_link,
-                             root_link=root_link,
-                             lower_angle=lower_angle,
-                             upper_angle=upper_angle,
-                             max_vel=reference_velocity,
-                             weight=weight,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition,
-                             **kwargs)
+                                    tip_vector=tip_vector,
+                                    reference_vector=reference_vector,
+                                    tip_link=tip_link,
+                                    root_link=root_link,
+                                    lower_angle=lower_angle,
+                                    upper_angle=upper_angle,
+                                    max_vel=reference_velocity,
+                                    weight=weight,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
     # SuTuRo Goals Interface Start
 
@@ -1731,28 +1729,28 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param end_condition: expression that ends goal
         """
         return self.add_motion_goal(class_name=GraspBarOffset.__name__,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             tip_grasp_axis=tip_grasp_axis,
-                             bar_center=bar_center,
-                             bar_axis=bar_axis,
-                             bar_length=bar_length,
-                             grasp_axis_offset=grasp_axis_offset,
-                             root_group=root_group,
-                             tip_group=tip_group,
-                             reference_linear_velocity=reference_linear_velocity,
-                             reference_angular_velocity=reference_angular_velocity,
-                             weight=weight,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition,
-                             **kwargs)
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=bar_length,
+                                    grasp_axis_offset=grasp_axis_offset,
+                                    root_group=root_group,
+                                    tip_group=tip_group,
+                                    reference_linear_velocity=reference_linear_velocity,
+                                    reference_angular_velocity=reference_angular_velocity,
+                                    weight=weight,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
     def hsrb_open_door_goal(self,
                             door_handle_link: Union[str, giskard_msgs.LinkName],
                             tip_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName(
-                            name='hand_gripper_tool_frame'),
+                                name='hand_gripper_tool_frame'),
                             name: str = 'HSRB_open_door',
                             handle_limit: Optional[float] = (np.pi / 6),
                             hinge_limit: Optional[float] = -(np.pi / 4),
@@ -2777,9 +2775,9 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
                                 pause_condition=pause_condition,
                                 end_condition=end_condition,
                                 reset_condition=reset_condition)
-    
+
     # Start of SuTuRo-specific monitors
-    
+
     def add_force_torque(self,
                          threshold_enum: int,
                          object_type: Optional[str] = None,
@@ -2788,7 +2786,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
                          stay_true: bool = True,
                          start_condition: str = '',
                          pause_condition: str = '',
-                         end_condition: str = ''):
+                         end_condition: str = '',
+                         reset_condition: str = ''):
         """
         Can be used if planning wants to use their own grasping and placing actions, only adds force_torque_monitor
         without manipulations grasping/placing goals
@@ -2800,8 +2799,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         :param stay_true: whether the monitor should stay active until it is finished or not
         :param start_condition: condition for when the monitor should start checking for thresholds
         """
-        if (
-                threshold_enum == ForceTorqueThresholds.GRASP.value or threshold_enum == ForceTorqueThresholds.PLACE.value) and object_type is None:
+        if ((threshold_enum == ForceTorqueThresholds.GRASP.value or threshold_enum == ForceTorqueThresholds.PLACE.value)
+                and object_type is None):
             raise MonitorInitalizationException('object_type not optional for GRASP and PLACE')
 
         return self.add_monitor(class_name=PayloadForceTorque.__name__,
@@ -2809,11 +2808,12 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
                                 start_condition=start_condition,
                                 pause_condition=pause_condition,
                                 end_condition=end_condition,
+                                reset_condition=reset_condition,
                                 stay_true=stay_true,
                                 topic=topic,
                                 threshold_enum=threshold_enum,
                                 object_type=object_type)
-    
+
     def add_payload_lidar(self,
                           start_condition: str = '',
                           topic: str = 'hsrb/base_scan',
@@ -2835,124 +2835,29 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
                                 laser_distance_threshold_width=laser_distance_threshold_width,
                                 laser_distance_threshold=laser_distance_threshold)
 
-    def add_open_hsr_gripper(self, start_condition: str = '', name: Optional[str] = None) -> str:
+    def add_open_hsr_gripper(self,
+                             start_condition: str = '',
+                             name: Optional[str] = None) -> str:
         """
         The monitor will send a force to the HSR's gripper to open it.
         """
-        from giskardpy.motion_graph.monitors.hsr_gripper import OpenHsrGripper
+        from giskardpy.motion_statechart.monitors.hsr_gripper import OpenHsrGripper
         name = name or OpenHsrGripper.__name__
         return self.add_monitor(class_name=OpenHsrGripper.__name__,
                                 name=name,
                                 start_condition=start_condition)
 
-    def add_close_hsr_gripper(self, start_condition: str = '', name: Optional[str] = None) -> str:
+    def add_close_hsr_gripper(self,
+                              start_condition: str = '',
+                              name: Optional[str] = None) -> str:
         """
         The monitor will send a force to the HSR's gripper to close it.
         """
-        from giskardpy.motion_graph.monitors.hsr_gripper import CloseHsrGripper
+        from giskardpy.motion_statechart.monitors.hsr_gripper import CloseHsrGripper
         name = name or CloseHsrGripper.__name__
         return self.add_monitor(class_name=CloseHsrGripper.__name__,
                                 name=name,
                                 start_condition=start_condition)
-
-    def add_pre_push_door(self,
-                          root_link: str,
-                          tip_link: str,
-                          door_object: str,
-                          door_handle: str,
-                          threshold: float = 0.025,
-                          root_group: Optional[str] = None,
-                          tip_group: Optional[str] = None,
-                          name: Optional[str] = None,
-                          start_condition: str = '',
-                          pause_condition: str = '',
-                          end_condition: Optional[str] = None) -> str:
-        """
-        PrePose-Monitor for dishwasher-opening
-        Checks if pre-pose is reached
-
-        :param root_link: Root-link of the kinematic chain
-        :param tip_link: Tip-link of the kinematic chain
-        :param door_object: base door link of the dishwasher
-        :param door_handle: door handle link of the dishwasher
-        :param threshold: distance threshold for position of tip_link to door plane
-        :param root_group:
-        :param tip_group:
-        :param name: name of the monitor to distinguish between monitors
-        :param start_condition: expression that starts monitor
-        :param pause_condition: expression that pauses monitor
-        :param end_condition: expression that ends monitor
-        """
-
-        return self.add_monitor(class_name=PrePushDoorMonitor.__name__,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                door_object=door_object,
-                                door_handle=door_handle,
-                                threshold=threshold,
-                                root_group=root_group,
-                                tip_group=tip_group,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition)
-
-    def add_align_to_push_door(self,
-                               root_link: str,
-                               tip_link: str,
-                               door_object: str,
-                               door_handle: str,
-                               tip_gripper_axis: Vector3Stamped,
-                               goal_angle: Optional[float] = None,
-                               root_group: Optional[str] = None,
-                               tip_group: Optional[str] = None,
-                               reference_linear_velocity: float = 0.1,
-                               reference_angular_velocity: float = 0.5,
-                               intermediate_point_scale: float = 1,
-                               weight: float = WEIGHT_BELOW_CA,
-                               name: Optional[str] = None,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: Optional[str] = None) -> str:
-        """
-        Monitor for align to push door goal.
-        Checks if alignment was reached.
-
-        :param root_link: Root-link of the kinematic chain
-        :param tip_link: Tip-link of the kinematic chain
-        :param door_object: base door link of the dishwasher
-        :param door_handle: door handle link of the dishwasher
-        :param tip_gripper_axis: Tip axis of the gripper of the robot
-        :param goal_angle: Angle of the dishwasher joint at start of monitor/goal
-        :param root_group:
-        :param tip_group:
-        :param reference_linear_velocity: Reference linear speed
-        :param reference_angular_velocity: Reference angular speed
-        :param intermediate_point_scale: Scaling parameter for intermediate point used to calculate align point
-        :param weight:
-        :param name:
-        :param start_condition: expression that starts monitor
-        :param pause_condition: expression that pauses monitor
-        :param end_condition: expression that ends monitor
-        """
-
-        return self.add_monitor(class_name=AlignToPushDoorMonitor.__name__,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                door_object=door_object,
-                                door_handle=door_handle,
-                                tip_gripper_axis=tip_gripper_axis,
-                                goal_angle=goal_angle,
-                                reference_linear_velocity=reference_linear_velocity,
-                                reference_angular_velocity=reference_angular_velocity,
-                                intermediate_point_scale=intermediate_point_scale,
-                                weight=weight,
-                                root_group=root_group,
-                                tip_group=tip_group,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition)
 
 
 class GiskardWrapper:
@@ -3145,15 +3050,15 @@ class GiskardWrapper:
 
     def add_lidar_hold_condition(self) -> None:
         """
-        1. Adds a lidar payload monitor and adds it as hold_condition to all previously defined motions goals
+        1. Adds a lidar payload monitor and adds it as pause_condition to all previously defined motions goals
         """
         lidar_monitor_name = self.monitors.add_payload_lidar(laser_distance_threshold_width=0.3,
                                                              laser_distance_threshold=0.35)
         for goal in self.motion_goals._goals:
-            if goal.hold_condition:
-                goal.hold_condition = f'{goal.hold_condition} and {lidar_monitor_name}'
+            if goal.pause_condition:
+                goal.pause_condition = f'{goal.pause_condition} and {lidar_monitor_name}'
             else:
-                goal.hold_condition = lidar_monitor_name
+                goal.pause_condition = lidar_monitor_name
 
     @property
     def robot_name(self):
@@ -3567,7 +3472,9 @@ class GiskardWrapper:
                             offset_y: float = 0.01,
                             offset_z: float = -0.15,
                             left_handle: str = 'shelf_billy:shelf_billy:shelf_door_left:handle',
-                            left_door: str = 'shelf_billy:shelf_billy:shelf_door_left'):
+                            left_door: str = 'shelf_billy:shelf_billy:shelf_door_left',
+                            group_name: str = 'iai_kitchen',
+                            orientation: np.array = None):
         """
         Pre-Pose for opening the shelf
 
@@ -3577,20 +3484,22 @@ class GiskardWrapper:
         :param left_handle: Left door handle of the shelf
         :param left_door: Main Link of the left door
         """
+        if orientation is None:
+            orientation = np.array([[-1, 0, 0, 0],
+                                    [0, 0, 1, 0],
+                                    [0, 1, 0, 0],
+                                    [0, 0, 0, 1]])
         if left_door not in self.world.get_group_names():
             self.world.register_group(new_group_name=left_door,
                                       root_link_name=giskard_msgs.LinkName(name=left_door,
-                                                                           group_name='iai_kitchen'))
+                                                                           group_name=group_name))
 
         first_goal = PoseStamped()
         first_goal.header.frame_id = left_handle
         first_goal.pose.position.x = offset_x
         first_goal.pose.position.y = offset_y
         first_goal.pose.position.z = offset_z
-        first_goal.pose.orientation = Quaternion(*quaternion_from_matrix(np.array([[-1, 0, 0, 0],
-                                                                                   [0, 0, 1, 0],
-                                                                                   [0, 1, 0, 0],
-                                                                                   [0, 0, 0, 1]])))
+        first_goal.pose.orientation = Quaternion(*quaternion_from_matrix(orientation))
 
         pre_grasp_reached = self.monitors.add_cartesian_pose(name='pre first goal monitor',
                                                              goal_pose=first_goal,
@@ -3781,7 +3690,8 @@ class GiskardWrapper:
         self.motion_goals.add_take_pose(pose_keyword='park', start_condition=full_open_joint,
                                         end_condition=park_joint_monitor)
 
-        set_seed = self.monitors.add_set_seed_configuration(seed_configuration={hinge_joint: 1.6}, start_condition=park_joint_monitor)
+        set_seed = self.monitors.add_set_seed_configuration(seed_configuration={hinge_joint: 1.6},
+                                                            start_condition=park_joint_monitor)
         self.monitors.add_end_motion(start_condition=set_seed)
 
         self.motion_goals.avoid_all_collisions(end_condition=align_push_door_monitor)

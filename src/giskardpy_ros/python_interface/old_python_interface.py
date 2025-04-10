@@ -10,7 +10,7 @@ from controller_manager_msgs.srv import ListControllers, ListControllersResponse
 from geometry_msgs.msg import PoseStamped, PointStamped, QuaternionStamped, Vector3Stamped, Vector3
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
-from giskardpy.motion_graph.monitors.force_torque_monitor import PayloadForceTorque
+from giskardpy.motion_statechart.monitors.force_torque_monitor import PayloadForceTorque
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from tmc_control_msgs.msg import GripperApplyEffortAction, GripperApplyEffortGoal
@@ -21,7 +21,7 @@ from giskard_msgs.msg import MoveResult, CollisionEntry, MoveGoal, WorldResult, 
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.msg import MoveResult, CollisionEntry, MoveGoal, WorldResult
 from giskard_msgs.srv import DyeGroupResponse, GetGroupInfoResponse
-from giskardpy.goals.suturo import MoveAroundDishwasher, Placing, Reaching
+from giskardpy.motion_statechart.goals.suturo import MoveAroundDishwasher, Placing, Reaching
 from giskardpy.data_types.suturo_types import GripperTypes
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy.data_types.data_types import goal_parameter
@@ -406,7 +406,6 @@ class OldGiskardWrapper(GiskardWrapper):
     def set_open_container_goal(self,
                                 tip_link: str,
                                 environment_link: str,
-                                special_door: Optional[bool] = False,
                                 tip_group: Optional[str] = None,
                                 environment_group: Optional[str] = None,
                                 goal_joint_state: Optional[float] = None,
@@ -427,7 +426,6 @@ class OldGiskardWrapper(GiskardWrapper):
         tip_link = giskard_msgs.LinkName(name=tip_link, group_name=tip_group)
         self.motion_goals.add_open_container(tip_link=tip_link,
                                              environment_link=environment_link,
-                                             special_door=special_door,
                                              goal_joint_state=goal_joint_state,
                                              weight=weight)
 

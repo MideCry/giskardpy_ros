@@ -35,9 +35,9 @@ class RealTimePointing(Pointing):
                  name: Optional[str] = None,
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_BELOW_CA,
-                 start_condition: cas.Expression = cas.TrueSymbol,
-                 hold_condition: cas.Expression = cas.FalseSymbol,
-                 end_condition: cas.Expression = cas.FalseSymbol):
+                 start_condition: cas.Expression = cas.BinaryTrue,
+                 pause_condition: cas.Expression = cas.BinaryFalse,
+                 end_condition: cas.Expression = cas.BinaryFalse):
         initial_goal = cas.Point3((1, 0, 1), reference_frame=god_map.world.search_for_link_name('base_footprint'))
         super().__init__(name=name,
                          tip_link=tip_link,
@@ -45,10 +45,7 @@ class RealTimePointing(Pointing):
                          root_link=root_link,
                          pointing_axis=pointing_axis,
                          max_velocity=max_velocity,
-                         weight=weight,
-                         start_condition=start_condition,
-                         hold_condition=hold_condition,
-                         end_condition=end_condition)
+                         weight=weight)
         self.sub = rospy.Subscriber(topic_name, PointStamped, self.cb)
 
     def cb(self, data: PointStamped):
@@ -68,9 +65,9 @@ class RealTimeConePointing(PointingCone):
                  max_velocity: float = 0.3,
                  threshold: float = 0.01,
                  weight: float = WEIGHT_BELOW_CA,
-                 start_condition: cas.Expression = cas.TrueSymbol,
-                 hold_condition: cas.Expression = cas.FalseSymbol,
-                 end_condition: cas.Expression = cas.FalseSymbol):
+                 start_condition: cas.Expression = cas.BinaryTrue,
+                 pause_condition: cas.Expression = cas.BinaryFalse,
+                 end_condition: cas.Expression = cas.BinaryFalse):
         initial_goal = cas.Point3((1, 0, 1), reference_frame=god_map.world.search_for_link_name('base_footprint'))
         super().__init__(name=name,
                          tip_link=tip_link,
@@ -80,10 +77,7 @@ class RealTimeConePointing(PointingCone):
                          cone_theta=cone_theta,
                          max_velocity=max_velocity,
                          threshold=threshold,
-                         weight=weight,
-                         start_condition=start_condition,
-                         hold_condition=hold_condition,
-                         end_condition=end_condition)
+                         weight=weight)
         self.sub = rospy.Subscriber(topic_name, PointStamped, self.cb)
 
     def cb(self, data: PointStamped):
