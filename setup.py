@@ -21,7 +21,8 @@ setup(
         'console_scripts': [
             'generic_giskard = scripts.generic_giskard:main',
             'generic_giskard_standalone = scripts.generic_giskard_standalone:main',
-            'interactive_marker = scripts.tools.interactive_marker:main'
+            'interactive_marker = scripts.tools.interactive_marker:main',
+            'motion_statechart_inspector = scripts.tools.motion_statechart_inspector:main'
         ],
     },
 )

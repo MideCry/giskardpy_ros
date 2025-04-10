@@ -3752,7 +3752,7 @@ class TestCollisionAvoidanceGoals:
         p.pose.orientation.w = 1.
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.api.monitors.add_check_trajectory_length(10.)
-        box_setup.execute(expected_error_type=MaxTrajectoryLengthException)
+        box_setup.execute(local_min_end=False, expected_error_type=MaxTrajectoryLengthException)
         box_setup.check_cpi_geq([attached_link_name], -0.005)
         box_setup.check_cpi_leq([attached_link_name], 0.01)
         box_setup.detach_group(attached_link_name)
@@ -4208,8 +4208,7 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.allow_collision(kitchen_setup.api.world.robot_name, tray_name)
         kitchen_setup.api.motion_goals.add_avoid_joint_limits(percentage=percentage)
         # grasp tray
-        kitchen_setup.add_end_on_local_minimum()
-        kitchen_setup.execute(add_local_minimum_reached=False)
+        kitchen_setup.execute()
 
         kitchen_setup.update_parent_link_of_group(tray_name, kitchen_setup.r_tip)
 
@@ -4257,8 +4256,7 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.allow_collision(group1=tray_name,
                                                        group2=kitchen_setup.l_gripper_group)
         kitchen_setup.api.motion_goals.add_cartesian_pose(tray_goal, tray_name, 'base_footprint')
-        kitchen_setup.add_end_on_local_minimum()
-        kitchen_setup.execute(add_local_minimum_reached=False)
+        kitchen_setup.execute()
 
     # TODO FIXME attaching and detach of urdf objects that listen to joint states
 
