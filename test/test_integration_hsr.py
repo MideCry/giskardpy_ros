@@ -24,13 +24,13 @@ from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
-import tf.transformations as tf
+import giskardpy_ros.ros1.tfwrapper as tf
 
 from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from giskardpy.motion_statechart.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
-    Retracting, Tilting, KeepRotationGoal
+        Retracting, Tilting, KeepRotationGoal
 
 
 class HSRTestWrapper(GiskardTestWrapper):
@@ -907,7 +907,8 @@ class TestSUTURO:
         hohc_setup.allow_all_collisions()
         hohc_setup.close_gripper()
 
-        hohc_setup.open_shelf_door(left_handle=left_handle, left_door=left_door, left_door_hinge='shelf_hohc:shelf_door_left:joint')
+        hohc_setup.open_shelf_door(left_handle=left_handle, left_door=left_door,
+                                   left_door_hinge='shelf_hohc:shelf_door_left:joint')
         hohc_setup.execute()
 
     def test_reaching1(self, zero_pose: HSRTestWrapper):
@@ -1036,7 +1037,8 @@ class TestSUTURO:
                                                goal_pose=mesh_goal_pose,
                                                object_size=size,
                                                grasp=GraspTypes.ABOVE.value,
-                                               align='vertical',  # alignment needs to be vertical so gripper is turned correctly
+                                               align='vertical',
+                                               # alignment needs to be vertical so gripper is turned correctly
                                                root_link='map',
                                                tip_link='hand_gripper_tool_frame')
 
@@ -1860,7 +1862,7 @@ class TestArenaActions:
 
         bar_grasped_force = kitchen_setup.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value)
 
-        kitchen_setup.motion_goals.add_grasp_bar_offset(name='grasp bar',
+        kitchen_setup.motion_goals.add_grasp_bar_offset(name='grasp bar offset',
                                                         root_link=root_link,
                                                         tip_link=tip_link,
                                                         tip_grasp_axis=tip_grasp_axis_bar,
@@ -1898,7 +1900,8 @@ class TestArenaActions:
                                                                    start_condition=bar_grasped_force,
                                                                    end_condition=grasped)
 
-        first_close = kitchen_setup.monitors.add_close_hsr_gripper(name='first close gripper', start_condition=grasped)
+        first_close = kitchen_setup.monitors.add_close_hsr_gripper(name='first close gripper',
+                                                       start_condition=grasped)
 
         half_open_joint = kitchen_setup.monitors.add_joint_position(name='half open joint',
                                                                     goal_state={hinge_joint: goal_angle_half},
@@ -1913,23 +1916,25 @@ class TestArenaActions:
                                                       end_condition=half_open_joint)
 
         final_open = kitchen_setup.monitors.add_open_hsr_gripper(name='final open gripper',
-                                                                 start_condition=half_open_joint)
+                                                      start_condition=half_open_joint)
 
-        around_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='around door local min',
-                                                                            start_condition=final_open)
+        # around_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='around door local min',
+        #                                                                     start_condition=final_open)
 
-        kitchen_setup.motion_goals.hsrb_dishwasher_door_around(handle_name=handle_frame_id,
-                                                               tip_gripper_axis=tip_grasp_axis_push,
-                                                               root_link=root_link,
-                                                               tip_link=tip_link,
-                                                               goal_angle=goal_angle_half,
-                                                               start_condition=final_open,
-                                                               end_condition=around_local_min)
+        around_dish_door = kitchen_setup.motion_goals.hsrb_dishwasher_door_around(name='MoveAroundDishwasher',
+                                                                                  handle_name=handle_frame_id,
+                                                                                  tip_gripper_axis=tip_grasp_axis_push,
+                                                                                  root_link=root_link,
+                                                                                  tip_link=tip_link,
+                                                                                  goal_angle=goal_angle_half,
+                                                                                  start_condition=final_open,
+                                                                                  end_condition='MoveAroundDishwasher')
 
         align_push_door_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='align push door local min',
-                                                                                     start_condition=around_local_min)
+                                                                                     start_condition=around_dish_door)
 
-        kitchen_setup.motion_goals.add_align_to_push_door(root_link=root_link,
+        kitchen_setup.motion_goals.add_align_to_push_door(name='Align To Push Door',
+                                                          root_link=root_link,
                                                           tip_link=tip_link,
                                                           door_handle=handle_frame_id,
                                                           door_object=door_hinge_frame_id,
@@ -1937,11 +1942,11 @@ class TestArenaActions:
                                                           weight=WEIGHT_ABOVE_CA,
                                                           goal_angle=goal_angle_half,
                                                           intermediate_point_scale=0.95,
-                                                          start_condition=around_local_min,
+                                                          start_condition=around_dish_door,
                                                           end_condition=align_push_door_local_min)
 
         final_close = kitchen_setup.monitors.add_close_hsr_gripper(name='final close gripper',
-                                                                   start_condition=align_push_door_local_min)
+                                                       start_condition=align_push_door_local_min)
 
         pre_push_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='pre push local min',
                                                                               start_condition=final_close)

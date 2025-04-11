@@ -1769,14 +1769,14 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
-        self.add_open_door_goal(tip_link=tip_link,
-                                door_handle_link=door_handle_link,
-                                name=name,
-                                handle_limit=handle_limit,
-                                hinge_limit=hinge_limit,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition)
+        return self.add_open_door_goal(tip_link=tip_link,
+                                       door_handle_link=door_handle_link,
+                                       name=name,
+                                       handle_limit=handle_limit,
+                                       hinge_limit=hinge_limit,
+                                       start_condition=start_condition,
+                                       pause_condition=pause_condition,
+                                       end_condition=end_condition)
 
     def hsrb_door_handle_grasp(self,
                                handle_name: str,
@@ -1826,20 +1826,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         bar_center.point.y = 0.045
 
         if grasp_axis_offset is None:
-            self.add_grasp_bar(name=name,
-                               root_link=root_link,
-                               tip_link=tip_link,
-                               tip_grasp_axis=tip_grasp_axis,
-                               bar_center=bar_center,
-                               bar_axis=bar_axis,
-                               bar_length=handle_bar_length,
-                               reference_linear_velocity=0.1 * ref_speed,
-                               reference_angular_velocity=0.5 * ref_speed,
-                               start_condition=start_condition,
-                               pause_condition=pause_condition,
-                               end_condition=end_condition)
-        else:
-            self.add_grasp_bar_offset(name=name,
+            return self.add_grasp_bar(name=name,
                                       root_link=root_link,
                                       tip_link=tip_link,
                                       tip_grasp_axis=tip_grasp_axis,
@@ -1848,10 +1835,23 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                       bar_length=handle_bar_length,
                                       reference_linear_velocity=0.1 * ref_speed,
                                       reference_angular_velocity=0.5 * ref_speed,
-                                      grasp_axis_offset=grasp_axis_offset,
                                       start_condition=start_condition,
                                       pause_condition=pause_condition,
                                       end_condition=end_condition)
+        else:
+            return self.add_grasp_bar_offset(name=name,
+                                             root_link=root_link,
+                                             tip_link=tip_link,
+                                             tip_grasp_axis=tip_grasp_axis,
+                                             bar_center=bar_center,
+                                             bar_axis=bar_axis,
+                                             bar_length=handle_bar_length,
+                                             reference_linear_velocity=0.1 * ref_speed,
+                                             reference_angular_velocity=0.5 * ref_speed,
+                                             grasp_axis_offset=grasp_axis_offset,
+                                             start_condition=start_condition,
+                                             pause_condition=pause_condition,
+                                             end_condition=end_condition)
 
     def hsrb_dishwasher_door_around(self,
                                     handle_name: str,
@@ -1859,6 +1859,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     root_link: str = 'map',
                                     tip_link: str = 'hand_gripper_tool_frame',
                                     goal_angle: float = None,
+                                    name: Optional[str] = None,
                                     start_condition: str = '',
                                     pause_condition: str = '',
                                     end_condition: str = ''):
@@ -1874,15 +1875,16 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
-        self.add_motion_goal(class_name=MoveAroundDishwasher.__name__,
-                             handle_name=handle_name,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             goal_angle=goal_angle,
-                             tip_gripper_axis=tip_gripper_axis,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
+        return self.add_motion_goal(class_name=MoveAroundDishwasher.__name__,
+                                    handle_name=handle_name,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    goal_angle=goal_angle,
+                                    name=name,
+                                    tip_gripper_axis=tip_gripper_axis,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def hsrb_align_to_push_door_goal(self,
                                      handle_name: str,
@@ -1904,13 +1906,13 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         tip_grasp_axis.header.frame_id = tip_link
         tip_grasp_axis.vector.y = 1
 
-        self.add_align_to_push_door(root_link=root_link,
-                                    tip_link=tip_link,
-                                    door_handle=handle_name,
-                                    door_object=hinge_frame_id,
-                                    tip_gripper_axis=tip_grasp_axis,
-                                    weight=weight,
-                                    intermediate_point_scale=0.95)
+        return self.add_align_to_push_door(root_link=root_link,
+                                           tip_link=tip_link,
+                                           door_handle=handle_name,
+                                           door_object=hinge_frame_id,
+                                           tip_gripper_axis=tip_grasp_axis,
+                                           weight=weight,
+                                           intermediate_point_scale=0.95)
 
     def hsrb_pre_push_door_goal(self,
                                 handle_name: str,
@@ -1928,11 +1930,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param weight: Weight of the goal compared to Collision Avoidance
         """
 
-        self.add_pre_push_door(root_link=root_link,
-                               tip_link=tip_link,
-                               door_handle=handle_name,
-                               weight=weight,
-                               door_object=hinge_frame_id)
+        return self.add_pre_push_door(root_link=root_link,
+                                      tip_link=tip_link,
+                                      door_handle=handle_name,
+                                      weight=weight,
+                                      door_object=hinge_frame_id)
 
     # TODO: change object_size Vector3Stamped instead
     def add_reaching(self,
@@ -1957,16 +1959,16 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param velocity: velocity of executed movement
         """
 
-        self.add_motion_goal(class_name=Reaching.__name__,
-                             grasp=grasp,
-                             align=align,
-                             object_name=object_name,
-                             object_shape=object_shape,
-                             goal_pose=goal_pose,
-                             object_size=object_size,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             velocity=velocity)
+        return self.add_motion_goal(class_name=Reaching.__name__,
+                                    grasp=grasp,
+                                    align=align,
+                                    object_name=object_name,
+                                    object_shape=object_shape,
+                                    goal_pose=goal_pose,
+                                    object_size=object_size,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    velocity=velocity)
 
     def add_placing(self,
                     context,
@@ -1974,11 +1976,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                     tip_link: str = 'hand_palm_link',
                     velocity: float = 0.02):
 
-        self.add_motion_goal(class_name=Placing.__name__,
-                             context=context,
-                             goal_pose=goal_pose,
-                             tip_link=tip_link,
-                             velocity=velocity)
+        return self.add_motion_goal(class_name=Placing.__name__,
+                                    context=context,
+                                    goal_pose=goal_pose,
+                                    tip_link=tip_link,
+                                    velocity=velocity)
 
     def add_vertical_motion(self,
                             action: str,
@@ -1986,11 +1988,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                             root_link: str = 'base_link',
                             tip_link: str = 'hand_palm_link'):
 
-        self.add_motion_goal(class_name=VerticalMotion.__name__,
-                             action=action,
-                             distance=distance,
-                             root_link=root_link,
-                             tip_link=tip_link)
+        return self.add_motion_goal(class_name=VerticalMotion.__name__,
+                                    action=action,
+                                    distance=distance,
+                                    root_link=root_link,
+                                    tip_link=tip_link)
 
     def add_retract(self,
                     object_name: str,
@@ -2000,13 +2002,13 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                     tip_link: str = 'base_link',
                     velocity: float = 0.2):
 
-        self.add_motion_goal(class_name=Retracting.__name__,
-                             object_name=object_name,
-                             distance=distance,
-                             reference_frame=reference_frame,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             velocity=velocity)
+        return self.add_motion_goal(class_name=Retracting.__name__,
+                                    object_name=object_name,
+                                    distance=distance,
+                                    reference_frame=reference_frame,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    velocity=velocity)
 
     def add_align_height(self,
                          object_name: str,
@@ -2016,20 +2018,20 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                          root_link: str = 'map',
                          tip_link: str = 'hand_gripper_tool_frame'):
 
-        self.add_motion_goal(class_name=AlignHeight.__name__,
-                             from_above=from_above,
-                             object_name=object_name,
-                             goal_pose=goal_pose,
-                             object_height=object_height,
-                             root_link=root_link,
-                             tip_link=tip_link)
+        return self.add_motion_goal(class_name=AlignHeight.__name__,
+                                    from_above=from_above,
+                                    object_name=object_name,
+                                    goal_pose=goal_pose,
+                                    object_height=object_height,
+                                    root_link=root_link,
+                                    tip_link=tip_link)
 
     def add_test_goal(self,
                       goal_name: str,
                       **kwargs):
 
-        self.add_motion_goal(class_name=goal_name,
-                             **kwargs)
+        return self.add_motion_goal(class_name=goal_name,
+                                    **kwargs)
 
     def add_take_pose(self,
                       pose_keyword: str,
@@ -2045,11 +2047,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param end_condition: expression that ends goal
         """
 
-        self.add_motion_goal(class_name=TakePose.__name__,
-                             pose_keyword=pose_keyword,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
+        return self.add_motion_goal(class_name=TakePose.__name__,
+                                    pose_keyword=pose_keyword,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def add_tilting(self,
                     tilt_direction: Optional[str] = None,
@@ -2057,10 +2059,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                     tip_link: str = 'wrist_roll_joint',
                     ):
 
-        self.add_motion_goal(class_name=Tilting.__name__,
-                             direction=tilt_direction,
-                             angle=tilt_angle,
-                             tip_link=tip_link)
+        return self.add_motion_goal(class_name=Tilting.__name__,
+                                    direction=tilt_direction,
+                                    angle=tilt_angle,
+                                    tip_link=tip_link)
 
     def add_joint_rotation_continuous(self,
                                       joint_name: str,
@@ -2070,21 +2072,21 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                       target_speed: float = 1,
                                       period_length: float = 1.0):
 
-        self.add_motion_goal(class_name=JointRotationGoalContinuous.__name__,
-                             joint_name=joint_name,
-                             joint_center=joint_center,
-                             joint_range=joint_range,
-                             trajectory_length=trajectory_length,
-                             target_speed=target_speed,
-                             period_length=period_length)
+        return self.add_motion_goal(class_name=JointRotationGoalContinuous.__name__,
+                                    joint_name=joint_name,
+                                    joint_center=joint_center,
+                                    joint_range=joint_range,
+                                    trajectory_length=trajectory_length,
+                                    target_speed=target_speed,
+                                    period_length=period_length)
 
     def add_mixing(self,
                    mixing_time=20,
                    weight: float = WEIGHT_ABOVE_CA):
 
-        self.add_motion_goal(class_name=Mixing.__name__,
-                             mixing_time=mixing_time,
-                             weight=weight)
+        return self.add_motion_goal(class_name=Mixing.__name__,
+                                    mixing_time=mixing_time,
+                                    weight=weight)
 
     def add_open_environment(self,
                              tip_link: str,
@@ -2102,11 +2104,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param weight: Weight of the goal compared to Collision Avoidance
         """
 
-        self.add_motion_goal(class_name=Open.__name__,
-                             tip_link=tip_link,
-                             environment_link=environment_link,
-                             goal_joint_state=goal_joint_state,
-                             weight=weight)
+        return self.add_motion_goal(class_name=Open.__name__,
+                                    tip_link=tip_link,
+                                    environment_link=environment_link,
+                                    goal_joint_state=goal_joint_state,
+                                    weight=weight)
 
     def add_open_door_goal(self,
                            tip_link: Union[str, giskard_msgs.LinkName],
@@ -2133,15 +2135,15 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             door_handle_link = giskard_msgs.LinkName(name=door_handle_link)
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
-        self.add_motion_goal(class_name=OpenDoorGoal.__name__,
-                             tip_link=tip_link,
-                             door_handle_link=door_handle_link,
-                             name=name,
-                             handle_limit=handle_limit,
-                             hinge_limit=hinge_limit,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
+        return self.add_motion_goal(class_name=OpenDoorGoal.__name__,
+                                    tip_link=tip_link,
+                                    door_handle_link=door_handle_link,
+                                    name=name,
+                                    handle_limit=handle_limit,
+                                    hinge_limit=hinge_limit,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def continuous_pointing_head(self):
         """
@@ -2151,10 +2153,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         tip_V_pointing_axis.header.frame_id = 'head_center_camera_frame'
         tip_V_pointing_axis.vector.z = 1
 
-        self.add_real_time_pointing(root_link='map',
-                                    tip_link='head_center_camera_frame',
-                                    topic_name='human_pose',
-                                    pointing_axis=tip_V_pointing_axis)
+        return self.add_real_time_pointing(root_link='map',
+                                           tip_link='head_center_camera_frame',
+                                           topic_name='human_pose',
+                                           pointing_axis=tip_V_pointing_axis)
 
     def add_joint_position_stop(self,
                                 goal_state: Dict[str, float],
@@ -2175,15 +2177,15 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
-        self.add_motion_goal(class_name=JointPositionListStop.__name__,
-                             goal_state=goal_state,
-                             weight=weight,
-                             max_velocity=max_velocity,
-                             name=name,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition,
-                             **kwargs)
+        return self.add_motion_goal(class_name=JointPositionListStop.__name__,
+                                    goal_state=goal_state,
+                                    weight=weight,
+                                    max_velocity=max_velocity,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
 
 
 class MonitorWrapper(MotionStatechartNodeWrapper):
@@ -2845,7 +2847,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name = name or OpenHsrGripper.__name__
         return self.add_monitor(class_name=OpenHsrGripper.__name__,
                                 name=name,
-                                start_condition=start_condition)
+                                start_condition=start_condition,
+                                end_condition=name)
 
     def add_close_hsr_gripper(self,
                               start_condition: str = '',
@@ -2857,7 +2860,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name = name or CloseHsrGripper.__name__
         return self.add_monitor(class_name=CloseHsrGripper.__name__,
                                 name=name,
-                                start_condition=start_condition)
+                                start_condition=start_condition,
+                                end_condition=name)
 
 
 class GiskardWrapper:
