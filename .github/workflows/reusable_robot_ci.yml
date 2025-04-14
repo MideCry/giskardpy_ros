@@ -152,12 +152,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'giskard_ws/src/giskardpy_ros'
-#      - name: Checkout iai_maps
-#        uses: actions/checkout@v3
-#        with:
-#          path: 'giskard_ws/src/iai_maps'
-#          repository: code-iai/iai_maps
-#          ref: master
+      - name: Checkout iai_maps
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/iai_maps'
+          repository: code-iai/iai_maps
+          ref: ros-jazzy
       # install robots -------------------------------------------------------------------------------------------------
       - if: ${{ inputs.robot == 'hsr' }}
         name: Checkout hsr_description
@@ -194,10 +194,10 @@ jobs:
           path: 'giskard_ws/src/iai_pr2'
           repository: code-iai/iai_pr2
           ref: ros-jazzy-main
-      - if: ${{ inputs.robot == 'pr2' }}
-        name: ignore some packages in iai_pr2
-        run: |
-          cd giskard_ws
+#      - if: ${{ inputs.robot == 'pr2' }}
+#        name: ignore some packages in iai_pr2
+#        run: |
+#          cd giskard_ws
 #          touch src/iai_pr2/iai_pr2_sim/CATKIN_IGNORE
 #          touch src/iai_pr2/iai_pr2_donbot/CATKIN_IGNORE
       - if: ${{ inputs.robot == 'tiago' }} # tiago has to be pulled now because it has fucked up package.xml
