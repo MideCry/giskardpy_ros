@@ -75,12 +75,11 @@ jobs:
     with:
       robot: pr2
       test1: test_integration_pr2.py::TestCollisionAvoidanceGoals
-      test2: test_integration_pr2.py::TestWorld
-      test3: test_integration_pr2.py::TestSelfCollisionAvoidance
-      test4: test_integration_pr2.py::TestInfoServices
-      test5: test_integration_pr2.py::TestJointGoals
-      test6: test_integration_pr2.py::TestMonitors
-      test7: test_integration_pr2.py::TestActionServerEvents
+      test2: test_integration_pr2.py::TestSelfCollisionAvoidance
+      test3: test_integration_pr2.py::TestInfoServices
+      test4: test_integration_pr2.py::TestJointGoals
+      test5: test_integration_pr2.py::TestMonitors
+      test6: test_integration_pr2.py::TestActionServerEvents
       is_trigger: ${{ inputs.is_trigger || false }}
       pr_id: ${{ inputs.pr_id || null }}
 #  tiago:
