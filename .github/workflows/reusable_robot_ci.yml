@@ -158,6 +158,15 @@ jobs:
           path: 'giskard_ws/src/iai_maps'
           repository: code-iai/iai_maps
           ref: ros-jazzy
+      - name: ignore some packages in iai_maps
+        run: |
+          cd giskard_ws
+          touch src/iai_maps/chemistry_laboratory/AMENT_IGNORE
+          touch src/iai_maps/iai_dlr_cutting_demo/AMENT_IGNORE
+          touch src/iai_maps/iai_kitchen_defs/AMENT_IGNORE
+          touch src/iai_maps/iai_refills_lab/AMENT_IGNORE
+          touch src/iai_maps/iai_semantic_maps/AMENT_IGNORE
+          touch src/iai_maps/iai_shelves/AMENT_IGNORE
       # install robots -------------------------------------------------------------------------------------------------
       - if: ${{ inputs.robot == 'hsr' }}
         name: Checkout hsr_description
