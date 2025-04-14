@@ -2623,13 +2623,13 @@ class TestWorldManipulation:
         r_gripper_palm_link = god_map.world.search_for_link_name('r_gripper_palm_link')
 
         old_color = god_map.world.groups[kitchen_setup.api.world.robot_name].links[base_link].collisions[0].color
-        kitchen_setup.dye_group(kitchen_setup.api.world.robot_name, (1, 0, 0, 1.))
+        kitchen_setup.dye_group(kitchen_setup.api.world.robot_name, (1., 0., 0., 1.))
         color_robot = god_map.world.groups[kitchen_setup.api.world.robot_name].links[base_link].collisions[0].color
         assert color_robot.r == 1.
         assert color_robot.g == 0.
         assert color_robot.b == 0.
         assert color_robot.a == 1.
-        kitchen_setup.dye_group('iai_kitchen', (0, 1., 0, 1.))
+        kitchen_setup.dye_group('iai_kitchen', (0., 1., 0., 1.))
         color_kitchen = god_map.world.groups['iai_kitchen'].links[sink_area_sink].collisions[
             0].color
         assert color_robot.r == 1.
@@ -2640,7 +2640,7 @@ class TestWorldManipulation:
         assert color_kitchen.g == 1.
         assert color_kitchen.b == 0.
         assert color_kitchen.a == 1.
-        kitchen_setup.dye_group(kitchen_setup.r_gripper_group, (0, 0, 1., 1.))
+        kitchen_setup.dye_group(kitchen_setup.r_gripper_group, (0., 0., 1., 1.))
         color_hand = god_map.world.groups[kitchen_setup.api.world.robot_name].links[r_gripper_palm_link].collisions[
             0].color
         assert color_robot.r == 1.
@@ -2682,14 +2682,14 @@ class TestWorldManipulation:
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(object_name, size=(1, 1., 1), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
         zero_pose.clear_world()
         object_name = 'muh2'
         p = PoseStamped()
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
         zero_pose.clear_world()
         zero_pose.api.motion_goals.add_joint_position(zero_pose.better_pose)
         zero_pose.execute()
@@ -2699,7 +2699,7 @@ class TestWorldManipulation:
         p = PoseStamped()
         p.header.frame_id = better_pose.r_tip
         p.pose.orientation.w = 1.
-        better_pose.api.world.add_box_to_world(pocky, size=(1, 1, 1), pose=p)
+        better_pose.add_box_to_world(pocky, size=(1., 1., 1.), pose=p)
         for i in range(3):
             better_pose.update_parent_link_of_group(name=pocky, parent_link=better_pose.r_tip)
             better_pose.detach_group(pocky)
@@ -2722,8 +2722,8 @@ class TestWorldManipulation:
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p)
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p,
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p,
                                    expected_error_type=DuplicateNameException)
 
     def test_add_remove_sphere(self, zero_pose: PR2Tester):
@@ -2734,7 +2734,7 @@ class TestWorldManipulation:
         p.pose.position.y = 0.
         p.pose.position.z = 1.6
         p.pose.orientation.w = 1.
-        zero_pose.add_sphere_to_world(object_name, radius=1, pose=p)
+        zero_pose.add_sphere_to_world(object_name, radius=1., pose=p)
         zero_pose.remove_group(object_name)
 
     def test_add_remove_cylinder(self, zero_pose: PR2Tester):
@@ -2745,9 +2745,9 @@ class TestWorldManipulation:
         p.pose.position.y = 0.
         p.pose.position.z = 0.
         p.pose.orientation.w = 1.
-        zero_pose.add_cylinder_to_world(object_name, height=1, radius=1, pose=p)
+        zero_pose.add_cylinder_to_world(object_name, height=1., radius=1., pose=p)
         zero_pose.remove_group(object_name)
-        zero_pose.add_cylinder_to_world(object_name, height=1, radius=1, pose=p)
+        zero_pose.add_cylinder_to_world(object_name, height=1., radius=1., pose=p)
         zero_pose.remove_group(object_name)
 
     def test_add_urdf_body(self, kitchen_setup: PR2Tester):
@@ -2793,7 +2793,7 @@ class TestWorldManipulation:
         p.header.frame_id = zero_pose.r_tip
         p.pose.position.x = 0.1
         p.pose.orientation.w = 1.0
-        zero_pose.add_mesh_to_world(name=object_name, mesh='package://giskardpy_ros/test/urdfs/meshes/bowl_21.obj',
+        zero_pose.add_mesh_to_world(name=object_name, mesh='package://giskardpy_ros/data/urdfs/meshes/bowl_21.obj',
                                     pose=p)
 
     def test_add_non_existing_mesh(self, zero_pose: PR2Tester):
@@ -2812,14 +2812,14 @@ class TestWorldManipulation:
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
         internal_object_name = god_map.world.search_for_link_name(object_name)
         zero_pose.update_parent_link_of_group(object_name,
                                               parent_link=giskard_msgs.LinkName(name=zero_pose.r_tip,
                                                                                 group_name=zero_pose.api.robot_name))
         zero_pose.detach_group(object_name)
         zero_pose.remove_group(object_name)
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
 
     def test_attach_to_kitchen(self, kitchen_setup: PR2Tester):
         object_name = 'muh'
@@ -2836,12 +2836,12 @@ class TestWorldManipulation:
         kitchen_setup.set_env_state({drawer_joint: 0.48})
         kitchen_setup.execute()
         kitchen_setup.detach_group(object_name)
-        kitchen_setup.set_env_state({drawer_joint: 0})
+        kitchen_setup.set_env_state({drawer_joint: 0.})
         kitchen_setup.execute()
 
     def test_single_joint_urdf(self, zero_pose: PR2Tester):
         object_name = 'spoon'
-        path = get_middleware().resolve_iri('package://giskardpy_ros/test/spoon/urdf/spoon.urdf')
+        path = get_middleware().resolve_iri('package://giskardpy_ros/data/spoon/urdf/spoon.urdf')
         with open(path, 'r') as f:
             urdf_str = hacky_urdf_parser_fix(f.read())
         pose = PoseStamped()
@@ -2858,7 +2858,7 @@ class TestWorldManipulation:
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(group_name, size=(1, 1, 1), pose=p)
+        zero_pose.add_box_to_world(group_name, size=(1., 1., 1.), pose=p)
         p.pose.position.x = 1.0
         zero_pose.update_group_pose('asdf', p, expected_error_type=UnknownGroupException)
         zero_pose.update_group_pose(group_name, p)
@@ -2869,7 +2869,7 @@ class TestWorldManipulation:
         p.header.frame_id = 'map'
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
-        zero_pose.add_box_to_world(group_name, size=(1, 1, 1), pose=p, parent_link='r_gripper_tool_frame')
+        zero_pose.add_box_to_world(group_name, size=(1., 1., 1.), pose=p, parent_link='r_gripper_tool_frame')
         p.pose.position.x = 1.0
         zero_pose.update_group_pose('asdf', p, expected_error_type=UnknownGroupException)
         zero_pose.update_group_pose(group_name, p)
@@ -2896,7 +2896,7 @@ class TestWorldManipulation:
         zero_pose.execute()
         p.header.frame_id = 'map'
         p.pose.position.y = -1.
-        p.pose.orientation = Quaternion(x=0, y=0, z=0.47942554, w=0.87758256)
+        p.pose.orientation = Quaternion(x=0., y=0., z=0.47942554, w=0.87758256)
         zero_pose.move_base(p)
         # sleep(.5)
 
@@ -2923,7 +2923,7 @@ class TestWorldManipulation:
         p.pose.position.y = 0.
         p.pose.position.z = 1.6
         p.pose.orientation.w = 1.
-        zero_pose.add_box_to_world(object_name, size=(1, 1, 1), pose=p)
+        zero_pose.add_box_to_world(object_name, size=(1., 1., 1.), pose=p)
         zero_pose.remove_group(object_name)
 
     def test_invalid_update_world(self, zero_pose: PR2Tester):
@@ -2933,7 +2933,7 @@ class TestWorldManipulation:
         req.parent_link = LinkName(name=zero_pose.r_tip)
         req.operation = 42
         with pytest.raises(InvalidWorldOperationException):
-            zero_pose.api.world._send_action_goal_async(req)
+            zero_pose.api.world._send_goal(req)
 
     def test_remove_unkown_group(self, zero_pose: PR2Tester):
         zero_pose.remove_group('muh', expected_error_type=UnknownGroupException)
@@ -2949,7 +2949,7 @@ class TestWorldManipulation:
         req.parent_link = LinkName(name='base_link')
         req.operation = World_Goal.ADD
         with pytest.raises(CorruptShapeException):
-            zero_pose.api.world._send_action_goal_async(req)
+            zero_pose.api.world._send_goal(req)
 
     def test_corrupt_shape_error_scale_0(self, zero_pose: PR2Tester):
         p = PoseStamped()
@@ -2961,7 +2961,7 @@ class TestWorldManipulation:
         req.parent_link = LinkName(name='base_link')
         req.operation = World_Goal.ADD
         with pytest.raises(CorruptShapeException):
-            zero_pose.api.world._send_action_goal_async(req)
+            zero_pose.api.world._send_goal(req)
 
     def test_busy(self, zero_pose: PR2Tester):
         p = PoseStamped()
@@ -2973,8 +2973,10 @@ class TestWorldManipulation:
         req.pose.header.frame_id = 'map'
         req.parent_link = LinkName(name='base_link')
         req.operation = World_Goal.ADD
-        zero_pose.api.world._client.send_goal_and_wait(req)
-        zero_pose.api.world._client.send_goal_and_wait(req)
+        with pytest.raises(CorruptShapeException):
+            zero_pose.api.world._send_goal(req)
+        with pytest.raises(CorruptShapeException):
+            zero_pose.api.world._send_goal(req)
 
     def test_tf_error(self, zero_pose: PR2Tester):
         req = World_Goal()
@@ -2984,7 +2986,7 @@ class TestWorldManipulation:
         req.parent_link = LinkName(name='base_link')
         req.operation = World_Goal.ADD
         with pytest.raises(TransformException):
-            zero_pose.api.world._send_action_goal_async(req)
+            zero_pose.api.world._send_goal(req)
 
     def test_unsupported_options(self, kitchen_setup: PR2Tester):
         wb = WorldBody()
@@ -2992,7 +2994,7 @@ class TestWorldManipulation:
         pose.header.stamp = rospy.node.get_clock().now().to_msg()
         pose.header.frame_id = str('base_link')
         pose.pose.position = Point()
-        pose.pose.orientation = Quaternion(w=1)
+        pose.pose.orientation = Quaternion(w=1.)
         wb.type = WorldBody.URDF_BODY
 
         req = World_Goal()
@@ -3001,7 +3003,7 @@ class TestWorldManipulation:
         req.parent_link = giskard_msgs.LinkName(name='base_link')
         req.operation = World_Goal.ADD
         with pytest.raises(CorruptURDFException):
-            kitchen_setup.api.world._send_action_goal_async(req)
+            kitchen_setup.api.world._send_goal(req)
 
 
 class TestSelfCollisionAvoidance:
