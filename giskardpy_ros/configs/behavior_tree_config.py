@@ -226,6 +226,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             self.add_tf_publisher(include_prefix=self.include_prefix, mode=TfPublishingModes.all)
         if self.publish_robot_description:
             self.add_robot_description_publisher()
+        self.add_evaluate_debug_expressions()
         if self.debug_mode:
             # self.add_gantt_chart_plotter()
             # self.add_goal_graph_plotter()
