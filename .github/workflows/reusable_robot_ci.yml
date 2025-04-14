@@ -265,7 +265,7 @@ jobs:
       - if: ${{ inputs.test7 != '' }}
         name: run ${{ inputs.test7 }}
         run: |
-          colcon_cd giskardpy_ros
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test7 }}
       - if: ${{ inputs.test8 != '' }}
         name: run ${{ inputs.test8 }}
