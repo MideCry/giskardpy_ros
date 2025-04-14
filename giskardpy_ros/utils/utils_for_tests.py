@@ -115,7 +115,6 @@ class GiskardTester:
     giskard: Giskard
 
     def __init__(self, giskard: Giskard):
-        print('0.0')
         self.async_loop = asyncio.new_event_loop()
         self.total_time_spend_giskarding = 0
         self.total_time_spend_moving = 0

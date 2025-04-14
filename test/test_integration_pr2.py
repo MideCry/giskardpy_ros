@@ -20,7 +20,7 @@ from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengt
     DuplicateNameException, CorruptMeshException, UnknownGroupException, UnknownLinkException, \
     InvalidWorldOperationException, CorruptShapeException, TransformException, CorruptURDFException, \
     SelfCollisionViolatedException, HardConstraintsViolatedException, PreemptedException, InvalidGoalException, \
-    EmptyProblemException, SetupException, UnknownJointException
+    EmptyProblemException, SetupException, UnknownJointException, ExecutionException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
@@ -4618,7 +4618,8 @@ class TestActionServerEvents:
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link='base_footprint', root_link='map')
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute(expected_error_type=PreemptedException, stop_after=6)
+        with pytest.raises(ExecutionException):
+            zero_pose.execute(expected_error_type=PreemptedException, stop_after=6)
 
     def test_undefined_type(self, zero_pose: PR2Tester):
         zero_pose.api.motion_goals.allow_all_collisions()
@@ -4627,7 +4628,7 @@ class TestActionServerEvents:
 
     def test_empty_goal(self, zero_pose: PR2Tester):
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute(expected_error_type=EmptyProblemException)
+        zero_pose.execute(expected_error_type=EmptyProblemException, local_min_end=False)
 
     def test_plan_only(self, zero_pose: PR2Tester):
         zero_pose.api.motion_goals.allow_self_collision()

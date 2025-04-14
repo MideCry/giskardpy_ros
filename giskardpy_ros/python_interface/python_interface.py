@@ -26,7 +26,7 @@ from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
 from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import MaxTrajectoryLengthException
+from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, GiskardException, ExecutionException
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
     CartesianPoseStraight, CartesianPositionStraight
@@ -2389,7 +2389,10 @@ class GiskardWrapper:
         """
         Stops the goal that was last sent to Giskard.
         """
-        future = self._goal_handle.cancel_goal_async()
+        try:
+            future = self._client._goal_handle.cancel_goal_async()
+        except AttributeError as e:
+            raise ExecutionException('Can\'t cancel goals, because there is no active one')
         return future
 
     async def get_result(self):
