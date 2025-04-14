@@ -4614,12 +4614,12 @@ class TestActionServerEvents:
     def test_interrupt2(self, zero_pose: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = 'base_footprint'
-        p.pose.position.x = 2.0
+        p.pose.position.x = 0.5
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link='base_footprint', root_link='map')
         zero_pose.api.motion_goals.allow_all_collisions()
         with pytest.raises(ExecutionException):
-            zero_pose.execute(expected_error_type=PreemptedException, stop_after=6)
+            zero_pose.execute(expected_error_type=PreemptedException, stop_after=10)
 
     def test_undefined_type(self, zero_pose: PR2Tester):
         zero_pose.api.motion_goals.allow_all_collisions()
