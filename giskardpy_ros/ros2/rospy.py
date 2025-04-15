@@ -7,6 +7,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
 from giskardpy.middleware import MiddlewareWrapper, set_middleware, get_middleware
+from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 
 node: Node = None
 executor: MultiThreadedExecutor = None
@@ -54,11 +55,11 @@ class ROS2Wrapper(MiddlewareWrapper):
 
 def heart():
     global node, executor
-    executor = MultiThreadedExecutor()
+    executor = MyMultiThreadedExecutor(thread_name_prefix='giskard executor')
     executor.add_node(node)
     try:
         while rclpy.ok():
-            rclpy.spin_once(node, executor=executor, timeout_sec=0.1)
+            executor.spin_once(timeout_sec=0.1)
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     except Exception as e:

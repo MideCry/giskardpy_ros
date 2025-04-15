@@ -21,12 +21,11 @@ from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
 from rclpy.client import Client
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
 from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, GiskardException, ExecutionException
+from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, ExecutionException
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
     CartesianPoseStraight, CartesianPositionStraight
@@ -56,8 +55,9 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
-from giskardpy_ros.ros2 import msg_converter
+from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
+from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy_ros.utils.utils import make_world_body_box
 
@@ -278,9 +278,8 @@ class WorldWrapper:
         """
         Returns the names of every group in the world.
         """
-        future = self._get_group_names_srv.call_async(GetGroupNames_Request())
-        rclpy.spin_until_future_complete(self.node_handle, future)
-        resp: GetGroupNames_Response = future.result()
+        req = GetGroupNames_Request()
+        resp: GetGroupNames_Response = self._get_group_names_srv.call(req)
         return resp.group_names
 
     def get_group_info(self, group_name: str) -> GetGroupInfo_Response:
@@ -2470,16 +2469,18 @@ class GiskardWrapperNode(Node, GiskardWrapper):
                       allow_undeclared_parameters=allow_undeclared_parameters,
                       automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides,
                       enable_logger_service=enable_logger_service)
+        rospy.executor.add_node(self)
         GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name)
-        self.executor = MultiThreadedExecutor()
         self.is_spinning = False
 
     def __spin(self):
+        self.my_executor = MyMultiThreadedExecutor(thread_name_prefix='python interface')
+        self.my_executor.add_node(self)
         self.is_spinning = True
         while rclpy.ok():
-            rclpy.spin_once(self.node_handle, executor=self.executor, timeout_sec=1)
+            self.my_executor.spin_once(timeout_sec=1)
         self.is_spinning = False
 
     def spin_in_background(self):
-        self.spinner = Thread(target=self.__spin, name='background giskard wrapper spinner')
+        self.spinner = Thread(target=self.__spin, daemon=False, name='background giskard wrapper spinner')
         self.spinner.start()

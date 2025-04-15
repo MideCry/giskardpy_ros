@@ -13,6 +13,7 @@ from std_msgs.msg import String
 
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
 from giskardpy_ros.utils.asynio_utils import wait_until_not_none
 
@@ -125,38 +126,31 @@ class ControllerManager:
 class MyActionClient:
     _goal_handle: Optional[ClientGoalHandle]
     _result_future: Optional[Future]
+    _goal_counter: int
 
     def __init__(self, node_handle: Node, action_type, action_name: str):
+        self._goal_counter = -1
         self._goal_handle = None
         self._goal_result = None
         self._result_future = None
         self.node_handle = node_handle
+        self.action_name = action_name
         self._client = ActionClient(node=node_handle,
                                     action_type=action_type,
                                     action_name=action_name)
         self._client.wait_for_server()
 
-    @property
-    def _event_loop(self) -> asyncio.AbstractEventLoop:
-        try:
-            return asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.new_event_loop()
-
     def send_goal_async(self, goal) -> Future:
+        self._goal_counter += 1
         future = self._client.send_goal_async(goal)
         future.add_done_callback(self.__goal_accepted_cb)
         return future
 
     def send_goal(self, goal):
-        # this works in theory too, but not in pycharms debugger, that's why i'm putting it into a function
-        # self._event_loop.run_until_complete(self.send_goal_async(goal))
-        # return self._event_loop.run_until_complete(self.get_result())
         async def muh():
             await self.send_goal_async(goal)
             return await self.get_result()
-
-        return self._event_loop.run_until_complete(muh())
+        return get_event_loop().run_until_complete(muh())
 
     async def get_result(self):
         await wait_until_not_none(lambda: self._result_future)
@@ -167,15 +161,15 @@ class MyActionClient:
     def __goal_accepted_cb(self, future: Future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.node_handle.get_logger().info('Goal rejected')
+            self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} rejected')
             return
 
         self._goal_handle = goal_handle
-        self.node_handle.get_logger().info('Goal accepted')
+        self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} accepted')
 
         self._result_future = self._goal_handle.get_result_async()
         self._result_future.add_done_callback(self.__goal_done_cb)
 
     def __goal_done_cb(self, future: Future):
-        self.node_handle.get_logger().info(f'Goal result received')
+        self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} result received')
         self._goal_handle = None

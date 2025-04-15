@@ -135,8 +135,8 @@ class GiskardTester:
         self.original_number_of_links = len(god_map.world.links)
         self.heart = Thread(target=GiskardBlackboard().tree.live, name='bt ticker')
         self.heart.start()
+        self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name='tests')
-        self.api.spin_in_background()
 
     def get_odometry_joint(self, group_name: Optional[str] = None) -> Joint:
         if group_name is None:
