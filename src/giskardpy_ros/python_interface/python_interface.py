@@ -48,7 +48,7 @@ from giskardpy.motion_statechart.monitors.payload_monitors import Print, Sleep, 
     Pulse, CheckMaxTrajectoryLength
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation, \
-    JustinTorsoLimitCart
+    JustinTorsoLimitCart, CartesianVelocityLimit
 from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
 from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits
@@ -3979,7 +3979,7 @@ class GiskardWrapper:
                                                end_condition=local_min_pre_grasp)
         ft_monitor = self.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value,
                                                     start_condition=local_min_pre_grasp)
-        self.motion_goals.add_grasp_bar_offset(name='grasp bar',
+        self.motion_goals.add_grasp_bar_offset(name='grasp bar offset',
                                                root_link='map',
                                                tip_link='hand_gripper_tool_frame',
                                                tip_grasp_axis=tip_grasp_axis,

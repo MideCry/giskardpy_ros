@@ -3,12 +3,17 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Vector3Stamped
 
 from giskard_msgs.msg import LinkName
-from giskardpy.motion_statechart.monitors.laser_door_finder import LaserDoorFinder
+from giskardpy.data_types.suturo_types import TakePoseTypes
+from giskardpy_ros.monitors.laser_door_finder import LaserDoorFinder
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 rospy.init_node('demo')
 
 gis = GiskardWrapper()
+
+gis.motion_goals.add_take_pose(pose_keyword=TakePoseTypes.PARK.value)
+gis.add_default_end_motion_conditions()
+gis.execute()
 
 base_goal = PoseStamped()
 base_goal.header.frame_id = 'map'
@@ -19,7 +24,7 @@ pre_laser = gis.monitors.add_cartesian_pose(root_link='map', tip_link='base_link
 
 gis.motion_goals.add_cartesian_pose(goal_pose=base_goal, root_link='map', tip_link='base_link', end_condition=pre_laser)
 
-finder = gis.monitors.add_monitor(monitor_class=LaserDoorFinder.__name__,
+finder = gis.monitors.add_monitor(class_name=LaserDoorFinder.__name__,
                                   vector_topic='door_vector',
                                   point_topic='door_points',
                                   door_hinge_name=LinkName(group_name='iai_kitchen', name='iai_kitchen:arena:door_hinge'),
@@ -43,7 +48,7 @@ x_gripper.vector.z = 1
 
 x_goal = Vector3Stamped()
 x_goal.header.frame_id = handle_name
-x_goal.vector.z = 1
+x_goal.vector.z = -1
 
 gis.motion_goals.add_align_planes(tip_link='hand_gripper_tool_frame',
                                   tip_normal=x_gripper,
