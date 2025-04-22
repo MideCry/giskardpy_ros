@@ -15,7 +15,7 @@ from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
-from giskardpy_ros.utils.asynio_utils import wait_until_not_none
+from giskardpy_ros.utils.asynio_utils import wait_until_not_none, wait_until_none
 
 
 def wait_for_message(msg_type,
@@ -137,8 +137,8 @@ class MyActionClient:
         self.node_handle = node_handle
         self.action_name = action_name
         self._client = ActionClient(node=node_handle,
-                                  action_type=action_type,
-                                  action_name=action_name)
+                                    action_type=action_type,
+                                    action_name=action_name)
         self._client.wait_for_server()
 
     def send_goal_async(self, goal) -> Future:
@@ -152,12 +152,14 @@ class MyActionClient:
         async def muh():
             await self.send_goal_async(goal)
             return await self.get_result()
+
         return get_event_loop().run_until_complete(muh())
 
     async def get_result(self):
         await wait_until_not_none(lambda: self._result_future)
         result = await self._result_future
         self._result_future = None
+        await wait_until_none(lambda: self._goal_handle)
         return result.result
 
     def __goal_accepted_cb(self, future: Future):
@@ -189,4 +191,3 @@ class MyActionClient:
         self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} result received')
         self._goal_handle = None
         self._current_goal_id = None
-
