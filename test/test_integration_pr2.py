@@ -464,8 +464,9 @@ class TestMonitors:
         assert god_map.trajectory.length_in_seconds > 4
 
     def test_joint_sequence(self, zero_pose: PR2Tester):
-        g1 = zero_pose.api.motion_goals.add_joint_position(name='g1',
-                                                           goal_state=zero_pose.better_pose)
+        g1 = 'g1'
+        zero_pose.api.motion_goals.add_joint_position(name=g1,
+                                                      goal_state=zero_pose.better_pose, end_condition=g1)
         end_monitor = zero_pose.api.monitors.add_local_minimum_reached(name='local min', start_condition=g1)
         g2 = zero_pose.api.motion_goals.add_joint_position(name='g2',
                                                            goal_state=pocky_pose,
