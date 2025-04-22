@@ -133,15 +133,17 @@ class MyActionClient:
         self._goal_handle = None
         self._goal_result = None
         self._result_future = None
+        self._current_goal_id = None
         self.node_handle = node_handle
         self.action_name = action_name
         self._client = ActionClient(node=node_handle,
-                                    action_type=action_type,
-                                    action_name=action_name)
+                                  action_type=action_type,
+                                  action_name=action_name)
         self._client.wait_for_server()
 
     def send_goal_async(self, goal) -> Future:
         self._goal_counter += 1
+        self._current_goal_id = self._goal_counter
         future = self._client.send_goal_async(goal)
         future.add_done_callback(self.__goal_accepted_cb)
         return future
@@ -160,16 +162,31 @@ class MyActionClient:
 
     def __goal_accepted_cb(self, future: Future):
         goal_handle = future.result()
+        goal_id = self._goal_counter  # Capture the current goal ID
+
         if not goal_handle.accepted:
-            self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} rejected')
+            self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} rejected')
+            return
+
+        # Only process if this is still the current goal
+        if goal_id != self._current_goal_id:
+            self.node_handle.get_logger().debug(f'Ignoring accepted callback for old goal {goal_id}')
             return
 
         self._goal_handle = goal_handle
-        self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} accepted')
+        self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} accepted')
 
         self._result_future = self._goal_handle.get_result_async()
-        self._result_future.add_done_callback(self.__goal_done_cb)
+        self._result_future.add_done_callback(
+            lambda f: self.__goal_done_cb(f, goal_id))
 
-    def __goal_done_cb(self, future: Future):
-        self.node_handle.get_logger().info(f'{self.action_name} Goal {self._goal_counter} result received')
+    def __goal_done_cb(self, future: Future, goal_id: int):
+        # Only process if this is still the current goal
+        if goal_id != self._current_goal_id:
+            self.node_handle.get_logger().debug(f'Ignoring done callback for old goal {goal_id}')
+            return
+
+        self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} result received')
         self._goal_handle = None
+        self._current_goal_id = None
+
