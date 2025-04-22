@@ -15,7 +15,7 @@ from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
-from giskardpy_ros.utils.asynio_utils import wait_until_not_none
+from giskardpy_ros.utils.asynio_utils import wait_until_not_none, wait_until_none
 
 
 def wait_for_message(msg_type,
@@ -158,6 +158,7 @@ class MyActionClient:
         await wait_until_not_none(lambda: self._result_future)
         result = await self._result_future
         self._result_future = None
+        await wait_until_none(lambda: self._current_goal_id)
         return result.result
 
     def __goal_accepted_cb(self, future: Future):
