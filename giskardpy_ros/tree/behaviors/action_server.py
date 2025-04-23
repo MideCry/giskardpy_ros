@@ -1,17 +1,17 @@
 from queue import Queue, Empty
+from time import sleep
 from typing import Any, Optional
 
+from giskard_msgs.action import Move
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.timer import Timer
-from line_profiler import profile
 
-from giskard_msgs.action import Move
 from giskardpy.data_types.exceptions import GiskardException
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
-from line_profiler import profile
+
 
 class ActionServerHandler:
     """
@@ -41,15 +41,18 @@ class ActionServerHandler:
                                 goal_callback=self.default_goal_callback,
                                 cancel_callback=self.cancel_callback)
 
+    def loginfo(self, msg):
+        get_middleware().loginfo(f'{self.name}(Goal #{self.goal_id}): {msg}')
+
     def default_goal_callback(self, goal_request):
         if self.goal_handle is not None:
-            get_middleware().loginfo('cancelling old goal')
+            self.loginfo(f'New Goal requested while Goal #{self.goal_id} is being processed. '
+                         f'Cancelling old Goal.')
             self.cancel_requested = True
-        get_middleware().loginfo('new goal accepted')
         return GoalResponse.ACCEPT
 
     def cancel_callback(self, goal_handle: ServerGoalHandle):
-        get_middleware().loginfo('Cancel request received')
+        self.loginfo(f'Cancel request received.')
         return CancelResponse.ACCEPT
 
     def is_goal_msg_type_execute(self):
@@ -62,9 +65,11 @@ class ActionServerHandler:
         return Move.Goal.UNDEFINED == self.goal_msg.type
 
     async def execute_cb(self, goal: ServerGoalHandle) -> None:
+        while self.goal_handle is not None:
+            sleep(0.1)
         self.goal_queue.put(goal)
         result_msg = self.result_queue.get()
-        get_middleware().loginfo('sending response')
+        self.loginfo(f'Sending response.')
         # self.client_alive_checker.shutdown()
         self.goal_msg = None
         self.goal_handle = None
@@ -75,7 +80,6 @@ class ActionServerHandler:
 
     def is_client_alive(self) -> bool:
         return True
-
 
     def ping_client(self, time):
         client_name = self._as.current_goal.goal.goal_id.id.split('-')[0]
@@ -91,6 +95,7 @@ class ActionServerHandler:
             # self.client_alive = True
             # self.client_alive_checker = rospy.node.create_timer(1.0, callback=self.ping_client)
             self.goal_id += 1
+            self.loginfo(f'Accepted')
         except Empty:
             return None
 

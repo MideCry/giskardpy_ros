@@ -1,6 +1,7 @@
 from __future__ import division
 
 from copy import deepcopy
+from time import sleep
 from typing import Optional
 
 import giskard_msgs.msg as giskard_msgs
@@ -4611,6 +4612,23 @@ class TestActionServerEvents:
         local_min = zero_pose.api.monitors.add_local_minimum_reached()
         zero_pose.api.monitors.add_end_motion(start_condition=local_min)
         zero_pose.execute(expected_error_type=PreemptedException, stop_after=2)
+
+    def test_cancel_with_new_goal(self, zero_pose: PR2Tester):
+        p = PoseStamped()
+        p.header.frame_id = 'base_footprint'
+        p.pose.position = Point(x=100., y=0., z=0.)
+        p.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link='base_footprint', root_link='map')
+        zero_pose.api.motion_goals.allow_all_collisions()
+        local_min = zero_pose.api.monitors.add_local_minimum_reached()
+        zero_pose.api.monitors.add_end_motion(start_condition=local_min)
+        zero_pose.execute(wait=False)
+        sleep(2)
+        p.pose.position = Point(x=0., y=1., z=0.)
+        done = zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link='base_footprint', root_link='map')
+        zero_pose.api.motion_goals.allow_all_collisions()
+        zero_pose.api.monitors.add_end_motion(start_condition=done)
+        zero_pose.execute(local_min_end=False)
 
     def test_interrupt2(self, zero_pose: PR2Tester):
         p = PoseStamped()
