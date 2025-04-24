@@ -48,7 +48,7 @@ from giskardpy.motion_statechart.monitors.payload_monitors import Print, Sleep, 
     Pulse, CheckMaxTrajectoryLength
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation, \
-    JustinTorsoLimitCart
+    JustinTorsoLimitCart, CartesianVelocityLimit
 from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
 from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits
@@ -4118,6 +4118,7 @@ class GiskardWrapper:
                                                        name='grasped monitor', start_condition=force)
 
         close_gripper = self.monitors.add_close_hsr_gripper(start_condition=grasped)
+        sleep = self.monitors.add_sleep(name='settle grasp', seconds=0.5, start_condition=close_gripper)
 
         self.monitors.add_end_motion(start_condition=close_gripper)
         self.monitors.add_cancel_motion(f'not {force} and {slep} ',
@@ -4130,6 +4131,7 @@ class GiskardWrapper:
         self.motion_goals.add_open_container(tip_link='hand_gripper_tool_frame', environment_link=handle_name,
                                              goal_joint_state=0.35)
         handle_monitor = self.monitors.add_joint_position(goal_state={handle_joint: 0.35})
+        self.motion_goals.allow_all_collisions()
         self.monitors.add_end_motion(start_condition=handle_monitor)
 
         self.execute()
@@ -4157,5 +4159,6 @@ class GiskardWrapper:
         door_hinge_monitor = self.monitors.add_joint_position(goal_state={hinge_joint: -1.3})
         open_gripper = self.monitors.add_open_hsr_gripper(start_condition=door_hinge_monitor)
         self.monitors.add_end_motion(start_condition=open_gripper)
+        self.motion_goals.allow_all_collisions()
 
         self.execute()
