@@ -3854,6 +3854,16 @@ class GiskardWrapper:
             self.billy_shelf_left_door_open(door_link_left, handle_link_left, hinge_joint_left, simulation)
 
     def billy_shelf_left_door_open(self, door_link_left, handle_link_left, hinge_joint_left, simulation):
+        open_gripper = self.monitors.add_open_hsr_gripper()
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'base_footprint'
+        goal_pose.pose.orientation.w = 1
+        self.motion_goals.add_cartesian_pose(goal_pose=goal_pose,
+                                             root_link='map',
+                                             tip_link='base_footprint')
+        self.monitors.add_end_motion(start_condition=open_gripper)
+        self.execute()
+
         if simulation:
             js = {'hand_motor_joint': 1.23}
             self.motion_goals.add_joint_position(js)
@@ -3879,7 +3889,7 @@ class GiskardWrapper:
         }
         goal_point = PointStamped()
         goal_point.header.frame_id = 'hand_gripper_tool_frame'
-        goal_point.point.z = 0.1
+        goal_point.point.z = 1
         retract_point = PointStamped()
         retract_point.header.frame_id = 'hand_gripper_tool_frame'
         retract_point.point.z = -0.02
@@ -3892,6 +3902,7 @@ class GiskardWrapper:
         self.motion_goals.add_cartesian_position(name='ft push',
                                                  root_link='map',
                                                  tip_link='hand_gripper_tool_frame',
+                                                 reference_velocity=0.05,
                                                  goal_point=goal_point,
                                                  end_condition=ft_mon_left)
         self.motion_goals.add_cartesian_position(name='ft retract',

@@ -555,6 +555,8 @@ class CarryMyBullshit(Goal):
         else:
             if closest_idx == CarryMyBullshit.trajectory.shape[0] - 1:
                 self.end_of_traj_reached = True
+        next_idx = max(next_idx, closest_idx + 1)
+        next_idx = min(next_idx, traj.shape[0]-1)
         result = {
             'next_x': traj[next_idx, 0],
             'next_y': traj[next_idx, 1],

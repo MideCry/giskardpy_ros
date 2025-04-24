@@ -13,7 +13,6 @@ if __name__ == '__main__':
     rospy.init_node('giskard')
     set_middleware(ROS1Wrapper())
     debug_mode = rospy.get_param('~debug_mode', False)
-    debug_mode = True
     environment_name = 'iai_kitchen'
     giskard = Giskard(world_config=SuturoArenaWithHSRConfig(environment_name=environment_name),
                       collision_avoidance_config=HSRCollisionAvoidanceConfig(),
