@@ -3,7 +3,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Vector3Stamped
 
 from giskard_msgs.msg import LinkName
-from giskardpy.motion_statechart.monitors.laser_door_finder import LaserDoorFinder
+from giskardpy_ros.monitors.laser_door_finder import LaserDoorFinder
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 rospy.init_node('demo')
