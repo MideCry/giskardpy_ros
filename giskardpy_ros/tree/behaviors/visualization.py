@@ -14,7 +14,7 @@ from line_profiler import profile
 
 
 class VisualizationBehavior(GiskardBehavior):
-    @profile
+
     def __init__(self,
                  mode: VisualizationMode,
                  name: str = 'visualization marker',
@@ -25,7 +25,6 @@ class VisualizationBehavior(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
     def update(self):
         self.visualizer.publish_markers()
         if self.ensure_publish:
@@ -35,7 +34,7 @@ class VisualizationBehavior(GiskardBehavior):
 
 
 class VisualizeTrajectory(GiskardBehavior):
-    @profile
+
     def __init__(self,
                  mode: VisualizationMode = VisualizationMode.CollisionsDecomposed,
                  name: Optional[str] = None,
@@ -46,8 +45,7 @@ class VisualizeTrajectory(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
     def update(self):
         GiskardBlackboard().ros_visualizer.publish_trajectory_markers(trajectory=god_map.trajectory,
-                                                   every_x=self.every_x)
+                                                                      every_x=self.every_x)
         return py_trees.common.Status.SUCCESS

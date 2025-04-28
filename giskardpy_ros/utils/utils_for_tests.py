@@ -1,7 +1,5 @@
 import asyncio
 import csv
-import inspect
-import keyword
 import os
 from collections import defaultdict
 from copy import deepcopy
@@ -10,7 +8,6 @@ from time import time, sleep
 from typing import Tuple, Optional, List, Dict, Union
 
 import giskard_msgs.msg as giskard_msgs
-import hypothesis.strategies as st
 import numpy as np
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
@@ -18,9 +15,6 @@ from giskard_msgs.action._move import Move_Result, Move_Goal
 from giskard_msgs.action._world import World_Result
 from giskard_msgs.msg import GiskardError
 from giskard_msgs.srv import DyeGroup_Response
-from hypothesis import assume
-from hypothesis.strategies import composite
-from numpy import pi
 from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
 from tf2_py import LookupException, ExtrapolationException
@@ -30,104 +24,19 @@ import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
-from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
-from giskardpy.motion_statechart.goals.cartesian_goals import CartesianPose, CartesianPoseStraight, CartesianOrientation, \
-    CartesianPosition, CartesianPositionStraight
-from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
-from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, AngleGoal, HeightGoal, DistanceGoal
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
-from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import Collisions, Collision, CollisionEntry
 from giskardpy.model.joints import OneDofJoint, OmniDrive, DiffDrive, Joint
-from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
-    PositionReached, PointingAt
-from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
-    DistanceMonitor
-from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
-from giskardpy.motion_statechart.monitors.monitors import Monitor
-from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetSeedConfiguration
-from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, VectorsAligned, OrientationReached, \
-    PositionReached, PointingAt
-from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
-from giskardpy.motion_statechart.monitors.monitors import Monitor
-from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetSeedConfiguration
+from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.free_variable import FreeVariable
 from giskardpy.qp.qp_controller import available_solvers
 from giskardpy.qp.qp_solver_ids import SupportedQPSolver
-from giskardpy.utils.utils import suppress_stderr
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.msg_converter import json_str_to_ros_kwargs
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-
-BIG_NUMBER = 1e100
-SMALL_NUMBER = 1e-100
-
-
-def vector(x):
-    return st.lists(float_no_nan_no_inf(), min_size=x, max_size=x)
-
-
-def angle_positive():
-    return st.floats(0, 2 * np.pi)
-
-
-def random_angle():
-    return st.floats(-np.pi, np.pi)
-
-
-def compare_axis_angle(actual_angle, actual_axis, expected_angle, expected_axis, decimal=3):
-    try:
-        np.testing.assert_array_almost_equal(actual_axis, expected_axis, decimal=decimal)
-        np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, expected_angle), 0, decimal=decimal)
-    except AssertionError:
-        try:
-            np.testing.assert_array_almost_equal(actual_axis, -expected_axis, decimal=decimal)
-            np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, abs(expected_angle - 2 * pi)), 0,
-                                           decimal=decimal)
-        except AssertionError:
-            np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, 0), 0, decimal=decimal)
-            np.testing.assert_almost_equal(shortest_angular_distance(0, expected_angle), 0, decimal=decimal)
-            assert not np.any(np.isnan(actual_axis))
-            assert not np.any(np.isnan(expected_axis))
-
-
-@composite
-def variable_name(draw):
-    variable = draw(st.text('qwertyuiopasdfghjklzxcvbnm', min_size=1))
-    assume(variable not in keyword.kwlist)
-    return variable
-
-
-@composite
-def lists_of_same_length(draw, data_types=(), min_length=1, max_length=10, unique=False):
-    length = draw(st.integers(min_value=min_length, max_value=max_length))
-    lists = []
-    for elements in data_types:
-        lists.append(draw(st.lists(elements, min_size=length, max_size=length, unique=unique)))
-    return lists
-
-
-@composite
-def rnd_joint_state(draw, joint_limits):
-    return {jn: draw(st.floats(ll, ul, allow_nan=False, allow_infinity=False)) for jn, (ll, ul) in joint_limits.items()}
-
-
-@composite
-def rnd_joint_state2(draw, joint_limits):
-    muh = draw(joint_limits)
-    muh = {jn: ((ll if ll is not None else pi * 2), (ul if ul is not None else pi * 2))
-           for (jn, (ll, ul)) in muh.items()}
-    return {jn: draw(st.floats(ll, ul, allow_nan=False, allow_infinity=False)) for jn, (ll, ul) in muh.items()}
-
-
-@composite
-def pr2_joint_state(draw):
-    pass
 
 
 def compare_poses(actual_pose: Union[cas.TransMatrix, Pose], desired_pose: Union[cas.TransMatrix, Pose],
@@ -198,88 +107,6 @@ def position_dict_to_joint_states(joint_state_dict: Dict[str, float]) -> JointSt
     return js
 
 
-def pr2_urdf():
-    path = get_middleware().resolve_iri('package://giskardpy/test/urdfs/pr2_with_base.urdf')
-    with open(path, 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def pr2_without_base_urdf():
-    with open('../../test/urdfs/pr2.urdf', 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def base_bot_urdf():
-    with open('../../test/urdfs/2d_base_bot.urdf', 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def donbot_urdf():
-    with open('../../test/urdfs/iai_donbot.urdf', 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def boxy_urdf():
-    with open('../../test/urdfs/boxy.urdf', 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def hsr_urdf():
-    with open('urdfs/hsr.urdf', 'r') as f:
-        urdf_string = f.read()
-    return urdf_string
-
-
-def float_no_nan_no_inf(outer_limit=1e5):
-    return float_no_nan_no_inf_min_max(-outer_limit, outer_limit)
-
-
-def float_no_nan_no_inf_min_max(min_value=-1e5, max_value=1e5):
-    return st.floats(allow_nan=False, allow_infinity=False, max_value=max_value, min_value=min_value,
-                     allow_subnormal=False)
-
-
-@composite
-def sq_matrix(draw):
-    i = draw(st.integers(min_value=1, max_value=10))
-    i_sq = i ** 2
-    l = draw(st.lists(float_no_nan_no_inf(outer_limit=1000), min_size=i_sq, max_size=i_sq))
-    return np.array(l).reshape((i, i))
-
-
-def unit_vector(length, elements=None):
-    if elements is None:
-        elements = float_no_nan_no_inf()
-    vector = st.lists(elements,
-                      min_size=length,
-                      max_size=length).filter(lambda x: SMALL_NUMBER < np.linalg.norm(x) < BIG_NUMBER)
-
-    def normalize(v):
-        v = [round(x, 4) for x in v]
-        l = np.linalg.norm(v)
-        if l == 0:
-            return np.array([0] * (length - 1) + [1])
-        return np.array([x / l for x in v])
-
-    return st.builds(normalize, vector)
-
-
-def quaternion():
-    return unit_vector(4, float_no_nan_no_inf(outer_limit=1))
-
-
-def pykdl_frame_to_numpy(pykdl_frame):
-    return np.array([[pykdl_frame.M[0, 0], pykdl_frame.M[0, 1], pykdl_frame.M[0, 2], pykdl_frame.p[0]],
-                     [pykdl_frame.M[1, 0], pykdl_frame.M[1, 1], pykdl_frame.M[1, 2], pykdl_frame.p[1]],
-                     [pykdl_frame.M[2, 0], pykdl_frame.M[2, 1], pykdl_frame.M[2, 2], pykdl_frame.p[2]],
-                     [0, 0, 0, 1]])
-
-
 class GiskardTester:
     default_pose: Dict[str, float]
     better_pose = Dict[str, float]
@@ -288,7 +115,6 @@ class GiskardTester:
     giskard: Giskard
 
     def __init__(self, giskard: Giskard):
-        print('0.0')
         self.async_loop = asyncio.new_event_loop()
         self.total_time_spend_giskarding = 0
         self.total_time_spend_moving = 0
@@ -307,10 +133,10 @@ class GiskardTester:
 
         # rospy.sleep(1)
         self.original_number_of_links = len(god_map.world.links)
-        self.heart = Thread(target=GiskardBlackboard().tree.live)
+        self.heart = Thread(target=GiskardBlackboard().tree.live, name='bt ticker')
         self.heart.start()
+        self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name='tests')
-        self.api.spin_in_background()
 
     def get_odometry_joint(self, group_name: Optional[str] = None) -> Joint:
         if group_name is None:
@@ -422,8 +248,8 @@ class GiskardTester:
         if object_name is None:
             object_name = self.default_env_name
         if GiskardBlackboard().tree.is_standalone():
-            self.monitors.add_set_seed_configuration(seed_configuration=joint_state,
-                                                     name='set kitchen state')
+            self.api.monitors.add_set_seed_configuration(seed_configuration=joint_state,
+                                                         name='set kitchen state')
             self.api.motion_goals.allow_all_collisions()
             self.execute()
         else:
@@ -466,7 +292,7 @@ class GiskardTester:
         done = self.api.monitors.add_set_seed_odometry(base_pose=goal_pose, group_name=group_name, name='teleport base')
         self.api.motion_goals.allow_all_collisions()
         self.api.monitors.add_end_motion(start_condition=done)
-        self.execute(add_monitors_for_everything=False)
+        self.execute()
 
     def set_keep_hand_in_workspace(self, tip_link: Union[str, giskard_msgs.LinkName], map_frame=None,
                                    base_footprint=None):
@@ -487,46 +313,10 @@ class GiskardTester:
     # GENERAL GOAL STUFF ###############################################################################################
     #
 
-    goal_monitor_map: Dict[str, Monitor] = {
-        JointPositionList.__name__: JointGoalReached,
-        SetSeedConfiguration.__name__: JointGoalReached,
-        CartesianPose.__name__: PoseReached,
-        CartesianPoseStraight.__name__: PoseReached,
-        CartesianOrientation.__name__: OrientationReached,
-        CartesianPosition.__name__: PositionReached,
-        CartesianPositionStraight.__name__: PositionReached,
-        AlignPlanes.__name__: VectorsAligned,
-        Pointing.__name__: PointingAt,
-        AlignPerpendicular.__name__: PerpendicularMonitor,
-        AngleGoal.__name__: AngleMonitor,
-        HeightGoal.__name__: HeightMonitor,
-        DistanceGoal.__name__: DistanceMonitor,
-    }
-
-    def add_monitor_for_everything(self):
-        for goal_name, goal in self.api.motion_goals.motion_graph_nodes.items():
-            if goal.class_name in self.goal_monitor_map:
-                monitor_class = self.goal_monitor_map[goal.class_name]
-                ros_kwargs = json_str_to_ros_kwargs(goal.kwargs)
-                monitor_kwargs = {}
-                for keyword in inspect.signature(monitor_class.__init__).parameters.keys():
-                    if keyword in ros_kwargs:
-                        monitor_kwargs[keyword] = ros_kwargs[keyword]
-                new_monitor = self.api.monitors.add_monitor(class_name=monitor_class.__name__,
-                                                            name=f'{goal_name}/{monitor_class.__name__}',
-                                                            start_condition=goal.start_condition,
-                                                            **monitor_kwargs)
-                if goal.end_condition:
-                    goal.end_condition = f'({goal.end_condition}) and {new_monitor}'
-                else:
-                    goal.end_condition = new_monitor
-        self.api.add_default_end_motion_conditions()
-
     def execute(self, expected_error_type: Optional[type(Exception)] = None, stop_after: float = None,
-                wait: bool = True, add_monitors_for_everything: bool = True) -> Move_Result:
-        if add_monitors_for_everything:
-            self.add_monitor_for_everything()
-            # self.api.add_default_end_motion_conditions()
+                wait: bool = True, local_min_end: bool = True) -> Move_Result:
+        if local_min_end:
+            self.api.add_default_end_motion_conditions()
         return self.async_loop.run_until_complete(self.send_goal(expected_error_type=expected_error_type,
                                                                  stop_after=stop_after, wait=wait))
 
@@ -658,12 +448,12 @@ class GiskardTester:
     def register_group(self, new_group_name: str, root_link_name: giskard_msgs.LinkName):
         self.api.world.register_group(new_group_name=new_group_name,
                                       root_link_name=root_link_name)
-        self.wait_heartbeats()
+        # self.wait_heartbeats()
         assert new_group_name in self.api.world.get_group_names()
 
     def clear_world(self) -> World_Result:
         respone = self.api.world.clear()
-        self.wait_heartbeats()
+        # self.wait_heartbeats()
         self.default_env_name = None
         assert respone.error.type == giskard_msgs.GiskardError.SUCCESS
         assert len(god_map.world.groups) == 1
@@ -791,7 +581,7 @@ class GiskardTester:
 
     def add_sphere_to_world(self,
                             name: str,
-                            radius: float = 1,
+                            radius: float = 1.,
                             pose: PoseStamped = None,
                             parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
                             expected_error_type: Optional[type(Exception)] = None) -> None:
@@ -832,11 +622,11 @@ class GiskardTester:
                                      expected_error_type=expected_error_type)
 
     def add_mesh_to_world(self,
+                          pose: PoseStamped,
                           name: str = 'meshy',
                           mesh: str = '',
-                          pose: PoseStamped = None,
                           parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                          scale: Tuple[float, float, float] = (1, 1, 1),
+                          scale: Tuple[float, float, float] = (1., 1., 1.),
                           expected_error_type: Optional[type(Exception)] = None) -> None:
         try:
             response = self.api.world.add_mesh(name=name,
@@ -848,8 +638,6 @@ class GiskardTester:
             assert response.error.type == GiskardError.SUCCESS
         except Exception as e:
             assert type(e) == expected_error_type
-        pose = make_pose_from_parts(pose=pose, frame_id=pose.header.frame_id,
-                                    position=pose.pose.position, orientation=pose.pose.orientation)
         self.check_add_object_result(name=name,
                                      pose=pose,
                                      parent_link=parent_link,
@@ -906,10 +694,10 @@ class GiskardTester:
         collision_goals = []
         for robot_name in self.robot_names:
             collision_goals.append(CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                                  distance=-1,
+                                                  distance=-1.,
                                                   group1=robot_name))
             collision_goals.append(CollisionEntry(type_=CollisionEntry.ALLOW_COLLISION,
-                                                  distance=-1,
+                                                  distance=-1.,
                                                   group1=robot_name,
                                                   group2=robot_name))
         return self.compute_collisions(collision_goals)
@@ -918,7 +706,7 @@ class GiskardTester:
         if group_name is None:
             group_name = self.robot_names[0]
         collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1,
+                                            distance=-1.,
                                             group1=group_name,
                                             group2=group_name)]
         return self.compute_collisions(collision_entries)
@@ -932,7 +720,7 @@ class GiskardTester:
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1)]
+                                            distance=-1.)]
         return self.compute_collisions(collision_entries)
 
     def check_cpi_geq(self, links, distance_threshold, check_external=True, check_self=True):
@@ -967,7 +755,7 @@ class GiskardTester:
     def move_base(self, goal_pose) -> None:
         tip = self.get_odometry_joint().child_link_name
         self.api.motion_goals.add_cartesian_pose(goal_pose=goal_pose, tip_link=tip.short_name, root_link='map',
-                                             name='base goal')
+                                                 name='base goal')
         self.execute()
 
     def reset(self):
@@ -976,15 +764,5 @@ class GiskardTester:
     def reset_base(self):
         p = PoseStamped()
         p.header.frame_id = god_map.world.root_link_name
-        p.pose.orientation.w = 1
+        p.pose.orientation.w = 1.
         self.teleport_base(p)
-
-
-def launch_launchfile(file_name: str):
-    launch_file = get_middleware().resolve_iri(file_name)
-    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-    roslaunch.configure_logging(uuid)
-    launch = roslaunch.parent.ROSLaunchParent(uuid, [launch_file])
-    with suppress_stderr():
-        launch.start()
-        # launch.shutdown()

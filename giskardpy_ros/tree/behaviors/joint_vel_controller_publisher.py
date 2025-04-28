@@ -1,24 +1,20 @@
 from typing import List
 
-from line_profiler import profile
 from py_trees.common import Status
 from std_msgs.msg import Float64
 
 from giskardpy.god_map import god_map
-from giskardpy_ros.ros2.ros2_interface import wait_for_topic_to_appear
-
+from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from line_profiler import profile
 
 
 class JointVelController(GiskardBehavior):
     last_time: float
 
     @record_time
-    @profile
+
     def __init__(self, namespaces: List[str]):
         super().__init__('joint velocity publisher')
         self.namespaces = namespaces
@@ -37,7 +33,7 @@ class JointVelController(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         msg = Float64()
         for i, joint_name in enumerate(self.joint_names):

@@ -373,13 +373,13 @@ class ExecutionStateToDotParser:
 
 class PlotMotionGraph(GiskardBehavior):
 
-    @profile
+
     def __init__(self, name: str = 'plot task graph'):
         super().__init__(name)
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         file_name = god_map.tmp_folder + f'task_graphs/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf'
         execution_state = giskard_state_to_execution_state()

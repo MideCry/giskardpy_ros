@@ -5,11 +5,11 @@ import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, PointStamped, Vector3Stamped
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
-from giskardpy.god_map import god_map
-from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy.god_map import god_map
 from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig, JustinStandaloneInterface, \
     JustinCollisionAvoidanceConfig
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
@@ -505,3 +505,9 @@ class TestEuRobin:
         dlr_kitchen_setup.allow_self_collision()
         dlr_kitchen_setup.motion_goals.add_justin_torso_limit(name='torso4_joint', end_condition='')
         dlr_kitchen_setup.execute(add_local_minimum_reached=False)
+
+        dlr_kitchen_setup.set_env_state({handle_joint: 0})
+
+        dlr_kitchen_setup.set_joint_goal(dlr_kitchen_setup.better_pose)
+        dlr_kitchen_setup.allow_all_collisions()
+        dlr_kitchen_setup.execute()

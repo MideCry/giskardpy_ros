@@ -16,7 +16,6 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
-from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 
 
@@ -355,7 +354,7 @@ class TestConstraints:
         kitchen_setup.api.motion_goals.allow_all_collisions()
         # kitchen_setup.set_json_goal('AvoidJointLimits', percentage=40)
 
-        kitchen_setup.execute(add_monitors_for_everything=False)
+        kitchen_setup.execute()
 
         kitchen_setup.set_env_state({'iai_fridge_door_joint': 0})
 
@@ -410,6 +409,7 @@ class TestConstraints:
         kitchen_setup.api.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
 
         kitchen_setup.api.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
+        kitchen_setup.update_end_condition(node_name=gripper_closed, condition=gripper_closed)
 
         kitchen_setup.api.update_start_condition(node_name=door_open, condition=gripper_closed)
         kitchen_setup.api.update_start_condition(node_name=gripper_opened, condition=f'{door_open}')
@@ -609,7 +609,7 @@ class TestConstraints:
 
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.api.monitors.add_end_motion(start_condition=f'{door_open} and {gripper_opened} and not {slipped}')
-        kitchen_setup.execute(add_monitors_for_everything=False)
+        kitchen_setup.execute()
 
 
 class TestCollisionAvoidanceGoals:

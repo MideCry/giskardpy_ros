@@ -18,7 +18,7 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, G
 class InitQPController(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         eq_constraints, neq_constraints, eq_derivative_constraints, derivative_constraints, quadratic_weight_gains, linear_weight_gains = god_map.motion_statechart_manager.get_constraints_from_tasks()
         try:

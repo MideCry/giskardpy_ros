@@ -16,6 +16,7 @@ from py_trees.decorators import RunningIsSuccess, SuccessIsRunning
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
+from giskardpy.middleware import get_middleware
 
 
 class AsyncBehavior(GiskardBehavior, Composite):
@@ -37,13 +38,13 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def initialise(self) -> None:
         self.looped_once = False
-        self.update_thread = Thread(target=self.loop_over_plugins, name=self.name)
+        self.update_thread = Thread(target=self.loop_over_plugins, name=f'async {self.name}')
         self.update_thread.start()
         super().initialise()
 
     def add_child(self, child: behaviour.Behaviour, success_is_running: bool = True) -> uuid.UUID:
         if success_is_running:
-            success_is_running_child = SuccessIsRunning('success is running', child)
+            success_is_running_child = SuccessIsRunning(f'success is running\n{child.name}', child)
             return super().add_child(success_is_running_child)
         return super().add_child(child)
 
@@ -56,6 +57,8 @@ class AsyncBehavior(GiskardBehavior, Composite):
         return self.status == Status.RUNNING
 
     def terminate(self, new_status: Status) -> None:
+        if self.sleeper is not None:
+            get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
         self.set_status(Status.FAILURE)
         try:
             self.update_thread.join()
@@ -72,12 +75,12 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def insert_behind(self, node: Behaviour, left_sibling_name: Behaviour, success_is_running: bool = True) -> None:
         if success_is_running:
-            node = SuccessIsRunning('success is running', node)
+            node = SuccessIsRunning(f'success is running\n{node.name}', node)
         try:
             sibling_id = self.children.index(left_sibling_name)
         except:
             sibling_id = self.children.index(left_sibling_name.parent)
-        self.insert_child(node, sibling_id+1)
+        self.insert_child(node, sibling_id + 1)
 
     def tick(self):
         self.logger.debug("%s.tick()" % self.__class__.__name__)
@@ -102,7 +105,6 @@ class AsyncBehavior(GiskardBehavior, Composite):
     def tip(self):
         return GiskardBehavior.tip(self)
 
-    @profile
     def loop_over_plugins(self) -> None:
         try:
             self.get_blackboard().runtime = time()

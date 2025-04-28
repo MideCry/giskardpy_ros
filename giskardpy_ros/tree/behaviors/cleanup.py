@@ -13,7 +13,7 @@ from line_profiler import profile
 
 
 class CleanUp(GiskardBehavior):
-    @profile
+
     def __init__(self, name, clear_markers=False):
         super().__init__(name)
         self.clear_markers_ = clear_markers
@@ -29,7 +29,7 @@ class CleanUp(GiskardBehavior):
         self.marker_pub.publish(msg)
 
     @record_time
-    @profile
+
     def initialise(self):
         if self.clear_markers_:
             self.clear_markers()

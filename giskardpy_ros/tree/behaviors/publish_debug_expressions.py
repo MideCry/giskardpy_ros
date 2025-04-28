@@ -12,7 +12,7 @@ from line_profiler import profile
 
 
 class PublishDebugExpressions(GiskardBehavior):
-    @profile
+    
     def __init__(self, name: str = 'publish qp data', publish_lb: bool = False, publish_ub: bool = False, publish_xdot: bool = False,
                  publish_lbA: bool = False, publish_ubA: bool = False, publish_Ax: bool = False,
                  publish_Ex: bool = False, publish_bE: bool = False,
@@ -30,12 +30,12 @@ class PublishDebugExpressions(GiskardBehavior):
         self.publish_xdot = publish_xdot
         self.publish_debug = publish_debug
 
-    @profile
+    
     def setup(self, timeout):
         self.publisher = rospy.node.create_publisher(JointState, f'{rospy.node.get_name()}/qp_data', 10)
         return super().setup(timeout)
 
-    @profile
+    
     def create_msg(self, qp_controller: QPController):
         msg = JointState()
         msg.header.stamp = rospy.node.get_clock().now().to_msg()
@@ -132,7 +132,7 @@ class PublishDebugExpressions(GiskardBehavior):
         return msg
 
     @record_time
-    @profile
+    
     def update(self):
         qp_controller: QPController = god_map.qp_controller
         msg = self.create_msg(qp_controller)

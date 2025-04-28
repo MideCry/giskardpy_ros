@@ -12,7 +12,6 @@ from giskardpy.model.world_config import WorldWithDiffDriveRobot
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 from giskardpy.god_map import god_map
 from giskardpy.data_types.data_types import PrefixName
-from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 
@@ -431,7 +430,7 @@ class TestCollisionAvoidance:
         box_pose.pose.position.x = 0.6
         box_pose.pose.position.z = 0.0
         box_pose.pose.orientation.w = 1
-        zero_pose.add_mesh_to_world('meshy',
+        zero_pose.add_mesh_to_world(name='meshy',
                                     mesh=mesh_path,
                                     pose=box_pose,
                                     scale=(1, 1, -1),

@@ -1,26 +1,21 @@
 from typing import Optional
 
 import numpy as np
-from geometry_msgs.msg import Twist, TwistStamped
-from line_profiler import profile
+from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy_ros.ros2.ros2_interface import wait_for_topic_to_appear
-from giskardpy.model.joints import OmniDrive, DiffDrive
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from line_profiler import profile
 
 
 # can be used during closed-loop control, instead of for tracking a trajectory
 class SendCmdVelTwist(GiskardBehavior):
     supported_state_types = [Twist]
 
-    @profile
     def __init__(self, topic_name: str, joint_name: Optional[PrefixName] = None):
         super().__init__()
         self.threshold = np.array([0.0, 0.0, 0.0])
@@ -54,7 +49,6 @@ class SendCmdVelTwist(GiskardBehavior):
         return twist
 
     @catch_and_raise_to_blackboard
-    @profile
     def update(self):
         cmd = god_map.qp_solver_solution
         twist = self.solver_cmd_to_twist(cmd)

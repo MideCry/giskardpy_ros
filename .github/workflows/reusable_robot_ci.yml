@@ -137,7 +137,7 @@ jobs:
         with:
           path: 'giskardpy'
           repository: ${{ github.repository_owner }}/giskardpy
-          ref: library_standalone
+          ref: giskard_library
       - name: install pip dependencies giskardpy
         run: |
           python3 -m pip install --upgrade pip
@@ -152,12 +152,21 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'giskard_ws/src/giskardpy_ros'
-#      - name: Checkout iai_maps
-#        uses: actions/checkout@v3
-#        with:
-#          path: 'giskard_ws/src/iai_maps'
-#          repository: code-iai/iai_maps
-#          ref: master
+      - name: Checkout iai_maps
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/iai_maps'
+          repository: code-iai/iai_maps
+          ref: ros-jazzy
+      - name: ignore some packages in iai_maps
+        run: |
+          cd giskard_ws
+          touch src/iai_maps/chemistry_laboratory/AMENT_IGNORE
+          touch src/iai_maps/iai_dlr_cutting_demo/AMENT_IGNORE
+          touch src/iai_maps/iai_kitchen_defs/AMENT_IGNORE
+          touch src/iai_maps/iai_refills_lab/AMENT_IGNORE
+          touch src/iai_maps/iai_semantic_maps/AMENT_IGNORE
+          touch src/iai_maps/iai_shelves/AMENT_IGNORE
       # install robots -------------------------------------------------------------------------------------------------
       - if: ${{ inputs.robot == 'hsr' }}
         name: Checkout hsr_description
@@ -194,10 +203,10 @@ jobs:
           path: 'giskard_ws/src/iai_pr2'
           repository: code-iai/iai_pr2
           ref: ros-jazzy-main
-      - if: ${{ inputs.robot == 'pr2' }}
-        name: ignore some packages in iai_pr2
-        run: |
-          cd giskard_ws
+#      - if: ${{ inputs.robot == 'pr2' }}
+#        name: ignore some packages in iai_pr2
+#        run: |
+#          cd giskard_ws
 #          touch src/iai_pr2/iai_pr2_sim/CATKIN_IGNORE
 #          touch src/iai_pr2/iai_pr2_donbot/CATKIN_IGNORE
       - if: ${{ inputs.robot == 'tiago' }} # tiago has to be pulled now because it has fucked up package.xml
@@ -226,50 +235,50 @@ jobs:
         uses: lhotari/action-upterm@v1
       - name: run ${{ inputs.test1 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test1 }}
       - if: ${{ inputs.test2 != '' }}
         name: run ${{ inputs.test2 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test2 }}
       - if: ${{ inputs.test3 != '' }}
         name: run ${{ inputs.test3 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test3 }}
       - if: ${{ inputs.test4 != '' }}
         name: run ${{ inputs.test4 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test4 }}
       - if: ${{ inputs.test5 != '' }}
         name: run ${{ inputs.test5 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test5 }}
       - if: ${{ inputs.test6 != '' }}
         name: run ${{ inputs.test6 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test6 }}
       - if: ${{ inputs.test7 != '' }}
         name: run ${{ inputs.test7 }}
         run: |
-          colcon_cd giskardpy_ros
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test7 }}
       - if: ${{ inputs.test8 != '' }}
         name: run ${{ inputs.test8 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test8 }}
       - if: ${{ inputs.test9 != '' }}
         name: run ${{ inputs.test9 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test9 }}
       - if: ${{ inputs.test10 != '' }}
         name: run ${{ inputs.test10 }}
         run: |
-          colcon_cd giskardpy_ros/test
+          cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
           python3 -m pytest -s ${{ inputs.test10 }}

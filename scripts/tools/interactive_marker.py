@@ -9,13 +9,13 @@ from visualization_msgs.msg import InteractiveMarkerFeedback
 
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
+from giskardpy_ros.ros2 import rospy
 
 
 class InteractiveMarkerNode:
     def __init__(self) -> None:
         super().__init__()
         self.giskard = GiskardWrapperNode('interactive_cartesian_goals')
-        self.giskard.spin_in_background()
         tf.init(self.giskard.node_handle)
 
         # self.giskard.declare_parameters(namespace='',
@@ -112,10 +112,10 @@ class InteractiveMarkerNode:
 
 
 def main(args: None = None) -> None:
-    rclpy.init(args=args)
+    rospy.init_node('interactive_marker')
     node = InteractiveMarkerNode()
     node.giskard.node_handle.get_logger().info('interactive marker server running')
-    node.giskard.spinner.join()
+    rospy.spinner_thread.join()
     rclpy.shutdown()
 
 

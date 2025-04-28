@@ -13,10 +13,9 @@ class GoalReceived(GiskardBehavior):
         self.action_server = action_server
         super().__init__(name)
 
-    @profile
+
     def update(self):
         if self.action_server.has_goal():
-            get_middleware().loginfo(f'{self.action_server.name} has received new goal.')
             self.action_server.accept_goal()
             return Status.SUCCESS
         return Status.FAILURE

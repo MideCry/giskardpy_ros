@@ -14,9 +14,8 @@ class CollisionSceneUpdater(GiskardBehavior):
     def __init__(self):
         super().__init__('update collision scene')
 
-    @catch_and_raise_to_blackboard
+    @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
-    @profile
     def update(self):
         god_map.collision_scene.sync()
         return Status.SUCCESS

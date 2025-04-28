@@ -21,12 +21,11 @@ from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
 from rclpy.client import Client
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
 from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import MaxTrajectoryLengthException
+from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, ExecutionException
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
     CartesianPoseStraight, CartesianPositionStraight
@@ -56,8 +55,9 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
-from giskardpy_ros.ros2 import msg_converter
+from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
+from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy_ros.utils.utils import make_world_body_box
 
@@ -122,7 +122,7 @@ class WorldWrapper:
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
-        req.body = make_world_body_box(size[0], size[1], size[2])
+        req.body = make_world_body_box(float(size[0]), float(size[1]), float(size[2]))
         req.parent_link = parent_link or giskard_msgs.LinkName()
         req.pose = pose
         return self._send_goal(req)
@@ -141,7 +141,7 @@ class WorldWrapper:
         world_body = WorldBody()
         world_body.type = WorldBody.PRIMITIVE_BODY
         world_body.shape.type = SolidPrimitive.SPHERE
-        world_body.shape.dimensions.append(radius)
+        world_body.shape.dimensions.append(float(radius))
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
@@ -155,7 +155,7 @@ class WorldWrapper:
                  mesh: str,
                  pose: PoseStamped,
                  parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                 scale: Tuple[float, float, float] = (1, 1, 1)) -> World_Result:
+                 scale: Tuple[float, float, float] = (1., 1., 1.)) -> World_Result:
         """
         See add_box.
         :param mesh: path to the mesh location, can be ros package path, e.g.,
@@ -172,9 +172,9 @@ class WorldWrapper:
         req.operation = World_Goal.ADD
         req.body = world_body
         req.pose = pose
-        req.body.scale.x = scale[0]
-        req.body.scale.y = scale[1]
-        req.body.scale.z = scale[2]
+        req.body.scale.x = float(scale[0])
+        req.body.scale.y = float(scale[1])
+        req.body.scale.z = float(scale[2])
         req.parent_link = parent_link
         return self._send_goal(req)
 
@@ -193,9 +193,9 @@ class WorldWrapper:
         world_body = WorldBody()
         world_body.type = WorldBody.PRIMITIVE_BODY
         world_body.shape.type = SolidPrimitive.CYLINDER
-        world_body.shape.dimensions = [0, 0]
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = height
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = radius
+        world_body.shape.dimensions = [0., 0.]
+        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = float(height)
+        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = float(radius)
         req = World_Goal()
         req.group_name = str(name)
         req.operation = World_Goal.ADD
@@ -278,9 +278,8 @@ class WorldWrapper:
         """
         Returns the names of every group in the world.
         """
-        future = self._get_group_names_srv.call_async(GetGroupNames_Request())
-        rclpy.spin_until_future_complete(self.node_handle, future)
-        resp: GetGroupNames_Response = future.result()
+        req = GetGroupNames_Request()
+        resp: GetGroupNames_Response = self._get_group_names_srv.call(req)
         return resp.group_names
 
     def get_group_info(self, group_name: str) -> GetGroupInfo_Response:
@@ -888,7 +887,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param group2: name of the second group
         """
         if min_distance is None:
-            min_distance = - 1
+            min_distance = - 1.
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.distance = min_distance
@@ -952,7 +951,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_avoid_joint_limits(self,
                                name: Optional[str] = None,
-                               percentage: int = 15,
+                               percentage: int = 15.,
                                joint_list: Optional[List[str]] = None,
                                weight: Optional[float] = None,
                                start_condition: str = '',
@@ -1036,7 +1035,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                door_object: str,
                                door_handle: str,
                                tip_gripper_axis: Vector3Stamped,
-                               weight: float,
+                               weight: Optional[float] = None,
                                name: Optional[str] = None,
                                tip_group: Optional[str] = None,
                                root_group: Optional[str] = None,
@@ -1074,7 +1073,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           tip_link: str,
                           door_object: str,
                           door_handle: str,
-                          weight: float,
+                          weight: Optional[float] = None,
                           name: Optional[str] = None,
                           tip_group: Optional[str] = None,
                           root_group: Optional[str] = None,
@@ -2389,7 +2388,10 @@ class GiskardWrapper:
         """
         Stops the goal that was last sent to Giskard.
         """
-        future = self._goal_handle.cancel_goal_async()
+        try:
+            future = self._client._goal_handle.cancel_goal_async()
+        except AttributeError as e:
+            raise ExecutionException('Can\'t cancel goals, because there is no active one')
         return future
 
     async def get_result(self):
@@ -2430,7 +2432,7 @@ class GiskardWrapper:
         def search_for_monitor_values_in_start_condition(start_condition: str):
             res = []
             for monitor, state in zip(execution_state.monitors, execution_state.monitor_state):
-                if f'\'{monitor.name}\'' in start_condition and state != 1:
+                if f'\'{monitor.name}\'' in start_condition or f'"{monitor.name}"' in start_condition and state != 1:
                     res.append(monitor)
             return res
 
@@ -2467,16 +2469,18 @@ class GiskardWrapperNode(Node, GiskardWrapper):
                       allow_undeclared_parameters=allow_undeclared_parameters,
                       automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides,
                       enable_logger_service=enable_logger_service)
+        rospy.executor.add_node(self)
         GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name)
-        self.executor = MultiThreadedExecutor()
         self.is_spinning = False
 
     def __spin(self):
+        self.my_executor = MyMultiThreadedExecutor(thread_name_prefix='python interface')
+        self.my_executor.add_node(self)
         self.is_spinning = True
         while rclpy.ok():
-            rclpy.spin_once(self.node_handle, executor=self.executor, timeout_sec=1)
+            self.my_executor.spin_once(timeout_sec=1)
         self.is_spinning = False
 
     def spin_in_background(self):
-        self.spinner = Thread(target=self.__spin)
+        self.spinner = Thread(target=self.__spin, daemon=False, name='background giskard wrapper spinner')
         self.spinner.start()

@@ -9,15 +9,15 @@ from line_profiler import profile
 
 
 class KinSimPlugin(GiskardBehavior):
-    @profile
+
     def initialise(self):
         def f(joint_symbol):
             return god_map.expr_to_key[joint_symbol][-2]
+
         self.symbol_to_joint_map = KeyDefaultDict(f)
         super().initialise()
 
     @record_time
-    @profile
     def update(self):
         next_cmds = god_map.qp_solver_solution
         god_map.world.update_state(next_cmds, god_map.qp_controller.mpc_dt,

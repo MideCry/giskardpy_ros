@@ -1,26 +1,20 @@
+from __future__ import annotations
 import io
 from time import sleep
-from typing import Optional, overload, List, Set
-import networkx as nx
+from typing import Optional, overload, List, TYPE_CHECKING
+
 import numpy as np
 import rclpy
-import yaml
-from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, TransformStamped, Pose, Quaternion, Point, \
-    Vector3, QuaternionStamped, Transform, TwistStamped
-from graphviz import Source
-from networkx import MultiDiGraph
-from networkx.drawing.nx_pydot import read_dot
-from line_profiler import profile
+from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, TransformStamped, Quaternion, QuaternionStamped
 from rclpy.duration import Duration
 from rclpy.time import Time
-from tf2_geometry_msgs import do_transform_pose, do_transform_vector3, do_transform_point, do_transform_pose_stamped
 from tf2_py import InvalidArgumentException
 from tf2_ros import Buffer, TransformListener
 
-from giskardpy.middleware import get_middleware
-from giskardpy.utils.decorators import memoize
 from giskardpy_ros.ros2 import rospy
-from line_profiler import profile
+
+if TYPE_CHECKING:
+    from networkx import MultiDiGraph
 
 tfBuffer: Buffer = None
 tf_listener: TransformListener = None
@@ -40,7 +34,7 @@ def init(node_handle=None, tf_buffer_size: Optional[float] = None) -> None:
         tf_buffer_size = Duration(seconds=tf_buffer_size)
     tfBuffer = Buffer(tf_buffer_size)
     tf_listener = TransformListener(tfBuffer, _node_handle)
-    sleep(4)
+    sleep(2)
     try:
         get_tf_root()
     except Exception as e:
@@ -62,6 +56,7 @@ def get_tf_roots() -> List[str]:
 
 
 def get_graph() -> MultiDiGraph:
+    from networkx.drawing.nx_pydot import read_dot
     tfBuffer = get_tf_buffer()
     dot_string = tfBuffer._allFramesAsDot()
     cleaned_dot_string = dot_string.replace("\n", " ")
@@ -72,8 +67,9 @@ def get_graph() -> MultiDiGraph:
 
 
 def get_frame_chain(target_frame: str, source_frame: str) -> List[str]:
+    from networkx.algorithms.shortest_paths.generic import shortest_path
     graph = get_graph()
-    return nx.shortest_path(graph, source=target_frame, target=source_frame)
+    return shortest_path(graph, source=target_frame, target=source_frame)
 
 
 
@@ -128,7 +124,7 @@ def transform_msg(target_frame: str, msg: Vector3Stamped, timeout: float = 5) ->
     pass
 
 
-@profile
+
 def transform_msg(target_frame, msg, timeout=5):
     if isinstance(msg, PoseStamped):
         return transform_pose(target_frame, msg, timeout)
@@ -147,6 +143,7 @@ def transform_pose(target_frame: str, pose: PoseStamped, timeout: Duration = 5.0
     Transforms a pose stamped into a different target frame.
     :return: Transformed pose of None on loop failure
     """
+    from tf2_geometry_msgs import do_transform_pose_stamped
     transform = lookup_transform(target_frame, pose.header.frame_id, pose.header.stamp, timeout)
     new_pose = do_transform_pose_stamped(pose, transform)
     return new_pose
@@ -173,6 +170,7 @@ def transform_vector(target_frame: str, vector: Vector3Stamped, timeout: float =
     :type target_frame: Union[str, unicode]
     :return: Transformed pose of None on loop failure
     """
+    from tf2_geometry_msgs import do_transform_vector3
     transform = lookup_transform(target_frame, vector.header.frame_id, vector.header.stamp, timeout)
     new_pose = do_transform_vector3(vector, transform)
     return new_pose
@@ -201,6 +199,7 @@ def transform_point(target_frame: str, point: PointStamped, timeout: float = 5) 
     :return: Transformed pose of None on loop failure
     :rtype: PointStamped
     """
+    from tf2_geometry_msgs import do_transform_point
     transform = lookup_transform(target_frame, point.header.frame_id, point.header.stamp, timeout)
     new_pose = do_transform_point(point, transform)
     return new_pose
@@ -231,7 +230,7 @@ def lookup_point(target_frame: str, source_frame: str, time: Optional[Time] = No
     return p
 
 
-@profile
+
 def normalize_quaternion_msg(quaternion: Quaternion) -> Quaternion:
     q = Quaternion()
     rotation = np.array([quaternion.x,

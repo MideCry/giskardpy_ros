@@ -11,49 +11,39 @@ from giskardpy_ros.configs.other_robots.generic import GenericWorldConfig
 from giskardpy_ros.ros2 import ros2_interface
 
 
-class WorldWithPR2Config(GenericWorldConfig):
+class WorldWithPR2Config(WorldWithOmniDriveRobot):
     def __init__(self, localization_joint_name: str = 'localization',
                  odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum',
                  urdf: Optional[str] = None):
-        super().__init__()
+        super().__init__(urdf=urdf, localization_joint_name=localization_joint_name, odom_link_name=odom_link_name,
+                         drive_joint_name=drive_joint_name)
         self.localization_joint_name = localization_joint_name
         self.odom_link_name = odom_link_name
         self.drive_joint_name = drive_joint_name
         self.robot_description = urdf
 
-    def setup(self):
-        self.set_default_limits({Derivatives.velocity: 0.2,
-                                 Derivatives.acceleration: np.inf,
-                                 Derivatives.jerk: 30})
-        self.map_name = PrefixName(self.get_tf_root_that_is_not_in_world())
-        self.add_empty_link(self.map_name)
-        self.urdf = self.robot_description or ros2_interface.get_robot_description()
-        self.add_robot_urdf(self.urdf, self.robot_name)
-
-
-        root_link_name = self.get_root_link_of_group(self.robot_name)
-
-        self.add_omni_drive_joint(name=self.drive_joint_name,
-                                  parent_link_name=self.map_name,
-                                  child_link_name=root_link_name,
-                                  translation_limits={
-                                      Derivatives.velocity: 0.2,
-                                      Derivatives.acceleration: 1,
-                                      Derivatives.jerk: 5,
-                                  },
-                                  rotation_limits={
-                                      Derivatives.velocity: 0.2,
-                                      Derivatives.acceleration: 1,
-                                      Derivatives.jerk: 5
-                                  },
-                                  robot_group_name=self.robot_group_name)
-
-        self.set_joint_limits(limit_map={Derivatives.velocity: 2,
+    def setup(self, robot_name: Optional[str] = None):
+        super().setup(robot_name)
+        self.set_joint_limits(limit_map={Derivatives.velocity: 1,
                                          Derivatives.jerk: None},
                               joint_name='head_pan_joint')
         self.set_joint_limits(limit_map={Derivatives.velocity: 3.5,
                                          Derivatives.jerk: None},
                               joint_name='head_tilt_joint')
+
+        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
+                                         Derivatives.jerk: None},
+                              joint_name='r_shoulder_pan_joint')
+        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
+                                         Derivatives.jerk: None},
+                              joint_name='l_shoulder_pan_joint')
+
+        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
+                                         Derivatives.jerk: None},
+                              joint_name='r_shoulder_lift_joint')
+        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
+                                         Derivatives.jerk: None},
+                              joint_name='l_shoulder_lift_joint')
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):

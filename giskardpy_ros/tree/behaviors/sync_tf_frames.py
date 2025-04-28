@@ -17,7 +17,6 @@ from line_profiler import profile
 class SyncTfFrames(GiskardBehavior):
     joint_map: Dict[PrefixName, Tuple[str, str]]
 
-    @profile
     def __init__(self, name, joint_map: Optional[Dict[PrefixName, Tuple[str, str]]] = None):
         super().__init__(name)
         if joint_map is None:
@@ -36,7 +35,6 @@ class SyncTfFrames(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
     def update(self):
         for joint_name, (tf_parent_frame, tf_child_frame) in self.joint_map.items():
             joint: Joint6DOF = god_map.world.joints[joint_name]

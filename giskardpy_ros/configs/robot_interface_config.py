@@ -3,7 +3,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Union
 
-import controller_manager as cm
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import ListControllers_Response
 from geometry_msgs.msg import Twist
@@ -53,7 +52,8 @@ class RobotInterfaceConfig(ABC):
     def control_mode(self) -> ControlModes:
         return GiskardBlackboard().tree.control_mode
 
-    def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str] = None, sync_in_control_loop: bool = True):
+    def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str] = None,
+                            sync_in_control_loop: bool = True):
         """
         Tell Giskard to sync an odometry joint added during by the world config.
         """
@@ -152,6 +152,7 @@ class RobotInterfaceConfig(ABC):
         """
         :param whitelist: list all controllers that should get added, if None, giskard will search automatically
         """
+        import controller_manager as cm
         controllers: ListControllers_Response = cm.list_controllers(node=rospy.node,
                                                                     controller_manager_name=controller_manager_name)
 

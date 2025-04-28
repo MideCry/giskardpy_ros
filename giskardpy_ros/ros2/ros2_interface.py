@@ -1,48 +1,21 @@
-import os
 import asyncio
-from typing import List, Type, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Union, Any
 
-import rclpy
 import xacro
-from ament_index_python import get_package_share_directory
-from controller_manager import controller_manager_services
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from rcl_interfaces.srv import GetParameters_Request, GetParameters_Response, GetParameters
 from rclpy import Future
+from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
 from rclpy.node import Node
-from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.wait_for_message import wait_for_message as rclpy_wait_for_message
 from std_msgs.msg import String
 
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
-from giskardpy_ros.utils.asynio_utils import wait_until_not_none
-
-
-def wait_for_topic_to_appear(topic_name: str,
-                             supported_types=None,
-                             sleep_time: float = 1):
-    rclpy.wait_for_message.wait_for_message()
-    waiting_message = f'Waiting for topic \'{topic_name}\' to appear...'
-    msg_type = None
-    while msg_type is None and not rospy.is_shutdown():
-        get_middleware().loginfo(waiting_message)
-        try:
-            rostopic.get_info_text(topic_name)
-            msg_type, _, _ = rostopic.get_topic_class(topic_name)
-            if msg_type is None:
-                raise ROSTopicException()
-            if supported_types is not None and msg_type not in supported_types:
-                raise TypeError(f'Topic of type \'{msg_type}\' is not supported. '
-                                f'Must be one of: \'{supported_types}\'')
-            else:
-                get_middleware().loginfo(f'\'{topic_name}\' appeared.')
-                return msg_type
-        except (ROSException, ROSTopicException) as e:
-            rospy.sleep(sleep_time)
+from giskardpy_ros.utils.asynio_utils import wait_until_not_none, wait_until_none
 
 
 def wait_for_message(msg_type,
@@ -107,6 +80,7 @@ def search_for_subscribers_of_type(topic_type) -> List[str]:
 
 
 def get_parameters(parameters: List[str], node_name: str = 'controller_manager') -> GetParameters_Response:
+    from controller_manager import controller_manager_services
     req = GetParameters_Request()
     req.names = parameters
     return controller_manager_services.service_caller(node=rospy.node,
@@ -152,57 +126,71 @@ class ControllerManager:
 class MyActionClient:
     _goal_handle: Optional[ClientGoalHandle]
     _result_future: Optional[Future]
+    _goal_counter: int
 
     def __init__(self, node_handle: Node, action_type, action_name: str):
+        self._goal_counter = -1
         self._goal_handle = None
         self._goal_result = None
         self._result_future = None
+        self._current_goal_id = None
+        self.result = None
         self.node_handle = node_handle
+        self.action_name = action_name
         self._client = ActionClient(node=node_handle,
                                     action_type=action_type,
                                     action_name=action_name)
         self._client.wait_for_server()
 
-    @property
-    def _event_loop(self) -> asyncio.AbstractEventLoop:
-        try:
-            return asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.new_event_loop()
-
     def send_goal_async(self, goal) -> Future:
+        self._goal_counter += 1
+        self._current_goal_id = self._goal_counter
         future = self._client.send_goal_async(goal)
         future.add_done_callback(self.__goal_accepted_cb)
         return future
 
     def send_goal(self, goal):
-        # this works in theory too, but not in pycharms debugger, that's why i'm putting it into a function
-        # self._event_loop.run_until_complete(self.send_goal_async(goal))
-        # return self._event_loop.run_until_complete(self.get_result())
         async def muh():
             await self.send_goal_async(goal)
             return await self.get_result()
 
-        return self._event_loop.run_until_complete(muh())
+        return get_event_loop().run_until_complete(muh())
 
     async def get_result(self):
-        await wait_until_not_none(lambda: self._result_future)
-        result = await self._result_future
-        self._result_future = None
-        return result.result
+        await wait_until_not_none(lambda: self.result)
+        result = self.result
+        self.result = None
+        return result
 
     def __goal_accepted_cb(self, future: Future):
         goal_handle = future.result()
+        goal_id = self._goal_counter  # Capture the current goal ID
+
         if not goal_handle.accepted:
-            self.node_handle.get_logger().info('Goal rejected')
+            self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} rejected')
+            return
+
+        # Only process if this is still the current goal
+        if goal_id != self._current_goal_id:
+            self.node_handle.get_logger().debug(f'Ignoring accepted callback for old goal {goal_id}')
             return
 
         self._goal_handle = goal_handle
-        self.node_handle.get_logger().info('Goal accepted')
+        self.node_handle.get_logger().info(f'{self.action_name} Goal #{goal_id} accepted')
 
         self._result_future = self._goal_handle.get_result_async()
-        self._result_future.add_done_callback(self.__goal_done_cb)
+        self._result_future.add_done_callback(
+            lambda f: self.__goal_done_cb(f, goal_id))
 
-    def __goal_done_cb(self, future: Future):
-        self.node_handle.get_logger().info(f'Goal result received')
+    def __goal_done_cb(self, future: Future, goal_id: int):
+        # Only process if this is still the current goal
+        if goal_id != self._current_goal_id:
+            self.node_handle.get_logger().debug(f'Ignoring done callback for old goal {goal_id}')
+            self.result = None
+            return
+
+        self.node_handle.get_logger().info(f'{self.action_name} Goal #{goal_id} result received')
+        self.result = future.result().result
         self._goal_handle = None
+        self._current_goal_id = None
+        self._result_future = None

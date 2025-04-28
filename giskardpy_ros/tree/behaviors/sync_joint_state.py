@@ -1,25 +1,21 @@
 from typing import Optional
 
-from line_profiler import profile
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 
+import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.data_types import JointStates
 from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy_ros.ros2.ros2_interface import wait_for_topic_to_appear
-
+from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.utils.decorators import record_time
-import giskardpy_ros.ros2.msg_converter as msg_converter
-from line_profiler import profile
+
 
 class SyncJointState(GiskardBehavior):
 
     @record_time
-    @profile
     def __init__(self, group_name: str, joint_state_topic: str = 'joint_states'):
         self.data = None
         self.group_name = group_name
@@ -29,7 +25,6 @@ class SyncJointState(GiskardBehavior):
         super().__init__(str(self))
 
     @record_time
-    @profile
     def setup(self, **kwargs):
         # wait_for_topic_to_appear(topic_name=self.joint_state_topic, supported_types=[JointState])
         self.joint_state_sub = rospy.node.create_subscription(JointState, self.joint_state_topic, self.cb, 1)
@@ -39,7 +34,6 @@ class SyncJointState(GiskardBehavior):
         self.data = data
 
     @record_time
-    @profile
     def update(self):
         if self.data:
             mjs = msg_converter.ros_joint_state_to_giskard_joint_state(self.data, self.group_name)
@@ -61,7 +55,6 @@ class SyncJointStatePosition(GiskardBehavior):
     msg: JointState
 
     @record_time
-    @profile
     def __init__(self, group_name: str, joint_state_topic='joint_states'):
         super().__init__(str(self))
         self.joint_state_topic = joint_state_topic
@@ -73,7 +66,6 @@ class SyncJointStatePosition(GiskardBehavior):
         self.group_name = group_name
 
     @record_time
-    @profile
     def setup(self, **kwargs):
         self.joint_state_sub = rospy.node.create_subscription(JointState, self.joint_state_topic, self.cb, 1)
         get_middleware().loginfo(f'Subscribed to {self.joint_state_topic}')
@@ -82,13 +74,11 @@ class SyncJointStatePosition(GiskardBehavior):
     def cb(self, data):
         self.msg = data
 
-    @profile
     def initialise(self):
         self.last_time = rospy.node.get_clock().now()
         super().initialise()
 
     @record_time
-    @profile
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
             joint_name = PrefixName(joint_name, self.group_name)

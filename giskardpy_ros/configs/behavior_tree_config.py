@@ -147,6 +147,9 @@ class BehaviorTreeConfig(ABC):
             self.tree.control_loop_branch.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                          tf_topic=tf_topic,
                                                                          mode=mode)
+    def add_robot_description_publisher(self, topic: str = 'robot_description'):
+        if GiskardBlackboard().tree.is_standalone():
+            self.tree.wait_for_goal.publish_state.add_robot_description_publisher(topic=topic)
 
     def add_evaluate_debug_expressions(self):
         self.tree.prepare_control_loop.add_compile_debug_expressions()
@@ -190,7 +193,8 @@ class StandAloneBTConfig(BehaviorTreeConfig):
                  visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked,
                  publish_free_variables: bool = False,
                  publish_tf: bool = True,
-                 include_prefix: bool = False):
+                 include_prefix: bool = False,
+                 publish_robot_description: bool = True):
         """
         The default behavior tree for Giskard in standalone mode. Make sure to set up the robot interface accordingly.
         :param debug_mode: enable various debugging tools.
@@ -211,6 +215,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
         self.publish_js = publish_js
         self.publish_free_variables = publish_free_variables
         self.publish_tf = publish_tf
+        self.publish_robot_description = publish_robot_description
         if publish_js and publish_free_variables:
             raise SetupException('publish_js and publish_free_variables cannot be True at the same time.')
 
@@ -219,9 +224,12 @@ class StandAloneBTConfig(BehaviorTreeConfig):
                                                 mode=self.visualization_mode)
         if self.publish_tf:
             self.add_tf_publisher(include_prefix=self.include_prefix, mode=TfPublishingModes.all)
-        self.add_gantt_chart_plotter()
-        self.add_goal_graph_plotter()
+        if self.publish_robot_description:
+            self.add_robot_description_publisher()
+        self.add_evaluate_debug_expressions()
         if self.debug_mode:
+            # self.add_gantt_chart_plotter()
+            # self.add_goal_graph_plotter()
             # self.add_trajectory_plotter(wait=True)
             # self.add_debug_trajectory_plotter(wait=True)
             # self.add_debug_trajectory_plotter(wait=True)
@@ -253,9 +261,9 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
     def setup(self):
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
-        self.add_gantt_chart_plotter()
-        self.add_goal_graph_plotter()
         if self.debug_mode:
+            self.add_gantt_chart_plotter()
+            self.add_goal_graph_plotter()
             self.add_trajectory_plotter(wait=True)
             self.add_debug_trajectory_plotter(wait=True)
             self.add_debug_marker_publisher()
@@ -285,9 +293,9 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=False,
                                                 mode=self.visualization_mode)
         # self.add_qp_data_publisher(publish_xdot=True, publish_lb=True, publish_ub=True)
-        self.add_gantt_chart_plotter()
-        self.add_goal_graph_plotter()
         if self.debug_mode:
+            self.add_gantt_chart_plotter()
+            self.add_goal_graph_plotter()
             self.add_trajectory_plotter(wait=True)
             self.add_debug_trajectory_plotter(wait=True)
             self.add_debug_marker_publisher()

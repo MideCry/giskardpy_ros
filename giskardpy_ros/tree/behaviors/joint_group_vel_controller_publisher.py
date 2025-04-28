@@ -16,7 +16,7 @@ from line_profiler import profile
 
 
 class JointGroupVelController(GiskardBehavior):
-    @profile
+
     def __init__(self, cmd_topic: str, joints: List[PrefixName]):
         super().__init__()
         self.cmd_topic = cmd_topic
@@ -31,7 +31,7 @@ class JointGroupVelController(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    @profile
+
     def update(self):
         msg = Float64MultiArray()
         for i, joint_name in enumerate(self.joint_names):

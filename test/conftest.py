@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import rclpy
 from geometry_msgs.msg import PoseStamped, Quaternion
 
 import giskardpy_ros.ros2.tfwrapper as tf
@@ -23,6 +22,7 @@ def ros(request):
     get_middleware().loginfo('done tf init')
 
     def kill_ros():
+        import rclpy
         try:
             GiskardBlackboard().tree.render()
         except KeyError as e:
@@ -30,20 +30,6 @@ def ros(request):
         get_middleware().loginfo('shutdown ros')
         rclpy.shutdown()
 
-    # try:
-    #     rospy.get_param('kitchen_description')
-    # except:
-    #     try:
-    #         launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch.py')
-    #     except:
-    #         get_middleware().logwarn('iai_apartment not found')
-    # try:
-    #     rospy.get_param('apartment_description')
-    # except:
-    #     try:
-    #         launch_launchfile('package://iai_apartment/launch/upload_apartment.launch')
-    #     except:
-    #         get_middleware().logwarn('iai_kitchen not found')
     request.addfinalizer(kill_ros)
 
 
@@ -58,7 +44,7 @@ def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
         done = giskard.api.monitors.add_set_seed_odometry(zero, name='initial pose')
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(start_condition=done)
-        giskard.execute(add_monitors_for_everything=False)
+        giskard.execute()
     giskard.api.world.clear()
     giskard.reset()
     return giskard
@@ -71,12 +57,12 @@ def zero_pose(resetted_giskard: GiskardTester) -> GiskardTester:
                                                                     name='initial joint state')
         resetted_giskard.api.motion_goals.allow_all_collisions()
         resetted_giskard.api.monitors.add_end_motion(start_condition=done)
-        resetted_giskard.execute(add_monitors_for_everything=False)
+        resetted_giskard.execute()
     else:
         resetted_giskard.api.motion_goals.allow_all_collisions()
         done = resetted_giskard.api.motion_goals.add_joint_position(name='joint goal', goal_state=resetted_giskard.default_pose)
         resetted_giskard.api.monitors.add_end_motion(start_condition=done)
-        resetted_giskard.execute(add_local_minimum_reached=False)
+        resetted_giskard.execute(local_min_end=False)
     return resetted_giskard
 
 
@@ -87,11 +73,10 @@ def better_pose(resetted_giskard: GiskardTester) -> GiskardTester:
                                                                     name='initial joint state')
         resetted_giskard.api.motion_goals.allow_all_collisions()
         resetted_giskard.api.monitors.add_end_motion(start_condition=done)
-        resetted_giskard.execute(add_monitors_for_everything=False)
+        resetted_giskard.execute()
     else:
         resetted_giskard.api.motion_goals.allow_all_collisions()
         resetted_giskard.api.motion_goals.add_joint_position(resetted_giskard.better_pose)
-        resetted_giskard.api.add_default_end_motion_conditions()
         resetted_giskard.execute()
     return resetted_giskard
 
@@ -131,8 +116,8 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     if GiskardBlackboard().tree.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
-        kitchen_pose.pose.position.x = -2
-        kitchen_pose.pose.position.y = 2
+        kitchen_pose.pose.position.x = -2.
+        kitchen_pose.pose.position.y = 2.
         kitchen_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle([0,0,1], -np.pi/2))
         kitchen_urdf = load_xacro('package://iai_kitchen/urdf_obj/iai_kitchen_python.urdf.xacro')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
@@ -164,12 +149,13 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
         kitchen_pose.pose.orientation.w = 1.0
+        apartment_urdf = load_xacro('package://iai_apartment/urdf/apartment.urdf')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('apartment_description'),
+                                      urdf=apartment_urdf,
                                       pose=kitchen_pose)
     else:
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('apartment_description'),
+                                      urdf=ros2_interface.get_robot_description('apartment_description'),
                                       pose=tf.lookup_pose('map', 'iai_apartment/apartment_root'),
                                       js_topic='/apartment_joint_states',
                                       set_js_topic='/iai_kitchen/cram_joint_states')
@@ -183,7 +169,7 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     base_pose.header.frame_id = 'iai_apartment/side_B'
     base_pose.pose.position.x = 1.5
     base_pose.pose.position.y = 2.4
-    base_pose.pose.orientation.w = 1
+    base_pose.pose.orientation.w = 1.
     base_pose = better_pose.transform_msg(god_map.world.root_link_name, base_pose)
     better_pose.teleport_base(base_pose)
     return better_pose

@@ -11,6 +11,8 @@ from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes, TFPubli
 from giskardpy_ros.tree.behaviors.visualization import VisualizationBehavior
 from giskardpy.utils.decorators import toggle_on, toggle_off
 
+from giskardpy_ros.tree.behaviors.robot_description_publisher import RobotDescriptionPublisher
+
 
 class PublishState(Sequence):
     visualization_behavior: Optional[VisualizationBehavior]
@@ -41,6 +43,10 @@ class PublishState(Sequence):
     def add_tf_publisher(self, include_prefix: bool = False, tf_topic: str = 'tf',
                          mode: TfPublishingModes = TfPublishingModes.attached_and_world_objects):
         node = TFPublisher('publish tf', mode=mode, tf_topic=tf_topic, include_prefix=include_prefix)
+        self.add_child(node)
+
+    def add_robot_description_publisher(self, topic: str = 'robot_description'):
+        node = RobotDescriptionPublisher('publish robot description', topic=topic)
         self.add_child(node)
 
     def add_qp_data_publisher(self, publish_lb: bool = False, publish_ub: bool = False, publish_lbA: bool = False,

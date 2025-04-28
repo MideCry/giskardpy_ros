@@ -18,10 +18,8 @@ class EvaluateDebugExpressions(GiskardBehavior):
         super().__init__(name)
         self.log_traj = log_traj
 
-    @catch_and_raise_to_blackboard
+    @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
-    @profile
     def update(self):
         god_map.debug_expression_manager.eval_debug_expressions(self.log_traj)
         return Status.RUNNING
-

@@ -36,13 +36,14 @@ class ProcessWorldUpdate(GiskardBehavior):
         super().__init__(name)
 
     @record_time
-    @profile
     def setup(self, **kwargs):
         self.marker_publisher = rospy.node.create_publisher(MarkerArray,
-                                                          f'{rospy.node.get_name()}/visualization_marker_array', 10)
+                                                            f'{rospy.node.get_name()}/visualization_marker_array', 10)
         self.get_group_names = rospy.node.create_service(GetGroupNames,
-                                                       f'{rospy.node.get_name()}/get_group_names', self.get_group_names_cb)
-        self.get_group_info = rospy.node.create_service(GetGroupInfo, f'{rospy.node.get_name()}/get_group_info', self.get_group_info_cb)
+                                                         f'{rospy.node.get_name()}/get_group_names',
+                                                         self.get_group_names_cb)
+        self.get_group_info = rospy.node.create_service(GetGroupInfo, f'{rospy.node.get_name()}/get_group_info',
+                                                        self.get_group_info_cb)
         self.dye_group = rospy.node.create_service(DyeGroup, f'{rospy.node.get_name()}/dye_group', self.dye_group)
         return super().setup(**kwargs)
 
@@ -94,7 +95,6 @@ class ProcessWorldUpdate(GiskardBehavior):
             res.error_codes = DyeGroup_Response.GROUP_NOT_FOUND_ERROR
         return res
 
-    @profile
     def get_group_names_cb(self, req: GetGroupNames_Request, res: GetGroupNames_Response) -> GetGroupNames_Response:
         group_names = god_map.world.group_names
         groups = list(sorted(group_names))
@@ -103,7 +103,6 @@ class ProcessWorldUpdate(GiskardBehavior):
         res.group_names = groups
         return res
 
-    @profile
     def get_group_info_cb(self, req: GetGroupInfo_Request, res: GetGroupInfo_Response) -> GetGroupInfo_Response:
         res.error_codes = GetGroupInfo_Response.SUCCESS
         try:
@@ -122,7 +121,6 @@ class ProcessWorldUpdate(GiskardBehavior):
 
         return res
 
-    @profile
     def add_object(self, req: World_Goal) -> None:
         group_name = req.group_name
         if group_name in god_map.world.groups:
@@ -169,7 +167,6 @@ class ProcessWorldUpdate(GiskardBehavior):
         if world_body.tf_root_link_name:
             raise NotImplementedError('tf_root_link_name is not implemented')
 
-    @profile
     def update_group_pose(self, req: World_Goal):
         if req.group_name not in god_map.world.groups:
             raise UnknownGroupException(f'Can\'t update pose of unknown group: \'{req.group_name}\'')
@@ -180,7 +177,6 @@ class ProcessWorldUpdate(GiskardBehavior):
         god_map.world.joints[joint_name].update_transform(pose)
         god_map.world.notify_state_change()
 
-    @profile
     def update_parent_link(self, req: World_Goal):
         parent_link = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
         if req.group_name not in god_map.world.groups:
@@ -189,11 +185,12 @@ class ProcessWorldUpdate(GiskardBehavior):
         if group.root_link_name != parent_link:
             old_parent_link = group.parent_link_of_root
             god_map.world.move_group(req.group_name, parent_link)
-            get_middleware().loginfo(f'Reattached \'{req.group_name}\' from \'{old_parent_link}\' to \'{req.parent_link}\'.')
+            get_middleware().loginfo(
+                f'Reattached \'{req.group_name}\' from \'{old_parent_link}\' to \'{req.parent_link}\'.')
         else:
-            get_middleware().logwarn(f'Didn\'t update world. \'{req.group_name}\' is already attached to \'{req.parent_link}\'.')
+            get_middleware().logwarn(
+                f'Didn\'t update world. \'{req.group_name}\' is already attached to \'{req.parent_link}\'.')
 
-    @profile
     def remove_object(self, name: str):
         if name not in god_map.world.groups:
             raise UnknownGroupException(f'Can not remove unknown group: {name}.')
@@ -201,7 +198,6 @@ class ProcessWorldUpdate(GiskardBehavior):
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_group_behaviors(name)
         get_middleware().loginfo(f'Deleted \'{name}\'.')
 
-    @profile
     def clear_world(self):
         tmp_state = deepcopy(god_map.world.state)
         god_map.world.clear()

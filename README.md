@@ -27,5 +27,11 @@ source ~/giskard_ws/install/setup.bash
 https://github.com/SemRoCo/giskardpy/wiki
 
 ### How to cite
-Stelter, Simon, Georg Bartels, and Michael Beetz. "An open-source motion planning framework for mobile manipulators using constraint-based task space control with linear MPC." 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). IEEE, 2022.
-
+```
+@phdthesis{stelter25giskard,
+	author = {Simon Stelter},
+	title = {A Robot-Agnostic Kinematic Control Framework: Task Composition via Motion Statecharts and Linear Model Predictive Control},
+	year = {2025},
+	doi = {10.26092/elib/3743},	
+}
+```

@@ -16,14 +16,12 @@ from line_profiler import profile
 
 class SetMoveResult(GiskardBehavior):
 
-    @profile
     def __init__(self, name, context, print=True):
         self.print = print
         self.context = context
         super().__init__(name)
 
     @record_time
-    @profile
     def update(self):
         e = self.get_blackboard_exception()
         if e is None:

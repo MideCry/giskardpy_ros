@@ -11,7 +11,7 @@ class EvaluateMonitors(GiskardBehavior):
     def __init__(self, name: str = 'evaluate monitors'):
         super().__init__(name)
 
-    @catch_and_raise_to_blackboard
+    @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
     def update(self):
         if god_map.motion_statechart_manager.evaluate_node_states():
