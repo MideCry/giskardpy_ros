@@ -27,6 +27,7 @@ def setup(init_pose_pub: Publisher):
     gis.motion_goals.add_cartesian_pose(root_link='map', tip_link='base_footprint', goal_pose=base_pose)
 
     gis.monitors.add_end_motion(start_condition=f'{joint_reset} and {odom}')
+    gis.motion_goals.allow_all_collisions()
     gis.execute()
 
     gis.motion_goals.add_take_pose(pose_keyword='park')
@@ -39,6 +40,7 @@ def setup(init_pose_pub: Publisher):
                                                          'wrist_roll_joint': 0.0},
                                              threshold=0.05)
     gis.monitors.add_end_motion(start_condition=joints)
+    gis.motion_goals.allow_all_collisions()
     gis.execute()
 
     init_pose = PoseWithCovarianceStamped()
