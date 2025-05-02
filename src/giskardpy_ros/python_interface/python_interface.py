@@ -3264,6 +3264,7 @@ class GiskardWrapper:
         goal_angle_full = 1.35
         bar_length = 0.1
         after_force_retract = 0.05
+        intermediate_point_scale = 1.05
         env_name = 'iai_kitchen'
         allow_collision_group = 'arm'
 
@@ -3402,7 +3403,7 @@ class GiskardWrapper:
                                                                        tip_gripper_axis=tip_grasp_axis_push,
                                                                        weight=WEIGHT_ABOVE_CA,
                                                                        goal_angle=goal_angle_half,
-                                                                       intermediate_point_scale=0.95,
+                                                                       intermediate_point_scale=intermediate_point_scale,
                                                                        start_condition=joint_monitor)
         # align_push_door_local_min = self.monitors.add_local_minimum_reached(name='align push door local min',
         #                                                                     start_condition=joint_monitor)
@@ -3414,7 +3415,7 @@ class GiskardWrapper:
                                                  tip_gripper_axis=tip_grasp_axis_push,
                                                  weight=WEIGHT_ABOVE_CA,
                                                  goal_angle=goal_angle_half,
-                                                 intermediate_point_scale=0.95,
+                                                 intermediate_point_scale=intermediate_point_scale,
                                                  start_condition=joint_monitor,
                                                  end_condition=align_push_door_monitor)
 
