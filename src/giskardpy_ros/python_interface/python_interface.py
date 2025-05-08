@@ -33,7 +33,7 @@ from giskardpy.motion_statechart.goals.open_close import Close, Open
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
 from giskardpy.motion_statechart.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, \
     OpenDoorGoal, Mixing, \
-    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion
+    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
     PointingAt, VectorsAligned, DistanceToLine
 from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
@@ -1693,12 +1693,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                              bar_center: PointStamped,
                              bar_axis: Vector3Stamped,
                              bar_length: float,
-                             tip_link: str,
+                             tip_link: Union[str, giskard_msgs.LinkName],
                              tip_grasp_axis: Vector3Stamped,
-                             root_link: str,
+                             root_link: Union[str, giskard_msgs.LinkName],
                              grasp_axis_offset: Vector3Stamped,
-                             tip_group: Optional[str] = None,
-                             root_group: Optional[str] = None,
                              reference_linear_velocity: Optional[float] = None,
                              reference_angular_velocity: Optional[float] = None,
                              weight: Optional[float] = None,
@@ -1728,6 +1726,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=GraspBarOffset.__name__,
                                     root_link=root_link,
                                     tip_link=tip_link,
@@ -1736,8 +1738,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     bar_axis=bar_axis,
                                     bar_length=bar_length,
                                     grasp_axis_offset=grasp_axis_offset,
-                                    root_group=root_group,
-                                    tip_group=tip_group,
                                     reference_linear_velocity=reference_linear_velocity,
                                     reference_angular_velocity=reference_angular_velocity,
                                     weight=weight,
@@ -1746,6 +1746,79 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
                                     **kwargs)
+
+    def add_grasp_with_ft_sensor(self,
+                                 root_link: Union[str, giskard_msgs.LinkName],
+                                 tip_link: Union[str, giskard_msgs.LinkName],
+                                 handle_name: Union[str, giskard_msgs.LinkName],
+                                 tip_grasp_axis: Vector3Stamped,
+                                 bar_axis: Vector3Stamped,
+                                 tip_retract: PointStamped,
+                                 handle_align_axis: Vector3Stamped,
+                                 tip_align_axis: Vector3Stamped,
+                                 grasp_axis_offset: Vector3Stamped,
+                                 pre_grasp_axis_offset: Vector3Stamped,
+                                 hinge_joint: Union[str, giskard_msgs.LinkName],
+                                 bar_length: float = 0.01,
+                                 timeout: float = 10,
+                                 ft_topic: str = '/filtered_raw/diff',
+                                 ft_grasp_ref_speed: float = 1,
+                                 name: str = None,
+                                 start_condition: str = '',
+                                 pause_condition: str = '',
+                                 end_condition: str = '', ) -> str:
+        """
+        Complex grasping motion using the ForceTorqueMonitor.
+
+        :param root_link: root-link of the kinematic chain.
+        :param tip_link: tip-link of the kinematic chain.
+        :param handle_name: LinkName of the environment-link that is to be grasped.
+        :param tip_grasp_axis: axis of tip-link that is to be aligned with bar axis.
+        :param bar_axis: axis of the handle along which the handlebar is.
+        :param tip_retract: distance the tip will retract after force-torque-threshold is reached.
+        :param handle_align_axis: axis of the handle which will be aligned with the grasp_axis while grasping.
+        :param tip_align_axis: axis of the tip_link along which is grasped. e.g. z-axis of the hsrb-gripper.
+        :param grasp_axis_offset: offset for grasping, such that force-torque sensor can be triggered.
+        :param pre_grasp_axis_offset: offset for pre-grasp-pose, from which the ft-grasping is started.
+        :param hinge_joint: hinge joint to be locked in place while grasping.
+        :param bar_length: length of the handlebar.
+        :param timeout: duration after which the ft-grasping is cancelled.
+        :param ft_topic: topic of the sensor-data for the ft-monitor.
+        :param ft_grasp_ref_speed: reference-speed-modifier for the ft-grasping motion.
+        :param name: Name of the Goal
+        :param start_condition: expression that starts goal
+        :param pause_condition: expression that pauses goal
+        :param end_condition: expression that ends goal
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        if isinstance(handle_name, str):
+            handle_name = giskard_msgs.LinkName(name=handle_name)
+        if isinstance(hinge_joint, str):
+            hinge_joint = giskard_msgs.LinkName(name=hinge_joint)
+
+        return self.add_motion_goal(class_name=GraspWithForceTorqueGoal.__name__,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    handle_name=handle_name,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_axis=bar_axis,
+                                    tip_retract=tip_retract,
+                                    handle_align_axis=handle_align_axis,
+                                    tip_align_axis=tip_align_axis,
+                                    grasp_axis_offset=grasp_axis_offset,
+                                    pre_grasp_axis_offset=pre_grasp_axis_offset,
+                                    hinge_joint=hinge_joint,
+                                    bar_length=bar_length,
+                                    timeout=timeout,
+                                    ft_topic=ft_topic,
+                                    ft_grasp_ref_speed=ft_grasp_ref_speed,
+                                    name=name,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def hsrb_open_door_goal(self,
                             door_handle_link: Union[str, giskard_msgs.LinkName],
@@ -1756,7 +1829,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                             hinge_limit: Optional[float] = -(np.pi / 4),
                             start_condition: str = '',
                             pause_condition: str = '',
-                            end_condition: str = ''):
+                            end_condition: str = '') -> str:
         """
         HSRB specific open door goal wrapper
 
@@ -1790,7 +1863,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                ref_speed: Optional[float] = 1,
                                start_condition: str = '',
                                pause_condition: str = '',
-                               end_condition: str = ''):
+                               end_condition: str = '') -> str:
         """
         HSRB specific set_grasp_bar_goal, that only needs handle_name of the door_handle
 
@@ -1862,7 +1935,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     name: Optional[str] = None,
                                     start_condition: str = '',
                                     pause_condition: str = '',
-                                    end_condition: str = ''):
+                                    end_condition: str = '') -> str:
         """
         HSRB specific avoid dishwasher door goal
 
