@@ -98,9 +98,9 @@ def grasping():
     ref_speed = 0.3
     handle_retract_distance = 0.063
     bar_center_offset = 0.01
-    pre_grasp_distance = 0.15
-    grasp_into_distance = -0.1
-    ft_timeout = 10
+    pre_grasp_distance = -0.15
+    grasp_into_distance = 0.1
+    ft_timeout = 1000
 
     bar_axis = Vector3Stamped()
     bar_axis.header.frame_id = handle_name
@@ -121,67 +121,39 @@ def grasping():
     x_goal.header.frame_id = handle_name
     x_goal.vector.z = -1
 
-    pre_grasp = gis.monitors.add_local_minimum_reached(name='pre grasp local min')
+    grasp_axis_offset = Vector3Stamped()
+    grasp_axis_offset.header.frame_id = tip
+    grasp_axis_offset.vector.y = grasp_into_distance
 
-    offset_pre = Vector3Stamped()
-    offset_pre.header.frame_id = tip
-    offset_pre.vector.y = pre_grasp_distance
-    offset_pre.vector.z = bar_center_offset
+    pre_grasp_axis_offset = Vector3Stamped()
+    pre_grasp_axis_offset.header.frame_id = tip
+    pre_grasp_axis_offset.vector.y = pre_grasp_distance
 
-    gis.motion_goals.add_joint_position(goal_state={hinge_joint: 0})
+    handle_retract = PointStamped()
+    handle_retract.header.frame_id = tip
+    handle_retract.point.z = -handle_retract_distance
 
-    gis.motion_goals.hsrb_door_handle_grasp(name='pre grasp', handle_name=handle_name, handle_bar_length=handle_length,
-                                            grasp_axis_offset=offset_pre, end_condition=pre_grasp)
+    open_gripper = gis.monitors.add_open_hsr_gripper()
 
-    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=pre_grasp)
+    grasp = gis.motion_goals.add_grasp_with_ft_sensor(root_link='map',
+                                                      tip_link=tip,
+                                                      handle_name=handle_name,
+                                                      tip_grasp_axis=tip_grasp_axis,
+                                                      bar_axis=bar_axis,
+                                                      tip_retract=handle_retract,
+                                                      handle_align_axis=x_goal,
+                                                      tip_align_axis=x_gripper,
+                                                      grasp_axis_offset=grasp_axis_offset,
+                                                      pre_grasp_axis_offset=pre_grasp_axis_offset,
+                                                      hinge_joint=hinge_joint,
+                                                      timeout=ft_timeout,
+                                                      ft_grasp_ref_speed=ref_speed,
+                                                      start_condition=open_gripper)
+    gis.update_end_condition(node_name=grasp, condition=grasp)
 
-    gis.motion_goals.add_align_planes(name='pre grasp align',
-                                      tip_link=tip,
-                                      tip_normal=x_gripper,
-                                      goal_normal=x_goal,
-                                      root_link='map',
-                                      end_condition=open_gripper)
-
-    gis.motion_goals.add_align_planes(name='grasp align',
-                                      tip_link=tip,
-                                      tip_normal=x_gripper,
-                                      goal_normal=x_goal,
-                                      root_link='map',
-                                      start_condition=open_gripper)
-
-    offset = Vector3Stamped()
-    offset.header.frame_id = tip
-    offset.vector.y = grasp_into_distance
-    offset.vector.z = bar_center_offset
-
-    slep = gis.monitors.add_sleep(seconds=ft_timeout, start_condition=open_gripper)
-    force = gis.monitors.add_force_torque(threshold_enum=ForceTorqueThresholds.DOOR.value, object_type='',
-                                          start_condition=open_gripper)
-    gis.motion_goals.hsrb_door_handle_grasp(name='grasp', handle_name=handle_name, handle_bar_length=handle_length,
-                                            grasp_axis_offset=offset, ref_speed=ref_speed, start_condition=open_gripper,
-                                            end_condition=force)
-
-    goal_point = PointStamped()
-    goal_point.header.frame_id = 'base_link'
-
-    handle_retract_direction = Vector3Stamped()
-    handle_retract_direction.header.frame_id = handle_name
-    handle_retract_direction.vector.z = handle_retract_distance
-
-    base_retract = tf.transform_vector(goal_point.header.frame_id, handle_retract_direction)
-
-    goal_point.point = Point(base_retract.vector.x, base_retract.vector.y, base_retract.vector.z)
-
-    gis.motion_goals.add_cartesian_position(root_link='map', tip_link='base_link', reference_velocity=0.05,
-                                            goal_point=goal_point, start_condition=force)
-    grasped = gis.monitors.add_cartesian_position(root_link='map', tip_link='base_link', goal_point=goal_point,
-                                                  name='grasped monitor', start_condition=force)
-
-    close_gripper = gis.monitors.add_close_hsr_gripper(start_condition=grasped)
+    close_gripper = gis.monitors.add_close_hsr_gripper(start_condition=grasp)
 
     gis.monitors.add_end_motion(start_condition=close_gripper)
-    gis.monitors.add_cancel_motion(f'not {force} and {slep} ',
-                                   ObjectForceTorqueThresholdException('Door not touched!'))
 
     gis.motion_goals.allow_all_collisions()
     gis.execute()
@@ -227,12 +199,14 @@ def full_opening():
 
     handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
     handle_turn_limit = 0.35
-    hinge_turn_limit = -1.3
+    hinge_turn_limit = -1.2
+    name = 'OpenDoorGoal'
 
-    gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=handle_turn_limit,
-                                         hinge_limit=hinge_turn_limit)
+    open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=handle_turn_limit,
+                                                     hinge_limit=hinge_turn_limit, name=name, end_condition=name)
 
     gis.motion_goals.allow_all_collisions()
+    gis.monitors.add_end_motion(start_condition=open_goal)
     gis.execute()
 
 
@@ -241,7 +215,7 @@ rospy.init_node('giskard_demo')
 init_pub = rospy.Publisher('/initialpose', data_class=PoseWithCovarianceStamped, queue_size=10)
 
 gis = GiskardWrapper()
-test = 0
+test = 1
 
 setup(init_pose_pub=init_pub)
 
