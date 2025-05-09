@@ -15,8 +15,8 @@ def setup(init_pose_pub: Publisher):
     hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
     base_pose = PoseStamped()
     base_pose.header.frame_id = 'map'
-    base_pose.pose.position.x = 1.8
-    base_pose.pose.position.y = -0.8
+    base_pose.pose.position.x = 2
+    base_pose.pose.position.y = 0.4
     base_pose.pose.orientation.z = -1
 
     odom = gis.monitors.add_local_minimum_reached()
@@ -96,7 +96,7 @@ def grasping():
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
     ref_speed = 0.3
-    handle_retract_distance = -0.063
+    handle_retract_distance = -0.055
     bar_center_offset = 0.01
     pre_grasp_distance = -0.2
     grasp_into_distance = 0.2
