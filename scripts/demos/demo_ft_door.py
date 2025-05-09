@@ -122,12 +122,12 @@ def grasping():
     x_goal.vector.z = -1
 
     grasp_axis_offset = Vector3Stamped()
-    grasp_axis_offset.header.frame_id = tip
-    grasp_axis_offset.vector.y = grasp_into_distance
+    grasp_axis_offset.header.frame_id = handle_name
+    grasp_axis_offset.vector.z = grasp_into_distance
 
     pre_grasp_axis_offset = Vector3Stamped()
-    pre_grasp_axis_offset.header.frame_id = tip
-    pre_grasp_axis_offset.vector.y = pre_grasp_distance
+    pre_grasp_axis_offset.header.frame_id = handle_name
+    pre_grasp_axis_offset.vector.z = pre_grasp_distance
 
     handle_retract = PointStamped()
     handle_retract.header.frame_id = tip
