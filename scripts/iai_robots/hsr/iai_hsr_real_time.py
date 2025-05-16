@@ -17,7 +17,7 @@ if __name__ == '__main__':
                       collision_avoidance_config=HSRCollisionAvoidanceConfig(),
                       robot_interface_config=HSRVelocityInterface(),
                       behavior_tree_config=ClosedLoopBTConfig(publish_free_variables=True, debug_mode=debug_mode,
-                                                              add_tf_pub=True),
+                                                              add_tf_pub=False),
                       qp_controller_config=QPControllerConfig(mpc_dt=0.025,
                                                               prediction_horizon=20,
                                                               control_dt=0.025))
