@@ -1,5 +1,6 @@
 import traceback
 from threading import Thread
+from time import sleep
 
 import rclpy
 from ament_index_python import get_package_share_directory
@@ -60,6 +61,7 @@ def heart():
     try:
         while rclpy.ok():
             executor.spin_once(timeout_sec=0.1)
+            sleep(0.001)
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     except Exception as e:
