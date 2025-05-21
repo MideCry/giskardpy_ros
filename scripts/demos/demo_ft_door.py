@@ -96,9 +96,9 @@ def grasping():
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
     ref_speed = 0.3
-    handle_retract_distance = -0.055
+    handle_retract_distance = -0.053
     bar_center_offset = 0.01
-    pre_grasp_distance = -0.2
+    pre_grasp_distance = -0.15
     grasp_into_distance = 0.2
     ft_timeout = 1000
 
@@ -159,46 +159,11 @@ def grasping():
     gis.execute()
 
 
-def handle_turning():
-    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
-    hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
-
-    gis.motion_goals.add_joint_position(goal_state={hinge_joint: 0})
-    gis.motion_goals.add_open_container(tip_link='hand_gripper_tool_frame', environment_link=handle_name,
-                                        goal_joint_state=0.35)
-    handle_monitor = gis.monitors.add_joint_position(goal_state={handle_joint: 0.35})
-    gis.monitors.add_end_motion(start_condition=handle_monitor)
-
-    gis.execute()
-
-
-def hinge_turning():
-    hinge_name = 'iai_kitchen/iai_kitchen:arena:door_center'
-    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
-
-    x_goal = Vector3Stamped()
-    x_goal.header.frame_id = handle_name
-    x_goal.vector.z = -1
-
-    x_base = Vector3Stamped()
-    x_base.header.frame_id = 'base_link'
-    x_base.vector.y = 1
-
-    gis.motion_goals.add_align_planes(goal_normal=x_goal, tip_link='base_link', tip_normal=x_base, root_link='map')
-    gis.motion_goals.add_close_container(tip_link='hand_gripper_tool_frame', environment_link=hinge_name)
-    door_hinge_monitor = gis.monitors.add_joint_position(goal_state={hinge_joint: -1.3})
-    gis.monitors.add_end_motion(start_condition=door_hinge_monitor)
-
-    gis.execute()
-
-
 def full_opening():
     grasping()
 
     handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    handle_turn_limit = 0.35
+    handle_turn_limit = 0.4
     hinge_turn_limit = -1.2
     name = 'OpenDoorGoal'
 
@@ -225,9 +190,5 @@ if test == 1:
     full_opening()
 elif test == 2:
     grasping()
-elif test == 3:
-    handle_turning()
-elif test == 4:
-    hinge_turning()
 else:
     gis.hsr_door_opening(ft_timeout=10000)
