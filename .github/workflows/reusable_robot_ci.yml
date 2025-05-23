@@ -131,7 +131,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: actions/checkout@v3
-        if: inputs.is_trigger == false || env.pr_found == 'false' || env.pr_mergeable != 'MERGEABLE'
+        if: (inputs.is_trigger == false && github.event_name == 'push') || env.pr_found == 'false' || env.pr_mergeable != 'MERGEABLE'
         # fallback repo and branch, if event is push or no merge-able pr is found
         with:
           path: 'giskardpy'
