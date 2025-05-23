@@ -42,6 +42,7 @@ from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 from giskardpy.motion_statechart.tasks.feature_functions import HeightGoal, DistanceGoal
 from giskardpy.motion_statechart.goals.sequence_goal import SimpleSequenceGoal
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
+from giskard_msgs.msg import MotionStatechartNode
 
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
@@ -4663,27 +4664,73 @@ class TestFeatureFunctions:
         start_spiral.header.frame_id = 'map'
         start_spiral.point = Point(2, -0.2, 0.45)
 
-        seq = \
-            [
-                [
-                    {'class_name': DistanceGoal.__name__, 'name': 'distanceG', 'reference_point': world_feature2,
-                     'tip_point': robot_feature, 'root_link': root_link, 'tip_link': tip_link, 'lower_limit': 0.00,
-                     'upper_limit': 0.02},
-                    {'class_name': HeightGoal.__name__, 'name': 'HeightG', 'reference_point': world_feature2,
-                     'tip_point': robot_feature, 'root_link': root_link, 'tip_link': tip_link, 'lower_limit': 0.6,
-                     'upper_limit': 0.7},
-                    {'class_name': AlignPlanes.__name__, 'name': 'alignG', 'goal_normal': world_up_axis,
-                     'tip_normal': robot_up_axis, 'root_link': root_link, 'tip_link': tip_link}
-                ],
-                [
-                    {'class_name': HeightGoal.__name__, 'name': 'HeightG2', 'reference_point': world_feature2,
-                     'tip_point': robot_feature, 'root_link': root_link, 'tip_link': tip_link, 'lower_limit': 0.4,
-                     'upper_limit': 0.5},
-                    {'class_name': DistanceGoal.__name__, 'name': 'distanceG2', 'reference_point': world_feature2,
-                     'tip_point': robot_feature, 'root_link': root_link, 'tip_link': tip_link, 'lower_limit': 0.03,
-                     'upper_limit': 0.04},
-                ],
-            ]
+        motion1 = MotionStatechartNode(
+            class_name=DistanceGoal.__name__,
+            name='distanceG',
+            kwargs={
+                'reference_point': world_feature2,
+                'tip_point': robot_feature,
+                'root_link': root_link,
+                'tip_link': tip_link,
+                'lower_limit': 0.00,
+                'upper_limit': 0.02
+            }
+        )
+
+        motion2 = MotionStatechartNode(
+            class_name=HeightGoal.__name__,
+            name='HeightG',
+            kwargs={
+                'reference_point': world_feature2,
+                'tip_point': robot_feature,
+                'root_link': root_link,
+                'tip_link': tip_link,
+                'lower_limit': 0.6,
+                'upper_limit': 0.7
+            }
+        )
+
+        motion3 = MotionStatechartNode(
+            class_name=AlignPlanes.__name__,
+            name='alignG',
+            kwargs={
+                'goal_normal': world_up_axis,
+                'tip_normal': robot_up_axis,
+                'root_link': root_link,
+                'tip_link': tip_link
+            }
+        )
+
+        motion4 = MotionStatechartNode(
+            class_name=HeightGoal.__name__,
+            name='HeightG2',
+            kwargs={
+                'reference_point': world_feature2,
+                'tip_point': robot_feature,
+                'root_link': root_link,
+                'tip_link': tip_link,
+                'lower_limit': 0.4,
+                'upper_limit': 0.5
+            }
+        )
+
+        motion5 = MotionStatechartNode(
+            class_name=DistanceGoal.__name__,
+            name='distanceG2',
+            kwargs={
+                'reference_point': world_feature2,
+                'tip_point': robot_feature,
+                'root_link': root_link,
+                'tip_link': tip_link,
+                'lower_limit': 0.03,
+                'upper_limit': 0.04
+            }
+        )
+
+        seq = [
+            [motion1, motion2, motion3],
+            [motion4, motion5]
+        ]
 
         zero_pose.motion_goals.add_motion_goal(class_name=SimpleSequenceGoal.__name__,
                                     sequence=seq,
