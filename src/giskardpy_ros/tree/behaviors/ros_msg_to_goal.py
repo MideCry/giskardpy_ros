@@ -4,25 +4,18 @@ from typing import List, Union, Tuple
 import genpy
 from py_trees import Status
 
-import giskard_msgs.msg as giskard_msgs
-import giskardpy.casadi_wrapper as cas
-from giskard_msgs.msg import MoveGoal, MotionStatechartNode
-from giskardpy.data_types.exceptions import InvalidGoalException, UnknownGoalException
+from giskard_msgs.msg import MoveGoal
+from giskardpy.data_types.exceptions import InvalidGoalException
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.joints import OmniDrive, DiffDrive
-from giskardpy.motion_statechart.goals.goal import Goal
-from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimumReached, EndMotion, CancelMotion, \
-    Monitor
-from giskardpy.motion_statechart.tasks.task import Task
+from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimumReached, EndMotion, CancelMotion
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros1.msg_converter import json_str_to_giskard_kwargs, create_node
+from giskardpy_ros.ros1.msg_converter import create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
 from line_profiler import profile
-
-from model.world import WorldTree
 
 
 class ParseActionGoal(GiskardBehavior):
