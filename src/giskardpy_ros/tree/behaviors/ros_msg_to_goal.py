@@ -17,10 +17,12 @@ from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimu
     Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros1.msg_converter import json_str_to_giskard_kwargs
+from giskardpy_ros.ros1.msg_converter import json_str_to_giskard_kwargs, create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
 from line_profiler import profile
+
+from model.world import WorldTree
 
 
 class ParseActionGoal(GiskardBehavior):
@@ -48,29 +50,12 @@ class ParseActionGoal(GiskardBehavior):
         get_middleware().loginfo('Done parsing goal message.')
         return Status.SUCCESS
 
-    def create_and_add_node(self, msg_node: MotionStatechartNode, parsed_kwargs):
-        if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-            C = god_map.motion_statechart_manager.allowed_monitor_types[msg_node.class_name]
-            node: Monitor = C(name=msg_node.name, **parsed_kwargs)
-            god_map.motion_statechart_manager.add_monitor(node)
-        elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-            C = god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-            node: Task = C(name=msg_node.name, **parsed_kwargs)
-            god_map.motion_statechart_manager.add_task(node)
-        elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-            C = god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-            node: Goal = C(name=msg_node.name, **parsed_kwargs)
-            god_map.motion_statechart_manager.add_goal(node)
-        else:
-            raise UnknownGoalException(f'unknown task type: \'{msg_node.class_name}\'.')
-        return node
-
     def parse_motion_graph(self, move_goal: MoveGoal) -> None:
         for msg_node in move_goal.nodes:
-            parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, god_map.world)
             get_middleware().loginfo(f'Adding node of type: \'{msg_node.class_name}\'')
 
-            node = self.create_and_add_node(msg_node, parsed_kwargs)
+            node = create_node(msg_node, god_map.world)
+            god_map.motion_statechart_manager.add_node(node)
 
             node.start_condition = msg_node.start_condition
             node.pause_condition = msg_node.pause_condition
