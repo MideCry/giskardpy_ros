@@ -38,7 +38,7 @@ from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros1.visualization_mode import VisualizationMode
-from motion_statechart.goals.goal import Goal
+from giskardpy.motion_statechart.goals.goal import Goal
 
 
 # TODO probably needs some consistency check
