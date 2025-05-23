@@ -17,7 +17,7 @@ import trajectory_msgs.msg as trajectory_msgs
 import tf2_msgs.msg as tf2_msgs
 
 import giskard_msgs.msg as giskard_msgs
-from data_types.exceptions import UnknownGoalException
+from giskardpy.data_types.exceptions import UnknownGoalException
 from giskard_msgs.msg import GiskardError, MotionStatechartNode
 from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
