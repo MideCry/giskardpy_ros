@@ -1,12 +1,13 @@
 #!/usr/bin/env python
+
+import numpy as np
 import rospy
-from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped, Point, PoseWithCovarianceStamped, \
+from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped, PoseWithCovarianceStamped, \
     QuaternionStamped
 from rospy import Publisher
 
-import giskardpy_ros.ros1.tfwrapper as tf
-from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds
+from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 
@@ -133,7 +134,19 @@ def grasping():
     handle_retract.header.frame_id = tip
     handle_retract.point.z = handle_retract_distance
 
-    open_gripper = gis.monitors.add_open_hsr_gripper()
+    js = {
+        'head_pan_joint': 0,
+        'head_tilt_joint': 0,
+        'arm_flex_joint': 0,
+        'arm_roll_joint': 0,
+        'wrist_flex_joint': -np.pi / 2,
+        'wrist_roll_joint': -np.pi / 2
+    }
+    jps = gis.motion_goals.add_joint_position(goal_state=js,
+                                              name='hold fixed grasping position',
+                                              threshold=0.05)
+
+    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=jps)
 
     grasp = gis.motion_goals.add_grasp_with_ft_sensor(root_link='map',
                                                       tip_link=tip,
@@ -166,6 +179,23 @@ def full_opening():
     handle_turn_limit = 0.4
     hinge_turn_limit = -1.2
     name = 'OpenDoorGoal'
+
+    js = {
+        'wrist_roll_joint': -np.pi / 2
+    }
+    jn = [
+        'arm_flex_joint',
+        'arm_roll_joint',
+        'wrist_roll_joint'
+    ]
+    jvl = gis.motion_goals.add_motion_goal(class_name=JointVelocityLimit.__name__,
+                                           joint_names=jn,
+                                           max_velocity=0.01)
+
+    # jps = gis.motion_goals.add_joint_position(goal_state=js,
+    #                                           name='hold fixed grasping position',
+    #                                           threshold=0.05,
+    #                                           weight=WEIGHT_ABOVE_CA)
 
     open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=handle_turn_limit,
                                                      hinge_limit=hinge_turn_limit, name=name, end_condition=name)
