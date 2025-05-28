@@ -29,7 +29,7 @@ import giskardpy_ros.ros1.tfwrapper as tf
 from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 
 if 'GITHUB_WORKFLOW' not in os.environ:
-    from giskardpy.motion_statechart.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
+    from giskardpy_ros.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
         Retracting, Tilting, KeepRotationGoal
 
 

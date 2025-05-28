@@ -5,7 +5,7 @@ from typing import Dict, Optional, List, Tuple
 import actionlib
 import rospy
 from actionlib_msgs.msg import GoalStatus
-from controller_manager_msgs.srv import ListControllers, ListControllersResponse, SwitchController, \
+from controller_manager_msgs.srv import ListControllersResponse, SwitchController, \
     SwitchControllerResponse
 from geometry_msgs.msg import PoseStamped, PointStamped, QuaternionStamped, Vector3Stamped, Vector3
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -17,11 +17,11 @@ if 'GITHUB_WORKFLOW' not in os.environ:
     from tmc_manipulation_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-from giskard_msgs.msg import MoveResult, CollisionEntry, MoveGoal, WorldResult, GiskardError
+from giskard_msgs.msg import GiskardError
 import giskard_msgs.msg as giskard_msgs
 from giskard_msgs.msg import MoveResult, CollisionEntry, MoveGoal, WorldResult
 from giskard_msgs.srv import DyeGroupResponse, GetGroupInfoResponse
-from giskardpy.motion_statechart.goals.suturo import MoveAroundDishwasher, Placing, Reaching
+from giskardpy_ros.goals.suturo import MoveAroundDishwasher, Placing, Reaching
 from giskardpy.data_types.suturo_types import GripperTypes
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy.data_types.data_types import goal_parameter

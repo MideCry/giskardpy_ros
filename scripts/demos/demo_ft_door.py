@@ -97,7 +97,7 @@ def grasping():
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
     ref_speed = 0.3
-    handle_retract_distance = -0.053
+    handle_retract_distance = -0.065
     bar_center_offset = 0.01
     pre_grasp_distance = -0.15
     grasp_into_distance = 0.2
@@ -177,31 +177,19 @@ def full_opening():
 
     handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
     handle_turn_limit = 0.4
-    hinge_turn_limit = -1.2
+    hinge_turn_limit = -0.5
     name = 'OpenDoorGoal'
 
-    js = {
-        'wrist_roll_joint': -np.pi / 2
-    }
-    jn = [
-        'arm_flex_joint',
-        'arm_roll_joint',
-        'wrist_roll_joint'
-    ]
-    jvl = gis.motion_goals.add_motion_goal(class_name=JointVelocityLimit.__name__,
-                                           joint_names=jn,
-                                           max_velocity=0.01)
+    open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
+                                                     handle_limit=handle_turn_limit,
+                                                     hinge_limit=hinge_turn_limit,
+                                                     name=name,
+                                                     end_condition=name)
 
-    # jps = gis.motion_goals.add_joint_position(goal_state=js,
-    #                                           name='hold fixed grasping position',
-    #                                           threshold=0.05,
-    #                                           weight=WEIGHT_ABOVE_CA)
-
-    open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=handle_turn_limit,
-                                                     hinge_limit=hinge_turn_limit, name=name, end_condition=name)
+    close_gripper = gis.monitors.add_open_hsr_gripper(start_condition=open_goal)
 
     gis.motion_goals.allow_all_collisions()
-    gis.monitors.add_end_motion(start_condition=open_goal)
+    gis.monitors.add_end_motion(start_condition=close_gripper)
     gis.execute()
 
 

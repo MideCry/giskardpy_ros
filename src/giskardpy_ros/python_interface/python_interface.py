@@ -31,7 +31,7 @@ from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal,
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Close, Open
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
-from giskardpy.motion_statechart.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, \
+from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, \
     OpenDoorGoal, Mixing, \
     JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \

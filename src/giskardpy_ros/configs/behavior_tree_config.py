@@ -307,7 +307,7 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         self.environment_group = environment_group
 
     def setup(self):
-        self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
+        self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=self.debug_mode,
                                                 mode=self.visualization_mode)
         # self.add_qp_data_publisher(publish_xdot=True, publish_lb=True, publish_ub=True)
         self.add_gantt_chart_plotter()
