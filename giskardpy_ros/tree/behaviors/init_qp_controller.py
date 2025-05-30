@@ -37,26 +37,6 @@ class InitQPController(GiskardBehavior):
             quadratic_weight_gains=quadratic_weight_gains,
             linear_weight_gains=linear_weight_gains,
         )
-        god_map.qp_controller.compile()
-
-        base_symbols = []
-        non_base_free_variables = []
-        for v in free_variables:
-            if v.is_base:
-                base_symbols.append(v.get_symbol(Derivatives.position))
-            else:
-                non_base_free_variables.append(v)
-
-        god_map.qp_controller2.init(
-            free_variables=non_base_free_variables,
-            equality_constraints=eq_constraints,
-            inequality_constraints=neq_constraints,
-            eq_derivative_constraints=eq_derivative_constraints,
-            derivative_constraints=derivative_constraints,
-            quadratic_weight_gains=quadratic_weight_gains,
-            linear_weight_gains=linear_weight_gains,
-        )
-        god_map.qp_controller2.compile()
 
         return Status.SUCCESS
 

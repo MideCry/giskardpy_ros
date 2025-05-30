@@ -232,7 +232,7 @@ class GiskardTester:
 
     def tear_down(self):
         # GiskardBlackboard().tree.stop_spinning()
-        self.print_qp_solver_times()
+        # self.print_qp_solver_times()
         # rospy.sleep(1)
         # self.heart.shutdown()
         # TODO it is strange that I need to kill the services... should be investigated. (:

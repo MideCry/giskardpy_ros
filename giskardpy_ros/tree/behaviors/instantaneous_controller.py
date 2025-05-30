@@ -16,27 +16,23 @@ class ControllerPlugin(GiskardBehavior):
     @catch_and_raise_to_blackboard
     def initialise(self):
         self.controller = god_map.qp_controller
-        self.controller2 = god_map.qp_controller2
 
     @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
     @profile
     def update(self):
-        parameters = self.controller.get_parameter_names()
-        substitutions = symbol_manager.resolve_symbols(parameters)
-
-        next_cmds = self.controller.get_cmd(substitutions)
-        if (self.controller2 is not None
-                and next_cmds.check_base_variables_threshold(self.controller.free_variables)):
-            parameters = self.controller2.get_parameter_names()
-            substitutions = symbol_manager.resolve_symbols(parameters)
-            next_cmds.free_variable_data.update(self.controller2.get_cmd(substitutions).free_variable_data)
-            for v in self.controller.free_variables:
-                if v.is_base:
-                    next_cmds.free_variable_data[v.name] = [0.,0.,0.]
-                    god_map.world.state[v.name].velocity = 0
-                    god_map.world.state[v.name].acceleration = 0
-                    god_map.world.state[v.name].jerk = 0
+        next_cmds = self.controller.get_cmd(symbol_manager)
+        # if (self.controller2 is not None
+        #         and next_cmds.check_base_variables_threshold(self.controller.free_variables)):
+        #     parameters = self.controller2.get_parameter_names()
+        #     substitutions = symbol_manager.resolve_symbols(parameters)
+        #     next_cmds.free_variable_data.update(self.controller2.get_cmd(substitutions).free_variable_data)
+        #     for v in self.controller.free_variables:
+        #         if v.is_base:
+        #             next_cmds.free_variable_data[v.name] = [0.,0.,0.]
+        #             god_map.world.state[v.name].velocity = 0
+        #             god_map.world.state[v.name].acceleration = 0
+        #             god_map.world.state[v.name].jerk = 0
 
         god_map.qp_solver_solution = next_cmds
         return Status.RUNNING
