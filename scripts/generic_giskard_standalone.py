@@ -23,7 +23,7 @@ def main():
                       behavior_tree_config=StandAloneBTConfig(publish_free_variables=False,
                                                               publish_tf=True,
                                                               debug_mode=True, publish_js=True),
-                      qp_controller_config=QPControllerConfig())
+                      qp_controller_config=QPControllerConfig(mpc_dt=0.05))
     giskard.live()
 
 

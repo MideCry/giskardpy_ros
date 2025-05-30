@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
@@ -55,6 +57,7 @@ class BehaviorTreeConfig(ABC):
                                             available on the machine where Giskard is running.
                                       False: use meshes defined in urdf.
         """
+        GiskardBlackboard().ros_visualizer = ROSMsgVisualization(mode=mode)
         if add_to_sync:
             self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode)
         if add_to_control_loop:

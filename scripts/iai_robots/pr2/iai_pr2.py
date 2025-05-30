@@ -23,5 +23,5 @@ if __name__ == '__main__':
                       collision_avoidance_config=PR2CollisionAvoidance(),
                       robot_interface_config=PR2JointTrajServerIAIInterface(),
                       behavior_tree_config=OpenLoopBTConfig(debug_mode=True),
-                      qp_controller_config=QPControllerConfig())
+                      qp_controller_config=QPControllerConfig(mpc_dt=0.05))
     giskard.live()

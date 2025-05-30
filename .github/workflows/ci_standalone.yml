@@ -37,8 +37,13 @@ on:
         type: string
         hidden: true
 jobs:
+  docker:
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish_dockerfiles.yml
 #  hsr:
-#    needs: [ build_dependencies ]
+#    needs: docker
 #    uses: ./.github/workflows/reusable_robot_ci.yml
 #    with:
 #      robot: hsr
@@ -48,7 +53,7 @@ jobs:
 #      is_trigger: ${{ inputs.is_trigger || false }} # Default values don't seem to work correctly, using this instead
 #      pr_id: ${{ inputs.pr_id || null }}
 #  donbot:
-#    needs: [ build_dependencies ]
+#    needs: docker
 #    uses: ./.github/workflows/reusable_robot_ci.yml
 #    with:
 #      robot: donbot
@@ -58,6 +63,7 @@ jobs:
 #      is_trigger: ${{ inputs.is_trigger || false }}
 #      pr_id: ${{ inputs.pr_id || null }}
   pr2_part1:
+    needs: docker
     uses: ./.github/workflows/reusable_robot_ci.yml
     with:
       robot: pr2
@@ -71,6 +77,7 @@ jobs:
       is_trigger: ${{ inputs.is_trigger || false }}
       pr_id: ${{ inputs.pr_id || null }}
   pr2_part2:
+    needs: docker
     uses: ./.github/workflows/reusable_robot_ci.yml
     with:
       robot: pr2
@@ -83,7 +90,7 @@ jobs:
       is_trigger: ${{ inputs.is_trigger || false }}
       pr_id: ${{ inputs.pr_id || null }}
 #  tiago:
-#    needs: [ build_dependencies ]
+#    needs: docker
 #    uses: ./.github/workflows/reusable_robot_ci.yml
 #    with:
 #      robot: tiago

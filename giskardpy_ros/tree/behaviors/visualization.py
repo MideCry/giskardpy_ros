@@ -9,8 +9,7 @@ from giskardpy.god_map import god_map
 from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization, VisualizationMode
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from line_profiler import profile
+from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
 
 
 class VisualizationBehavior(GiskardBehavior):
@@ -21,7 +20,7 @@ class VisualizationBehavior(GiskardBehavior):
                  ensure_publish: bool = False):
         super().__init__(name)
         self.ensure_publish = ensure_publish
-        self.visualizer = ROSMsgVisualization(mode=mode)
+        self.visualizer = GiskardBlackboard().ros_visualizer
 
     @catch_and_raise_to_blackboard
     @record_time
