@@ -19,10 +19,10 @@ from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.goals.open_close import Open
 from giskardpy.motion_statechart.monitors.force_torque_monitor import PayloadForceTorque
 from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
-from giskardpy.motion_statechart.monitors.monitors import Monitor, CancelMotion, LocalMinimumReached
+from giskardpy.motion_statechart.monitors.monitors import Monitor, CancelMotion
 from giskardpy.motion_statechart.monitors.payload_monitors import Sleep
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList, JointVelocityLimit, JointPositionListStop
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
 
 if 'GITHUB_WORKFLOW' not in os.environ:
@@ -1155,9 +1155,9 @@ class OpenDoorGoal(Goal):
     def __init__(self,
                  tip_link: PrefixName,
                  door_handle_link: PrefixName,
-                 name: str = None,
-                 handle_limit: Optional[float] = None,
-                 hinge_limit: Optional[float] = None):
+                 handle_limit: float,
+                 hinge_limit: float,
+                 name: str = None):
         """
         Use this, if you have grasped a door handle and want to open the door and handle
 
@@ -1215,7 +1215,7 @@ class OpenDoorGoal(Goal):
 
         x_base = cas.Vector3()
         x_base.reference_frame = base_link
-        x_base.y = 1
+        x_base.x = 1
 
         apl = AlignPlanes(root_link=map_link,
                           tip_link=base_link,
@@ -1224,26 +1224,6 @@ class OpenDoorGoal(Goal):
                           name='AlignBaseWithDoor')
         apl.start_condition = handle_state_monitor
         self.add_task(apl)
-
-        goal_state = {door_hinge_id: limit_hinge/10}
-        unlock_state_monitor = JointGoalReached(name='UnlockMonitor', goal_state=goal_state)
-        unlock_state_monitor.start_condition = handle_state_monitor
-        self.add_monitor(unlock_state_monitor)
-
-        goal_states = {
-            'head_pan_joint': 0,
-            'head_tilt_joint': 0,
-            'arm_lift_joint': 0,
-            'arm_flex_joint': 0,
-            'arm_roll_joint': 0,
-            'wrist_flex_joint': 0,
-            'wrist_roll_joint': 0
-        }
-        jps = JointPositionListStop(goal_state=goal_states,
-                                    name='StopJointsFromMoving')
-        jps.start_condition = handle_state_monitor
-        jps.end_condition = unlock_state_monitor
-        self.add_task(jps)
 
         open_goal2 = Open(tip_link=tip_link,
                           environment_link=link_id,
@@ -1261,7 +1241,7 @@ class OpenDoorGoal(Goal):
         self.observation_expression = hinge_state_monitor.observation_expression
 
 
-class MoveAroundDishwasher(Goal):
+class MoveAroundHinge(Goal):
     old_position_monitor: Monitor = None
     tip_gripper_axis: cas.Vector3 = None
     root_V_tip_grasp_axis: cas.Vector3 = None
@@ -1276,11 +1256,12 @@ class MoveAroundDishwasher(Goal):
                  reference_angular_velocity: float = 0.5,
                  weight: float = WEIGHT_ABOVE_CA,
                  goal_angle: float = None,
+                 multipliers: Optional[np.ndarray] = None,
                  name: str = None):
         """
-        Adds two Points to move around the door of the dishwasher
+        Adds Points to move around the hinge to a given handle
 
-        :param handle_name: full frame id of the dishwasher door handle
+        :param handle_name: full frame id of the handle
         :param root_link: root link of the kinematic chain
         :param tip_link: tip link of the kinematic chain
         :param reference_linear_velocity: m/s
@@ -1288,8 +1269,12 @@ class MoveAroundDishwasher(Goal):
         :param name: Name of the goal
         """
         if name is None:
-            name = 'MoveAroundDishwasherGoal'
+            name = 'MoveAroundHingeGoal'
         super().__init__(name=name)
+        if multipliers is None:
+            multipliers = [(11 / 10, -0.7, 'down_short'),
+                           (7 / 5, -0.3, 'down_long'),
+                           (7 / 5, 0.4, 'up_long')]
 
         self.weight = weight
         self.reference_linear_velocity = reference_linear_velocity
@@ -1323,9 +1308,6 @@ class MoveAroundDishwasher(Goal):
         # axis pointing in the direction of handle frame from door joint frame
         direction_axis = np.argmax(abs(temp_point[0:3]))
 
-        multipliers = [(11 / 10, -0.7, 'down_short'),
-                       (7 / 5, -0.3, 'down_long'),
-                       (7 / 5, 0.4, 'up_long')]
         root_P_top_chain = []
 
         for i, (axis_multi, angle_multi, goal_name) in enumerate(multipliers):

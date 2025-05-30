@@ -31,9 +31,6 @@ from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal,
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Close, Open
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
-from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundDishwasher, Reaching, Placing, \
-    OpenDoorGoal, Mixing, \
-    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
     PointingAt, VectorsAligned, DistanceToLine
 from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
@@ -59,6 +56,8 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath, RealTimeConePointing
+from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundHinge, Reaching, Placing, OpenDoorGoal, Mixing, \
+    JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy_ros.ros1 import msg_converter
 from giskardpy_ros.ros1 import tfwrapper as tf
 from giskardpy_ros.ros1.msg_converter import kwargs_to_json
@@ -1092,6 +1091,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           door_object: str,
                           door_handle: str,
                           weight: float,
+                          threshold: float = 0.01,
                           name: Optional[str] = None,
                           tip_group: Optional[str] = None,
                           root_group: Optional[str] = None,
@@ -1116,6 +1116,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     door_handle=door_handle,
                                     tip_group=tip_group,
                                     root_group=root_group,
+                                    threshold=threshold,
                                     weight=weight,
                                     name=name,
                                     reference_linear_velocity=reference_linear_velocity,
@@ -1928,6 +1929,41 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                              pause_condition=pause_condition,
                                              end_condition=end_condition)
 
+    def add_move_around_hinge(self,
+                              handle_name: str,
+                              tip_gripper_axis: Vector3Stamped = None,
+                              root_link: str = 'map',
+                              tip_link: str = 'hand_gripper_tool_frame',
+                              goal_angle: float = None,
+                              name: Optional[str] = None,
+                              multipliers: Optional[np.ndarray] = None,
+                              start_condition: str = '',
+                              pause_condition: str = '',
+                              end_condition: str = '') -> str:
+        """
+        Move around hinge to given handle_name, based on distance between hinge and handle
+
+        :param handle_name: name of the handle
+        :param tip_gripper_axis: tip axis of gripper to point towards handle
+        :param tip_link: robot link, that grasps the handle
+        :param root_link: root link of the kinematic chain
+        :param goal_angle: Angle that the hinge should have at start of goal
+        :param start_condition: expression that starts goal
+        :param pause_condition: expression that pauses goal
+        :param end_condition: expression that ends goal
+        """
+        return self.add_motion_goal(class_name=MoveAroundHinge.__name__,
+                                    handle_name=handle_name,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    goal_angle=goal_angle,
+                                    name=name,
+                                    tip_gripper_axis=tip_gripper_axis,
+                                    multipliers=multipliers,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
+
     def hsrb_dishwasher_door_around(self,
                                     handle_name: str,
                                     tip_gripper_axis: Vector3Stamped = None,
@@ -1950,16 +1986,15 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
-        return self.add_motion_goal(class_name=MoveAroundDishwasher.__name__,
-                                    handle_name=handle_name,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    goal_angle=goal_angle,
-                                    name=name,
-                                    tip_gripper_axis=tip_gripper_axis,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_move_around_hinge(handle_name=handle_name,
+                                          root_link=root_link,
+                                          tip_link=tip_link,
+                                          goal_angle=goal_angle,
+                                          name=name,
+                                          tip_gripper_axis=tip_gripper_axis,
+                                          start_condition=start_condition,
+                                          pause_condition=pause_condition,
+                                          end_condition=end_condition)
 
     def hsrb_align_to_push_door_goal(self,
                                      handle_name: str,

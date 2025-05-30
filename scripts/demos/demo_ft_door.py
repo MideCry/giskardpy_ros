@@ -6,7 +6,6 @@ from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped
     QuaternionStamped
 from rospy import Publisher
 
-from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
@@ -176,20 +175,76 @@ def full_opening():
     grasping()
 
     handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
+    door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
+    door_center = "iai_kitchen/iai_kitchen:arena:door_center"
     handle_turn_limit = 0.4
-    hinge_turn_limit = -0.5
-    name = 'OpenDoorGoal'
+    pre_push_hinge_turn_limit = -0.5
+    full_hinge_turn_limit = -1.4
+    open_door_name = 'OpenDoorGoal'
+    tip = 'hand_gripper_tool_frame'
+    root = 'map'
+    tip_grasp_axis = Vector3Stamped()
+    tip_grasp_axis.header.frame_id = tip
+    tip_grasp_axis.vector = Vector3(1, 0, 0)
+    move_around_name = 'MovingAroundAtTheSpeedOfSound'
+    multiplier = [(11 / 10, -0.7, 'down_short')]
+    multipliers = [(7 / 5, -0.3, 'down_long'),
+                   (7 / 5, 0.4, 'up_long'),
+                   (1, 0.7, 'up_short')]
 
     open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
                                                      handle_limit=handle_turn_limit,
-                                                     hinge_limit=hinge_turn_limit,
-                                                     name=name,
-                                                     end_condition=name)
+                                                     hinge_limit=pre_push_hinge_turn_limit,
+                                                     name=open_door_name,
+                                                     end_condition=open_door_name)
 
-    close_gripper = gis.monitors.add_open_hsr_gripper(start_condition=open_goal)
+    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=open_goal)
 
-    gis.motion_goals.allow_all_collisions()
-    gis.monitors.add_end_motion(start_condition=close_gripper)
+    open_goal_moving_around_first = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
+                                                                           tip_gripper_axis=tip_grasp_axis,
+                                                                           root_link=root,
+                                                                           tip_link=tip,
+                                                                           goal_angle=pre_push_hinge_turn_limit,
+                                                                           multipliers=multiplier,
+                                                                           name=f'{move_around_name}_first',
+                                                                           start_condition=open_gripper,
+                                                                           end_condition=f'{move_around_name}_first')
+
+    open_goal_moving_around = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
+                                                                     tip_gripper_axis=tip_grasp_axis,
+                                                                     root_link=root,
+                                                                     tip_link=tip,
+                                                                     goal_angle=pre_push_hinge_turn_limit,
+                                                                     multipliers=multipliers,
+                                                                     name=move_around_name,
+                                                                     start_condition=open_goal_moving_around_first,
+                                                                     end_condition=move_around_name)
+
+    close_gripper = gis.monitors.add_close_hsr_gripper(start_condition=open_goal_moving_around)
+
+    pre_push = gis.motion_goals.add_pre_push_door(root_link=root,
+                                                  tip_link=tip,
+                                                  door_handle=door_handle_for_hinge,
+                                                  weight=WEIGHT_ABOVE_CA,
+                                                  door_object=door_center,
+                                                  start_condition=close_gripper)
+    gis.update_end_condition(pre_push, pre_push)
+
+    open_full = gis.motion_goals.add_open_container(tip_link=tip,
+                                                    environment_link=door_center,
+                                                    name='Push open door',
+                                                    goal_joint_state=full_hinge_turn_limit,
+                                                    start_condition=pre_push)
+    gis.update_end_condition(open_full, open_full)
+
+    gis.motion_goals.allow_all_collisions(start_condition='',
+                                          end_condition=open_goal_moving_around)
+    gis.motion_goals.allow_all_collisions(start_condition=open_goal_moving_around,
+                                          end_condition=open_full)
+    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_moving_around_first,
+                                          end_condition=open_goal_moving_around)
+    # gis.motion_goals.allow_all_collisions()
+    gis.monitors.add_end_motion(start_condition=open_full)
     gis.execute()
 
 
