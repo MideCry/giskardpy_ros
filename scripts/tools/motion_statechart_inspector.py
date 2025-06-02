@@ -1,9 +1,12 @@
 import sys
 import rospy
-from PyQt5.QtGui import QPainter
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QLabel
-from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtGui import QPainter, QTransform
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, \
+    QLabel, QGraphicsView, QGraphicsScene, QGraphicsItem
+from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtCore import Qt, QTimer, QRectF
+from pygraphviz import ItemAttribute
+
 from giskard_msgs.msg import ExecutionState
 from PyQt5.QtCore import QMutex, QMutexLocker
 
@@ -12,30 +15,47 @@ from giskardpy_ros.tree.behaviors.plot_motion_graph import ExecutionStateToDotPa
 
 compact = False
 
-class MySvgWidget(QSvgWidget):
+
+class SvgGrahpicsView(QGraphicsView):
 
     def __init__(self, *args):
-        QSvgWidget.__init__(self, *args)
+        QGraphicsView.__init__(self, *args)
         self.mutex = QMutex()  # Mutex for synchronizing access to the widget
 
-    def paintEvent(self, event):
-        with QMutexLocker(self.mutex):  # Lock the mutex to prevent concurrent access
-            renderer = self.renderer()
-            if renderer is not None:
-                painter = QPainter(self)
-                size = renderer.defaultSize()
-                ratio = size.height() / size.width()
-                frame_ratio = self.height() / self.width()
-                if frame_ratio > ratio:
-                    new_width, new_height = self.width(), self.width() * ratio
-                else:
-                    new_width, new_height = self.height() / ratio, self.height()
-                if new_width < self.width():
-                    left = (self.width() - new_width) / 2
-                else:
-                    left = 0
-                renderer.render(painter, QRectF(left, 0, new_width, new_height))
-                painter.end()
+        # Set up the graphics scene
+        self.scene = QGraphicsScene()
+        self.setScene(self.scene)
+        self.svg_item = QGraphicsSvgItem()
+        self.scene.addItem(self.svg_item)
+
+        # Configure the view
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setRenderHint(QPainter.Antialiasing)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+    def wheelEvent(self, event):
+        # Only zoom when Ctrl is pressed
+        if event.modifiers() & Qt.ControlModifier:
+            delta = 1.0 + event.angleDelta().y() / 1200
+            transform = self.transform()
+            transform.scale(delta, delta)
+            self.setTransform(transform)
+        elif event.modifiers() & Qt.ShiftModifier:
+            # Horizontal scroll when Shift is pressed
+            delta = event.angleDelta().y()
+            self.horizontalScrollBar().setValue(
+                self.horizontalScrollBar().value() - delta
+            )
+        else:
+            # Pass the event to parent if Ctrl or Shift is not pressed
+            super().wheelEvent(event)
+
+    def load(self, svg_path):
+        with QMutexLocker(self.mutex):
+            renderer = QSvgRenderer(svg_path)
+            self.svg_item.setSharedRenderer(renderer)
+            self.fitInView(self.svg_item, Qt.KeepAspectRatio)
+
 
 
 class DotGraphViewer(QWidget):
@@ -49,7 +69,7 @@ class DotGraphViewer(QWidget):
         rospy.init_node('motion_statechart_viewer', anonymous=True)
 
         # Set up the GUI components
-        self.svg_widget = MySvgWidget(self)
+        self.svg_widget = SvgGrahpicsView(self)
         self.svg_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.svg_widget.setMinimumSize(600, 400)
 
@@ -176,8 +196,7 @@ class DotGraphViewer(QWidget):
         svg_path = 'graph.svg'
         graph.write_svg(svg_path)
         graph.write_pdf('graph.pdf')
-        with QMutexLocker(self.svg_widget.mutex):  # Lock the mutex during SVG loading
-            self.svg_widget.load(svg_path)
+        self.svg_widget.load(svg_path)
 
     def update_position_label(self) -> None:
         goal_count = len(self.goals)
