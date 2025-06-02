@@ -1,8 +1,8 @@
 import sys
 import rospy
-from PyQt5.QtGui import QPainter, QTransform
+from PyQt5.QtGui import QPainter, QTransform, QKeySequence
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, \
-    QLabel, QGraphicsView, QGraphicsScene, QGraphicsItem
+    QLabel, QGraphicsView, QGraphicsScene, QGraphicsItem, QShortcut
 from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
 from pygraphviz import ItemAttribute
@@ -98,6 +98,29 @@ class DotGraphViewer(QWidget):
         self.next_button.clicked.connect(self.show_next_image)
         self.next_goal_button.clicked.connect(self.show_next_goal)
         self.latest_button.clicked.connect(self.show_latest_image)
+
+        # Add keyboard shortcuts
+        self.left_shortcut = QShortcut(QKeySequence(Qt.Key_Left), self)
+        self.left_shortcut.activated.connect(self.show_previous_image)
+        self.right_shortcut = QShortcut(QKeySequence(Qt.Key_Right), self)
+        self.right_shortcut.activated.connect(self.show_next_image)
+
+        self.control_left_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_Left), self)
+        self.control_left_shortcut.activated.connect(self.show_prev_goal)
+        self.control_right_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_Right), self)
+        self.control_right_shortcut.activated.connect(self.show_next_goal)
+        self.shift_left_shortcut = QShortcut(QKeySequence(Qt.SHIFT + Qt.Key_Left), self)
+        self.shift_left_shortcut.activated.connect(self.show_first_image)
+        self.shift_right_shortcut = QShortcut(QKeySequence(Qt.SHIFT + Qt.Key_Right), self)
+        self.shift_right_shortcut.activated.connect(self.show_latest_image)
+
+        # Add Tooltips for Shortcuts
+        self.next_button.setToolTip('RightArrow')
+        self.prev_button.setToolTip('LeftArrow')
+        self.next_goal_button.setToolTip('Ctrl + RightArrow')
+        self.prev_goal_button.setToolTip('Ctrl + LeftArrow')
+        self.latest_button.setToolTip('Shift + RightArrow')
+        self.first_button.setToolTip('Shift + LeftArrow')
 
         # Layout for topic selection
         top_layout = QHBoxLayout()
