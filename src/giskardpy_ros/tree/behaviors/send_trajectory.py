@@ -64,7 +64,6 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         self.goal_time_tolerance = rospy.Duration(goal_time_tolerance)
         self.path_tolerance = path_tolerance
 
-        params: Dict[str, Any] = rospy.get_param(self.namespace)
         if not controlled_joints:
             params: Dict[str, Any] = rospy.get_param(self.namespace)
             controlled_joint_names = [PrefixName(j, self.group_name) for j in params['joints']]
