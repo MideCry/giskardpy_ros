@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPainter, QTransform
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, \
     QLabel, QGraphicsView, QGraphicsScene, QGraphicsItem
 from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
-from PyQt5.QtCore import Qt, QTimer, QRectF
+from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
 from pygraphviz import ItemAttribute
 
 from giskard_msgs.msg import ExecutionState
@@ -59,11 +59,15 @@ class SvgGrahpicsView(QGraphicsView):
 
 
 class DotGraphViewer(QWidget):
+    # Add this signal to communicate between threads
+    new_message_signal: pyqtSignal = pyqtSignal(object)
     last_goal_id: int
 
     def __init__(self):
         super().__init__()
         self.last_goal_id = -1
+        # Connect the signal to the slot
+        self.new_message_signal.connect(self.handle_new_message)
 
         # Initialize the ROS node
         rospy.init_node('motion_statechart_viewer', anonymous=True)
@@ -156,6 +160,11 @@ class DotGraphViewer(QWidget):
             rospy.Subscriber(topic_name, ExecutionState, self.on_new_message_received, queue_size=50)
 
     def on_new_message_received(self, msg: ExecutionState) -> None:
+        # Emit signal to handle in main thread
+        self.new_message_signal.emit(msg)
+
+    def handle_new_message(self, msg: ExecutionState) -> None:
+        # This runs in the main thread
         if len(self.goals) > 0:
             navigator_at_end = (self.current_goal_index == self.goals[-1]
                                 and self.current_message_index == len(self.graphs_by_goal[self.goals[-1]]) - 1)
