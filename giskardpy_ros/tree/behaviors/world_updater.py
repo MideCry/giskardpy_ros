@@ -205,9 +205,11 @@ class ProcessWorldUpdate(GiskardBehavior):
             GiskardBlackboard().giskard.world_config.setup()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
         # copy only state of joints that didn't get deleted
-        remaining_free_variables = list(god_map.world.free_variables.keys()) + list(
+        remaining_free_variables = set(god_map.world.free_variables.keys()).union(
             god_map.world.virtual_free_variables.keys())
-        god_map.world.state = JointStates({k: v for k, v in tmp_state.items() if k in remaining_free_variables})
+        for v in god_map.world.state:
+            if v not in remaining_free_variables:
+                del god_map.world.state[v]
         god_map.world.notify_state_change()
         god_map.collision_scene.sync()
         GiskardBlackboard().giskard.collision_avoidance_config.setup()

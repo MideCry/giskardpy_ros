@@ -21,7 +21,7 @@ from rclpy_message_converter.message_converter import \
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
 
 import giskardpy.casadi_wrapper as cas
-from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
+from giskardpy.data_types.data_types import JointStates, PrefixName, ColorRGBA, Derivatives
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException
 from giskardpy.model.collision_world_syncer import CollisionEntry
@@ -428,14 +428,7 @@ def ros_joint_state_to_giskard_joint_state(msg: sensor_msgs.JointState, prefix: 
     js = JointStates()
     for i, joint_name in enumerate(msg.name):
         joint_name = PrefixName(joint_name, prefix)
-        sjs = _JointState(position=msg.position[i],
-                          velocity=0,
-                          acceleration=0,
-                          jerk=0,
-                          snap=0,
-                          crackle=0,
-                          pop=0)
-        js[joint_name] = sjs
+        js[joint_name][Derivatives.position] = msg.position[i]
     return js
 
 
