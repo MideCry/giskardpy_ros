@@ -41,7 +41,8 @@ class HSRTestWrapper(GiskardTestWrapper):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,
                                                                       publish_js=False),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125,
+                                                                      control_dt=0.0125))
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
@@ -283,20 +284,9 @@ class TestCartGoals:
         hole_point.header.frame_id = 'map'
         hole_point.pose.position.x = 0.5
         hole_point.pose.position.z = 0.3
-        wiggle = zero_pose.motion_goals.add_motion_goal(class_name=WiggleInsert.__name__,
-                                                        root_link=root_link,
-                                                        tip_link=hpl,
-                                                        name='testing',
-                                                        down_velocity=0.2,
-                                                        hole_point=hole_point,
-                                                        noise_translation=0.5,
-                                                        noise_angle=10,
-                                                        random_walk=True,
-                                                        vector_momentum_factor=0.9,
-                                                        angular_momentum_factor=0.9,
-                                                        center_pull_strength_angle=0.1,
-                                                        center_pull_strength_vector=0.25,
-                                                        dt=0.05)
+        wiggle = zero_pose.motion_goals.add_wiggle_insert(root_link=root_link,
+                                                          tip_link=hpl,
+                                                          hole_point=hole_point)
         # zero_pose.motion_goals.update_end_condition(wiggle, wiggle)
         zero_pose.execute(add_local_minimum_reached=False)
 
