@@ -1249,14 +1249,15 @@ class MoveAroundHinge(Goal):
 
     def __init__(self,
                  handle_name: str,
-                 root_link: str,
-                 tip_link: str,
+                 root_link: PrefixName,
+                 tip_link: PrefixName,
                  tip_gripper_axis: cas.Vector3 = None,
                  reference_linear_velocity: float = 0.1,
                  reference_angular_velocity: float = 0.5,
                  weight: float = WEIGHT_ABOVE_CA,
                  goal_angle: float = None,
                  multipliers: Optional[np.ndarray] = None,
+                 offset: Optional[cas.Vector3] = None,
                  name: str = None):
         """
         Adds Points to move around the hinge to a given handle
@@ -1275,6 +1276,8 @@ class MoveAroundHinge(Goal):
             multipliers = [(11 / 10, -0.7, 'down_short'),
                            (7 / 5, -0.3, 'down_long'),
                            (7 / 5, 0.4, 'up_long')]
+        if offset is None:
+            offset = cas.Vector3().from_xyz(0, 0, 0, root_link)
 
         self.weight = weight
         self.reference_linear_velocity = reference_linear_velocity
@@ -1285,8 +1288,8 @@ class MoveAroundHinge(Goal):
         hinge_joint = god_map.world.get_movable_parent_joint(self.handle_frame_id)
         door_hinge_frame_id = god_map.world.get_parent_link_of_link(self.handle_frame_id)
 
-        self.tip_link = god_map.world.search_for_link_name(tip_link)
-        self.root_link = god_map.world.search_for_link_name(root_link)
+        self.tip_link = tip_link
+        self.root_link = root_link
 
         root_T_tip = god_map.world.compose_fk_expression(self.root_link, self.tip_link)
         root_P_tip = root_T_tip.to_position()
@@ -1294,6 +1297,8 @@ class MoveAroundHinge(Goal):
 
         object_V_object_rotation_axis = cas.Vector3(god_map.world.get_joint(hinge_joint).axis)
         root_T_door_expr = god_map.world.compose_fk_expression(self.root_link, door_hinge_frame_id)
+        root_V_offset = god_map.world.transform(self.root_link, offset)
+        root_T_door_expr = root_T_door_expr + root_V_offset
 
         if tip_gripper_axis is not None:
             tip_gripper_axis.scale(1)

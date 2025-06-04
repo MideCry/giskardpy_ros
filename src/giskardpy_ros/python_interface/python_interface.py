@@ -1097,6 +1097,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           root_group: Optional[str] = None,
                           reference_linear_velocity: Optional[float] = None,
                           reference_angular_velocity: Optional[float] = None,
+                          offset: Optional[Vector3Stamped] = None,
                           start_condition: str = '',
                           pause_condition: str = '',
                           end_condition: str = '') -> str:
@@ -1121,6 +1122,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     name=name,
                                     reference_linear_velocity=reference_linear_velocity,
                                     reference_angular_velocity=reference_angular_velocity,
+                                    offset=offset,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)
@@ -1937,6 +1939,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                               goal_angle: float = None,
                               name: Optional[str] = None,
                               multipliers: Optional[np.ndarray] = None,
+                              offset: Optional[Vector3Stamped] = None,
                               start_condition: str = '',
                               pause_condition: str = '',
                               end_condition: str = '') -> str:
@@ -1960,6 +1963,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     name=name,
                                     tip_gripper_axis=tip_gripper_axis,
                                     multipliers=multipliers,
+                                    offset=offset,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)

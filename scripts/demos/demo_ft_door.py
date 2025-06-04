@@ -192,6 +192,10 @@ def full_opening():
                    (7 / 5, 0.4, 'up_long'),
                    (1, 0.7, 'up_short')]
 
+    offset = Vector3Stamped()
+    offset.header.frame_id = root
+    offset.vector = Vector3(0, 0, -0.05)
+
     open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
                                                      handle_limit=handle_turn_limit,
                                                      hinge_limit=pre_push_hinge_turn_limit,
@@ -206,6 +210,7 @@ def full_opening():
                                                                            tip_link=tip,
                                                                            goal_angle=pre_push_hinge_turn_limit,
                                                                            multipliers=multiplier,
+                                                                           offset=offset,
                                                                            name=f'{move_around_name}_first',
                                                                            start_condition=open_gripper,
                                                                            end_condition=f'{move_around_name}_first')
@@ -216,6 +221,7 @@ def full_opening():
                                                                      tip_link=tip,
                                                                      goal_angle=pre_push_hinge_turn_limit,
                                                                      multipliers=multipliers,
+                                                                     offset=offset,
                                                                      name=move_around_name,
                                                                      start_condition=open_goal_moving_around_first,
                                                                      end_condition=move_around_name)
@@ -227,6 +233,7 @@ def full_opening():
                                                   door_handle=door_handle_for_hinge,
                                                   weight=WEIGHT_ABOVE_CA,
                                                   door_object=door_center,
+                                                  offset=offset,
                                                   start_condition=close_gripper)
     gis.update_end_condition(pre_push, pre_push)
 
