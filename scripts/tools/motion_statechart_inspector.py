@@ -54,6 +54,7 @@ class SvgGrahpicsView(QGraphicsView):
         with QMutexLocker(self.mutex):
             renderer = QSvgRenderer(svg_path)
             self.svg_item.setSharedRenderer(renderer)
+            self.scene.setSceneRect(self.svg_item.boundingRect())
             self.fitInView(self.svg_item, Qt.KeepAspectRatio)
 
 
