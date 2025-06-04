@@ -194,7 +194,7 @@ def full_opening():
 
     offset = Vector3Stamped()
     offset.header.frame_id = root
-    offset.vector = Vector3(0, 0, -0.05)
+    offset.vector = Vector3(0, 0, -0.1)
 
     open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
                                                      handle_limit=handle_turn_limit,
@@ -233,7 +233,6 @@ def full_opening():
                                                   door_handle=door_handle_for_hinge,
                                                   weight=WEIGHT_ABOVE_CA,
                                                   door_object=door_center,
-                                                  offset=offset,
                                                   start_condition=close_gripper)
     gis.update_end_condition(pre_push, pre_push)
 

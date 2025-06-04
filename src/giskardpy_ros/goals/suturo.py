@@ -1298,7 +1298,11 @@ class MoveAroundHinge(Goal):
         object_V_object_rotation_axis = cas.Vector3(god_map.world.get_joint(hinge_joint).axis)
         root_T_door_expr = god_map.world.compose_fk_expression(self.root_link, door_hinge_frame_id)
         root_V_offset = god_map.world.transform(self.root_link, offset)
-        root_T_door_expr = root_T_door_expr + root_V_offset
+        root_T_offset = cas.TransMatrix().from_xyz_rpy(root_V_offset.x,
+                                                       root_V_offset.y,
+                                                       root_V_offset.z,
+                                                       reference_frame=offset.reference_frame)
+        root_T_door_expr = root_T_offset.dot(root_T_door_expr)
 
         if tip_gripper_axis is not None:
             tip_gripper_axis.scale(1)

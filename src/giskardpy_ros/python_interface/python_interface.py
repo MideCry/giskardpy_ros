@@ -1097,7 +1097,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           root_group: Optional[str] = None,
                           reference_linear_velocity: Optional[float] = None,
                           reference_angular_velocity: Optional[float] = None,
-                          offset: Optional[Vector3Stamped] = None,
                           start_condition: str = '',
                           pause_condition: str = '',
                           end_condition: str = '') -> str:
@@ -1122,7 +1121,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     name=name,
                                     reference_linear_velocity=reference_linear_velocity,
                                     reference_angular_velocity=reference_angular_velocity,
-                                    offset=offset,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)
@@ -1934,8 +1932,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_move_around_hinge(self,
                               handle_name: str,
                               tip_gripper_axis: Vector3Stamped = None,
-                              root_link: str = 'map',
-                              tip_link: str = 'hand_gripper_tool_frame',
+                              root_link: Union[str, giskard_msgs.LinkName] = 'map',
+                              tip_link: Union[str, giskard_msgs.LinkName] = 'hand_gripper_tool_frame',
                               goal_angle: float = None,
                               name: Optional[str] = None,
                               multipliers: Optional[np.ndarray] = None,
@@ -1955,6 +1953,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=MoveAroundHinge.__name__,
                                     handle_name=handle_name,
                                     root_link=root_link,
