@@ -6,6 +6,7 @@ from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped
     QuaternionStamped
 from rospy import Publisher
 
+from giskardpy.data_types.suturo_types import MoveAroundHingeAlign
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
@@ -187,14 +188,22 @@ def full_opening():
     tip_grasp_axis.header.frame_id = tip
     tip_grasp_axis.vector = Vector3(1, 0, 0)
     move_around_name = 'MovingAroundAtTheSpeedOfSound'
-    multiplier = [(11 / 10, -0.7, 'down_short')]
     multipliers = [(7 / 5, -0.3, 'down_long'),
                    (7 / 5, 0.4, 'up_long'),
                    (0.9, 0.7, 'up_short')]
 
     offset = Vector3Stamped()
     offset.header.frame_id = root
-    offset.vector = Vector3(0, 0, -0.1)
+    offset.vector = Vector3(0, 0, -0.15)
+
+    retract_name = 'retract_after_ft'
+    handle_retract_distance = -0.15
+    handle_retract = PointStamped()
+    handle_retract.header.frame_id = tip
+    handle_retract.point.z = handle_retract_distance
+    goal_orientation = QuaternionStamped()
+    goal_orientation.header.frame_id = tip
+    goal_orientation.quaternion.w = 1
 
     open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
                                                      handle_limit=handle_turn_limit,
@@ -204,16 +213,28 @@ def full_opening():
 
     open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=open_goal)
 
-    open_goal_moving_around_first = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
-                                                                           tip_gripper_axis=tip_grasp_axis,
-                                                                           root_link=root,
-                                                                           tip_link=tip,
-                                                                           goal_angle=pre_push_hinge_turn_limit,
-                                                                           multipliers=multiplier,
-                                                                           name=f'{move_around_name}_first',
-                                                                           start_condition=open_gripper,
-                                                                           end_condition=f'{move_around_name}_first')
+    gis.motion_goals.add_cartesian_orientation(goal_orientation=goal_orientation,
+                                               root_link=root,
+                                               tip_link=tip,
+                                               name='fix_rotation_on_retract',
+                                               start_condition=open_gripper,
+                                               end_condition=retract_name)
 
+    open_goal_retract = gis.motion_goals.add_cartesian_position(root_link=root,
+                                                                tip_link=tip,
+                                                                goal_point=handle_retract,
+                                                                name=retract_name,
+                                                                threshold=0.001,
+                                                                start_condition=open_gripper,
+                                                                end_condition=retract_name)
+
+    # js = {'arm_flex_joint': -np.pi/2}
+    # joint_suggest = gis.motion_goals.add_joint_position(goal_state=js,
+    #                                                     name='extend_arm',
+    #                                                     start_condition=retract_name,
+    #                                                     end_condition=move_around_name)
+
+    # TODO: Test with different align areas like arm instead of just gripper?? to get whole arm behind door instead of half clipping into arm
     open_goal_moving_around = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
                                                                      tip_gripper_axis=tip_grasp_axis,
                                                                      root_link=root,
@@ -221,8 +242,9 @@ def full_opening():
                                                                      goal_angle=pre_push_hinge_turn_limit,
                                                                      multipliers=multipliers,
                                                                      offset=offset,
+                                                                     align_gripper=MoveAroundHingeAlign.ALL,
                                                                      name=move_around_name,
-                                                                     start_condition=open_goal_moving_around_first,
+                                                                     start_condition=open_goal_retract,
                                                                      end_condition=move_around_name)
 
     close_gripper = gis.monitors.add_close_hsr_gripper(start_condition=open_goal_moving_around)
@@ -242,12 +264,13 @@ def full_opening():
                                                     start_condition=pre_push)
     gis.update_end_condition(open_full, open_full)
 
+    # FIXME: use collision groups instead of allow all collisions
     gis.motion_goals.allow_all_collisions(start_condition='',
                                           end_condition=open_goal_moving_around)
     gis.motion_goals.allow_all_collisions(start_condition=open_goal_moving_around,
                                           end_condition=open_full)
-    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_moving_around_first,
-                                          end_condition=open_goal_moving_around)
+    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_retract,
+                                          end_condition=open_goal_moving_around)  # TODO: maybe use min_distance?
     # gis.motion_goals.allow_all_collisions()
     gis.monitors.add_end_motion(start_condition=open_full)
     gis.execute()

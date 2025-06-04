@@ -24,7 +24,7 @@ from giskard_msgs.srv import GetGroupNamesResponse, GetGroupInfoResponse
 from giskardpy.data_types.data_types import goal_parameter
 from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, \
     MonitorInitalizationException, ObjectForceTorqueThresholdException
-from giskardpy.data_types.suturo_types import ForceTorqueThresholds, TakePoseTypes
+from giskardpy.data_types.suturo_types import ForceTorqueThresholds, TakePoseTypes, MoveAroundHingeAlign
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
     CartesianPoseStraight, CartesianPositionStraight, CartesianPose
@@ -1936,8 +1936,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                               tip_link: Union[str, giskard_msgs.LinkName] = 'hand_gripper_tool_frame',
                               goal_angle: float = None,
                               name: Optional[str] = None,
-                              multipliers: Optional[np.ndarray] = None,
+                              multipliers: Optional[List[Tuple[float, float, str]]] = None,
                               offset: Optional[Vector3Stamped] = None,
+                              align_gripper: Union[int, MoveAroundHingeAlign] = MoveAroundHingeAlign.LAST,
                               start_condition: str = '',
                               pause_condition: str = '',
                               end_condition: str = '') -> str:
@@ -1949,6 +1950,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param tip_link: robot link, that grasps the handle
         :param root_link: root link of the kinematic chain
         :param goal_angle: Angle that the hinge should have at start of goal
+        :param name: Name of the goal
+        :param multipliers: Multipliers for distance and angle between handle and joint,
+         to control where move around points are and their goal_names
+        :param offset: Offset for move around points, best used for height offset when handling doors
+        :param align_gripper: Decides if gripper should try to align towards handle at each point or only last
         :param start_condition: expression that starts goal
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
@@ -1957,6 +1963,12 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             root_link = giskard_msgs.LinkName(name=root_link)
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
+        if isinstance(align_gripper, int):
+            try:
+                align_gripper = MoveAroundHingeAlign(align_gripper)
+            except ValueError:
+                raise ValueError("Invalid MoveAroundHingeAlign value")
+
         return self.add_motion_goal(class_name=MoveAroundHinge.__name__,
                                     handle_name=handle_name,
                                     root_link=root_link,
@@ -1966,6 +1978,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     tip_gripper_axis=tip_gripper_axis,
                                     multipliers=multipliers,
                                     offset=offset,
+                                    align_gripper=align_gripper,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)

@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 from enum import Enum
-from typing import Optional
+from typing import Optional, List, Tuple
 
 import numpy as np
 from std_msgs.msg import ColorRGBA
@@ -9,7 +9,7 @@ from std_msgs.msg import ColorRGBA
 from giskardpy import casadi_wrapper as w, casadi_wrapper as cas
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
-from giskardpy.data_types.suturo_types import GraspTypes, ForceTorqueThresholds
+from giskardpy.data_types.suturo_types import GraspTypes, ForceTorqueThresholds, MoveAroundHingeAlign
 from giskardpy.data_types.suturo_types import ObjectTypes, TakePoseTypes
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
@@ -1256,8 +1256,9 @@ class MoveAroundHinge(Goal):
                  reference_angular_velocity: float = 0.5,
                  weight: float = WEIGHT_ABOVE_CA,
                  goal_angle: float = None,
-                 multipliers: Optional[np.ndarray] = None,
+                 multipliers: Optional[List[Tuple[float, float, str]]] = None,
                  offset: Optional[cas.Vector3] = None,
+                 align_gripper: MoveAroundHingeAlign = MoveAroundHingeAlign.LAST,
                  name: str = None):
         """
         Adds Points to move around the hinge to a given handle
@@ -1367,7 +1368,9 @@ class MoveAroundHinge(Goal):
                                             weight=self.weight)
 
             # Add Vector-Align for better alignment to push later
-            if i == len(root_P_top_chain) - 1 and self.tip_gripper_axis is not None:
+            if (((i == len(root_P_top_chain) - 1 and align_gripper == MoveAroundHingeAlign.LAST)
+                 or (align_gripper == MoveAroundHingeAlign.ALL))
+                    and self.tip_gripper_axis is not None):
                 task.add_vector_goal_constraints(frame_V_current=self.root_V_tip_grasp_axis,
                                                  frame_V_goal=self.root_V_object_rotation_axis,
                                                  reference_velocity=self.reference_angular_velocity,
