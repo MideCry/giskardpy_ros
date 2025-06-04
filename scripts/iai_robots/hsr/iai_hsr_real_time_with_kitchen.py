@@ -19,7 +19,7 @@ if __name__ == '__main__':
                       robot_interface_config=HSRVelocityInterfaceSuturo(environment_name=environment_name),
                       behavior_tree_config=ClosedLoopBTConfig(publish_free_variables=True, debug_mode=debug_mode,
                                                               add_tf_pub=False, add_environment_pub=True),
-                      qp_controller_config=QPControllerConfig(mpc_dt=0.017,
+                      qp_controller_config=QPControllerConfig(mpc_dt=0.020,
                                                               prediction_horizon=15,
-                                                              control_dt=0.017))  # TODO: test 70 HZ dt + 10 PH
+                                                              control_dt=0.020))  # TODO: test 70 HZ dt + 10 PH
     giskard.live()

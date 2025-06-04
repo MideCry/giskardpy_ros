@@ -95,8 +95,8 @@ def grasping():
     hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
-    ref_speed = 0.3
-    handle_retract_distance = -0.065
+    ref_speed = 0.5
+    handle_retract_distance = -0.058
     bar_center_offset = 0.01
     pre_grasp_distance = -0.15
     grasp_into_distance = 0.2
@@ -190,7 +190,7 @@ def full_opening():
     multiplier = [(11 / 10, -0.7, 'down_short')]
     multipliers = [(7 / 5, -0.3, 'down_long'),
                    (7 / 5, 0.4, 'up_long'),
-                   (1, 0.7, 'up_short')]
+                   (0.9, 0.7, 'up_short')]
 
     offset = Vector3Stamped()
     offset.header.frame_id = root
@@ -210,7 +210,6 @@ def full_opening():
                                                                            tip_link=tip,
                                                                            goal_angle=pre_push_hinge_turn_limit,
                                                                            multipliers=multiplier,
-                                                                           offset=offset,
                                                                            name=f'{move_around_name}_first',
                                                                            start_condition=open_gripper,
                                                                            end_condition=f'{move_around_name}_first')
