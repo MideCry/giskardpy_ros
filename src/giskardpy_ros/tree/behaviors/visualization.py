@@ -16,10 +16,11 @@ class VisualizationBehavior(GiskardBehavior):
     def __init__(self,
                  mode: VisualizationMode,
                  name: str = 'visualization marker',
+                 scale_scale: float = 1.0,
                  ensure_publish: bool = False):
         super().__init__(name)
         self.ensure_publish = ensure_publish
-        self.visualizer = ROSMsgVisualization(mode=mode)
+        self.visualizer = ROSMsgVisualization(mode=mode, scale_scale=scale_scale)
 
     @catch_and_raise_to_blackboard
     @record_time

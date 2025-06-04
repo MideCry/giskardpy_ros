@@ -45,8 +45,10 @@ class ROSMsgVisualization:
     @profile
     def __init__(self,
                  visualization_topic: str = '~visualization_marker_array',
+                 scale_scale: float = 1.0,
                  mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
         self.mode = mode
+        self.scale_scale = scale_scale
         self.frame_locked = self.mode in [VisualizationMode.VisualsFrameLocked,
                                           VisualizationMode.CollisionsFrameLocked,
                                           VisualizationMode.CollisionsDecomposedFrameLocked]
@@ -59,7 +61,12 @@ class ROSMsgVisualization:
 
     @memoize
     def link_to_marker(self, link: Link) -> List[Marker]:
-        return msg_converter.link_to_visualization_marker(data=link, mode=self.mode).markers
+        ms = msg_converter.link_to_visualization_marker(data=link, mode=self.mode).markers
+        for m in ms:
+            m.scale.x *= self.scale_scale
+            m.scale.y *= self.scale_scale
+            m.scale.z *= self.scale_scale
+        return ms
 
     def clear_marker_cache(self) -> None:
         clear_memo(self.link_to_marker)
