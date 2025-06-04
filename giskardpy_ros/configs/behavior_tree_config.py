@@ -48,7 +48,8 @@ class BehaviorTreeConfig(ABC):
     def add_visualization_marker_publisher(self,
                                            mode: VisualizationMode,
                                            add_to_sync: Optional[bool] = None,
-                                           add_to_control_loop: Optional[bool] = None):
+                                           add_to_control_loop: Optional[bool] = None,
+                                           scale_scale: float = 1.0):
         """
 
         :param add_to_sync: Markers are published while waiting for a goal.
@@ -59,9 +60,9 @@ class BehaviorTreeConfig(ABC):
         """
         GiskardBlackboard().ros_visualizer = ROSMsgVisualization(mode=mode)
         if add_to_sync:
-            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode)
+            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale)
         if add_to_control_loop:
-            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode)
+            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale)
 
     def add_qp_data_publisher(self, publish_lb: bool = False, publish_ub: bool = False,
                               publish_lbA: bool = False, publish_ubA: bool = False,

@@ -7,6 +7,7 @@ from numpy import pi
 
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException
+from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.tasks.pointing import Pointing
@@ -40,7 +41,8 @@ class HSRTester(GiskardTester):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,
                                                                       publish_js=False),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125,
+                                                                      control_dt=0.0125))
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
@@ -265,6 +267,33 @@ class TestCartGoals:
         zero_pose.set_cart_goal(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
+
+    def test_wiggle_insert(self, zero_pose: HSRTester):
+        goal_state = {
+            'arm_flex_joint': -1.5,
+            'arm_lift_joint': 0.5,
+            'arm_roll_joint': 0,
+            'head_pan_joint': 0,
+            'head_tilt_joint': 0,
+            'wrist_flex_joint': -1.5,
+            'wrist_roll_joint': 0,
+        }
+
+        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=goal_state)
+        zero_pose.execute()
+
+        hpl = god_map.world.search_for_link_name(link_name='hand_gripper_tool_frame',
+                                                 group_name='hsrb')
+        root_link = god_map.world.search_for_link_name(link_name='map')
+        hole_point = PoseStamped()
+        hole_point.header.frame_id = 'map'
+        hole_point.pose.position.x = 0.5
+        hole_point.pose.position.z = 0.3
+        wiggle = zero_pose.api.motion_goals.add_wiggle_insert(root_link=root_link,
+                                                          tip_link=hpl,
+                                                          hole_point=hole_point)
+        # zero_pose.motion_goals.update_end_condition(wiggle, wiggle)
+        zero_pose.execute(local_min_end=False)
 
 
 class TestConstraints:

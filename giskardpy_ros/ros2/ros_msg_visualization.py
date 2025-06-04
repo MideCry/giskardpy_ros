@@ -42,8 +42,10 @@ class ROSMsgVisualization:
 
     def __init__(self, tf_frame: Optional[str] = None,
                  visualization_topic: str = '~visualization_marker_array',
+                 scale_scale: float = 1.0,
                  mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
         self.mode = mode
+        self.scale_scale = scale_scale
         self.frame_locked = self.mode in [VisualizationMode.VisualsFrameLocked,
                                           VisualizationMode.CollisionsFrameLocked,
                                           VisualizationMode.CollisionsDecomposedFrameLocked]
@@ -61,7 +63,12 @@ class ROSMsgVisualization:
 
     @memoize
     def link_to_marker(self, link: Link) -> List[Marker]:
-        return msg_converter.link_to_visualization_marker(data=link, mode=self.mode).markers
+        ms = msg_converter.link_to_visualization_marker(data=link, mode=self.mode).markers
+        for m in ms:
+            m.scale.x *= self.scale_scale
+            m.scale.y *= self.scale_scale
+            m.scale.z *= self.scale_scale
+        return ms
 
     def clear_marker_cache(self) -> None:
         clear_memo(self.link_to_marker)
@@ -261,7 +268,8 @@ class ROSMsgVisualization:
                                        debug_expressions: Dict[PrefixName, Union[cas.TransMatrix,
                                        cas.Point3,
                                        cas.Vector3,
-                                       cas.Quaternion]],
+                                       cas.Quaternion,
+                                       cas.RotationMatrix]],
                                        debug_values: Dict[PrefixName, np.ndarray],
                                        width: float = 0.05,
                                        marker_id_offset: int = 0) -> List[Marker]:
@@ -274,7 +282,34 @@ class ROSMsgVisualization:
                 map_T_ref = god_map.world.compute_fk_np(god_map.world.root_link_name, expr.reference_frame)
             else:
                 map_T_ref = np.eye(4)
-            if isinstance(expr, cas.TransMatrix):
+
+            if isinstance(expr, cas.RotationMatrix):
+                colors = [
+                    ColorRGBA(1.0, 0.0, 0.0, 1.0),  # Red (X)
+                    ColorRGBA(0.0, 1.0, 0.0, 1.0),  # Green (Y)
+                    ColorRGBA(0.0, 0.0, 1.0, 1.0)  # Blue (Z)
+                ]
+
+                for i in range(3):
+                    m = Marker()
+                    m.header.frame_id = self.tf_root
+                    m.header.stamp = rospy.Time.now()
+                    m.pose.orientation.w = 1
+                    m.ns = f'debug/{name}'
+                    m.id = i + marker_id_offset
+                    m.type = Marker.ARROW
+                    m.action = Marker.ADD
+                    axis = value[:, i] * 0.5
+                    m.points = [Point(), Point(axis[0], axis[1], axis[2])]  # Start and Endpoints
+                    # Arrow properties
+                    m.scale.x = width / 2
+                    m.scale.y = width
+                    m.scale.z = 0
+
+                    m.color = colors[i]
+
+                    ms.append(m)
+            elif isinstance(expr, cas.TransMatrix):
                 ref_T_d = value
                 map_T_d = np.dot(map_T_ref, ref_T_d)
                 map_P_d = map_T_d[:4, 3:]
