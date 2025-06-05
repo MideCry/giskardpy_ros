@@ -29,12 +29,12 @@ on:
         required: true
         type: boolean
         default: false
-        hidden: true
+        # hidden: true
       pr_id:
         description: 'ID of PR from giskardpy'
         required: false
         type: string
-        hidden: true
+        # hidden: true
 jobs:
   docker:
       permissions:
