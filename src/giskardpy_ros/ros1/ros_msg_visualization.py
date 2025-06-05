@@ -46,9 +46,11 @@ class ROSMsgVisualization:
     def __init__(self,
                  visualization_topic: str = '~visualization_marker_array',
                  scale_scale: float = 1.0,
+                 include_tf_predix: bool = False,
                  mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
         self.mode = mode
         self.scale_scale = scale_scale
+        self.include_tf_predix = include_tf_predix
         self.frame_locked = self.mode in [VisualizationMode.VisualsFrameLocked,
                                           VisualizationMode.CollisionsFrameLocked,
                                           VisualizationMode.CollisionsDecomposedFrameLocked]
@@ -90,7 +92,10 @@ class ROSMsgVisualization:
             collision_markers = self.link_to_marker(link)
             for j, marker in enumerate(collision_markers):
                 if self.frame_locked:
-                    marker.header.frame_id = link_name.short_name
+                    if self.include_tf_predix:
+                        marker.header.frame_id = str(link_name)
+                    else:
+                        marker.header.frame_id = link_name.short_name
                 else:
                     marker.header.frame_id = self.tf_root
                 marker.action = Marker.ADD

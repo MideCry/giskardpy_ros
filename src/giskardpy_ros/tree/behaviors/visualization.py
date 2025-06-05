@@ -17,10 +17,11 @@ class VisualizationBehavior(GiskardBehavior):
                  mode: VisualizationMode,
                  name: str = 'visualization marker',
                  scale_scale: float = 1.0,
+                 include_tf_predix: bool = False,
                  ensure_publish: bool = False):
         super().__init__(name)
         self.ensure_publish = ensure_publish
-        self.visualizer = ROSMsgVisualization(mode=mode, scale_scale=scale_scale)
+        self.visualizer = ROSMsgVisualization(mode=mode, scale_scale=scale_scale, include_tf_predix=include_tf_predix)
 
     @catch_and_raise_to_blackboard
     @record_time
