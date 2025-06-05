@@ -3,7 +3,21 @@ defaults:
   run:
     shell: bash -ieo pipefail {0}
 on:
-  workflow_call:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
 
 jobs:
   docker:
