@@ -23,7 +23,7 @@ from giskardpy.motion_statechart.monitors.monitors import Monitor, CancelMotion
 from giskardpy.motion_statechart.monitors.payload_monitors import Sleep
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task, WEIGHT_BELOW_CA
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     pass
@@ -1254,7 +1254,7 @@ class MoveAroundHinge(Goal):
                  tip_gripper_axis: cas.Vector3 = None,
                  reference_linear_velocity: float = 0.1,
                  reference_angular_velocity: float = 0.5,
-                 weight: float = WEIGHT_ABOVE_CA,
+                 weight: float = WEIGHT_BELOW_CA,
                  goal_angle: float = None,
                  multipliers: Optional[List[Tuple[float, float, str]]] = None,
                  offset: Optional[cas.Vector3] = None,

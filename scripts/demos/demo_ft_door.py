@@ -4,10 +4,10 @@ import numpy as np
 import rospy
 from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped, PoseWithCovarianceStamped, \
     QuaternionStamped
-from rospy import Publisher
-
 from giskardpy.data_types.suturo_types import MoveAroundHingeAlign
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
+from rospy import Publisher
+
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 
@@ -264,13 +264,12 @@ def full_opening():
                                                     start_condition=pre_push)
     gis.update_end_condition(open_full, open_full)
 
-    # FIXME: use collision groups instead of allow all collisions
-    gis.motion_goals.allow_all_collisions(start_condition='',
-                                          end_condition=open_goal_moving_around)
-    gis.motion_goals.allow_all_collisions(start_condition=open_goal_moving_around,
-                                          end_condition=open_full)
-    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_retract,
-                                          end_condition=open_goal_moving_around)  # TODO: maybe use min_distance?
+    gis.motion_goals.allow_collision(group1='arm',
+                                     group2='iai_kitchen')
+    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_retract)  # TODO: maybe use min_distance?
+    gis.motion_goals.allow_collision(group1='arm',
+                                     group2='iai_kitchen',
+                                     start_condition=open_goal_moving_around)
     # gis.motion_goals.allow_all_collisions()
     gis.monitors.add_end_motion(start_condition=open_full)
     gis.execute()
