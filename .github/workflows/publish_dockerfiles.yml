@@ -3,6 +3,21 @@ defaults:
   run:
     shell: bash -ieo pipefail {0}
 on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
   workflow_call:
 
 jobs:
@@ -82,9 +97,9 @@ jobs:
           DOCKERFILE_CHANGED=false
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # For manual triggers, nver build Docker images
-            echo "Manual workflow trigger, will not build Docker images"
-            DOCKERFILE_CHANGED=false
+            # For manual triggers, always rebuild
+            DOCKERFILE_CHANGED=true
+            echo "NEEDS_REBUILD=true" >> $GITHUB_OUTPUT
 
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # For PRs, check if any Dockerfiles changed in the PR

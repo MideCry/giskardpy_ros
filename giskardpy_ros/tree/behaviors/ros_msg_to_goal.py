@@ -16,20 +16,20 @@ from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimu
     Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2.msg_converter import json_str_to_giskard_kwargs
+from giskardpy_ros.ros2.msg_converter import create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard, GiskardBlackboard
 
 
 class ParseActionGoal(GiskardBehavior):
     @record_time
-    
+
     def __init__(self, name):
         super().__init__(name)
 
     @catch_and_raise_to_blackboard
     @record_time
-    
+
     def update(self):
         move_goal: Move.Goal = GiskardBlackboard().move_action_server.goal_msg
         get_middleware().loginfo(f'Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message.')
@@ -48,23 +48,11 @@ class ParseActionGoal(GiskardBehavior):
 
     def parse_motion_graph(self, move_goal: Move.Goal) -> None:
         for msg_node in move_goal.nodes:
-            parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, god_map.world)
             get_middleware().loginfo(f'Adding node of type: \'{msg_node.class_name}\'')
-            msg_node: MotionStatechartNode
-            if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-                C = god_map.motion_statechart_manager.allowed_monitor_types[msg_node.class_name]
-                node: Monitor = C(name=msg_node.name, **parsed_kwargs)
-                god_map.motion_statechart_manager.add_monitor(node)
-            elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-                C = god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-                node: Task = C(name=msg_node.name, **parsed_kwargs)
-                god_map.motion_statechart_manager.add_task(node)
-            elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-                C = god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-                node: Goal = C(name=msg_node.name, **parsed_kwargs)
-                god_map.motion_statechart_manager.add_goal(node)
-            else:
-                raise UnknownGoalException(f'unknown task type: \'{msg_node.class_name}\'.')
+
+            node = create_node(msg_node, god_map.world)
+            god_map.motion_statechart_manager.add_node(node)
+
             node.start_condition = msg_node.start_condition
             node.pause_condition = msg_node.pause_condition
             node.end_condition = msg_node.end_condition
@@ -93,13 +81,13 @@ def get_ros_msgs_constant_name_by_value(ros_msg_class, value: Union[str, int, fl
 
 class SetExecutionMode(GiskardBehavior):
     @record_time
-    
+
     def __init__(self, name: str = 'set execution mode'):
         super().__init__(name)
 
     @catch_and_raise_to_blackboard
     @record_time
-    
+
     def update(self):
         get_middleware().loginfo(
             f'Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg), GiskardBlackboard().move_action_server.goal_msg.type)}')
@@ -121,7 +109,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     @record_time
-    
+
     def update(self):
         local_min = LocalMinimumReached('local min')
         god_map.motion_statechart_manager.add_monitor(local_min)

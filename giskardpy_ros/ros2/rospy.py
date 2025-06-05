@@ -4,6 +4,7 @@ from time import sleep
 
 import rclpy
 from ament_index_python import get_package_share_directory
+from rclpy import Future
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
@@ -79,3 +80,8 @@ def init_node(node_name: str) -> None:
     spinner_thread = Thread(target=heart, daemon=True, name='rclpy spin')
     set_middleware(ROS2Wrapper())
     spinner_thread.start()
+
+
+def wait_for_future_to_complete(future: Future) -> None:
+    while rclpy.ok() and not future.done():
+        sleep(0.01)
