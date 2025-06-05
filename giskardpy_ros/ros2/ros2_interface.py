@@ -151,8 +151,9 @@ class MyActionClient:
 
     def send_goal(self, goal):
         async def muh():
-            await self.send_goal_async(goal)
-            return await self.get_result()
+            rospy.wait_for_future_to_complete(self.send_goal_async(goal))
+            result = await self.get_result()
+            return result
 
         return get_event_loop().run_until_complete(muh())
 
