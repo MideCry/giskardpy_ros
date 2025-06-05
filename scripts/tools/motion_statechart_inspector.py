@@ -3,7 +3,7 @@ from PyQt5.QtGui import QPainter, QTransform, QKeySequence
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, \
     QLabel, QGraphicsView, QGraphicsScene, QGraphicsItem, QShortcut
 from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
-from PyQt5.QtCore import QTimer, QRectF, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
 from pygraphviz import ItemAttribute
 from giskard_msgs.msg import ExecutionState
 from PyQt5.QtCore import QMutex, QMutexLocker
