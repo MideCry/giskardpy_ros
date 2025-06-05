@@ -52,7 +52,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList
     MirrorJointPosition
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
 from giskardpy_ros.ros2 import msg_converter, rospy
@@ -532,6 +532,46 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     weight=weight,
                                     name=name,
                                     absolute=absolute,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
+
+    def add_base_arm_weight_scaling(self,
+                                    tip_link: Union[str, giskard_msgs.LinkName],
+                                    root_link: Union[str, giskard_msgs.LinkName],
+                                    tip_goal: PointStamped,
+                                    arm_joints: List[str],
+                                    base_joints: List[str],
+                                    gain: int = 100000,
+                                    name: Optional[str] = None,
+                                    start_condition: str = '',
+                                    pause_condition: str = '',
+                                    end_condition: str = '',
+                                    **kwargs: goal_parameter) -> str:
+        """
+        This goals adds weight scaling constraints with the distance between a tip_link and its goal Position as a
+        scaling expression. The larger the scaling expression the more is the base movement used to achieve
+        all other constraints instead of arm movements. When the expression decreases this relation changes to favor
+        arm movements instead of base movements.
+        :param root_link: name of the root link of the kin chain
+        :param tip_link: name of the tip link of the kin chain
+        :param tip_goal: the goal position
+        :param arm_joints: joints of the arm that should be scaled.
+        :param base_joints: joints of the base that should be scaled.
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        return self.add_motion_goal(class_name=BaseArmWeightScaling.__name__,
+                                    name=name,
+                                    tip_link=tip_link,
+                                    root_link=root_link,
+                                    tip_goal=tip_goal,
+                                    arm_joints=arm_joints,
+                                    base_joints=base_joints,
+                                    gain=gain,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
