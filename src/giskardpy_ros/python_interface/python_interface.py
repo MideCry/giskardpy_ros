@@ -863,7 +863,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           vector_momentum_factor: float = 0.9,
                           angular_momentum_factor: float = 0.9,
                           center_pull_strength_angle: float = 0.1,
-                          center_pull_strength_vector: float = 0.25):
+                          center_pull_strength_vector: float = 0.25,
+                          weight: Optional[float] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
         """
         Press down while wiggling the end effector.
         :param root_link:
@@ -899,7 +903,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     vector_momentum_factor=vector_momentum_factor,
                                     angular_momentum_factor=angular_momentum_factor,
                                     center_pull_strength_angle=center_pull_strength_angle,
-                                    center_pull_strength_vector=center_pull_strength_vector)
+                                    center_pull_strength_vector=center_pull_strength_vector,
+                                    weight=weight,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def _add_collision_avoidance(self,
                                  collisions: List[CollisionEntry],

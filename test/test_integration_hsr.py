@@ -11,7 +11,6 @@ from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
@@ -280,14 +279,26 @@ class TestCartGoals:
         hpl = god_map.world.search_for_link_name(link_name='hand_gripper_tool_frame',
                                                  group_name='hsrb')
         root_link = god_map.world.search_for_link_name(link_name='map')
-        hole_point = PoseStamped()
+        hole_point = PointStamped()
         hole_point.header.frame_id = 'map'
-        hole_point.pose.position.x = 0.5
-        hole_point.pose.position.z = 0.3
-        wiggle = zero_pose.motion_goals.add_wiggle_insert(root_link=root_link,
-                                                          tip_link=hpl,
-                                                          hole_point=hole_point)
-        # zero_pose.motion_goals.update_end_condition(wiggle, wiggle)
+        hole_point.point.x = 0.5
+        hole_point.point.z = 0.3
+        wiggle = 'wiggle'
+        zero_pose.motion_goals.add_wiggle_insert(name=wiggle,
+                                                 root_link=root_link,
+                                                 tip_link=hpl,
+                                                 hole_point=hole_point,
+                                                 end_condition=wiggle)
+        resistence_point = PointStamped()
+        resistence_point.header.frame_id = 'map'
+        resistence_point.point.x = 0.5
+        resistence_point.point.z = 0.4
+        timer = zero_pose.monitors.add_sleep(5)
+        zero_pose.motion_goals.add_cartesian_position(root_link=root_link,
+                                                      tip_link=hpl,
+                                                      goal_point=resistence_point,
+                                                      end_condition=timer)
+        zero_pose.monitors.add_end_motion(start_condition=wiggle)
         zero_pose.execute(add_local_minimum_reached=False)
 
 
