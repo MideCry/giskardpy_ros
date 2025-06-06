@@ -53,6 +53,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
 from giskardpy_ros.ros2 import msg_converter, rospy
@@ -879,7 +880,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                           vector_momentum_factor: float = 0.9,
                           angular_momentum_factor: float = 0.9,
                           center_pull_strength_angle: float = 0.1,
-                          center_pull_strength_vector: float = 0.25):
+                          center_pull_strength_vector: float = 0.25,
+                          weight: Optional[float] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
         """
         Press down while wiggling the end effector.
         :param root_link:
@@ -915,7 +920,11 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     vector_momentum_factor=vector_momentum_factor,
                                     angular_momentum_factor=angular_momentum_factor,
                                     center_pull_strength_angle=center_pull_strength_angle,
-                                    center_pull_strength_vector=center_pull_strength_vector)
+                                    center_pull_strength_vector=center_pull_strength_vector,
+                                    weight=weight,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def _add_collision_avoidance(self,
                                  collisions: List[CollisionEntry],

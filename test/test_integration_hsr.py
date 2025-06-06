@@ -286,14 +286,26 @@ class TestCartGoals:
         hpl = god_map.world.search_for_link_name(link_name='hand_gripper_tool_frame',
                                                  group_name='hsrb')
         root_link = god_map.world.search_for_link_name(link_name='map')
-        hole_point = PoseStamped()
+        hole_point = PointStamped()
         hole_point.header.frame_id = 'map'
-        hole_point.pose.position.x = 0.5
-        hole_point.pose.position.z = 0.3
-        wiggle = zero_pose.api.motion_goals.add_wiggle_insert(root_link=root_link,
-                                                              tip_link=hpl,
-                                                              hole_point=hole_point)
-        # zero_pose.motion_goals.update_end_condition(wiggle, wiggle)
+        hole_point.point.x = 0.5
+        hole_point.point.z = 0.3
+        wiggle = 'wiggle'
+        zero_pose.api.motion_goals.add_wiggle_insert(name=wiggle,
+                                                 root_link=root_link,
+                                                 tip_link=hpl,
+                                                 hole_point=hole_point,
+                                                 end_condition=wiggle)
+        resistence_point = PointStamped()
+        resistence_point.header.frame_id = 'map'
+        resistence_point.point.x = 0.5
+        resistence_point.point.z = 0.4
+        timer = zero_pose.api.monitors.add_sleep(5)
+        zero_pose.api.motion_goals.add_cartesian_position(root_link=root_link,
+                                                      tip_link=hpl,
+                                                      goal_point=resistence_point,
+                                                      end_condition=timer)
+        zero_pose.api.monitors.add_end_motion(start_condition=wiggle)
         zero_pose.execute(local_min_end=False)
 
 
