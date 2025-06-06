@@ -64,10 +64,7 @@ class RealTimeConePointing(PointingCone):
                  name: Optional[str] = None,
                  max_velocity: float = 0.3,
                  threshold: float = 0.01,
-                 weight: float = WEIGHT_BELOW_CA,
-                 start_condition: cas.Expression = cas.BinaryTrue,
-                 pause_condition: cas.Expression = cas.BinaryFalse,
-                 end_condition: cas.Expression = cas.BinaryFalse):
+                 weight: float = WEIGHT_BELOW_CA):
         initial_goal = cas.Point3((1, 0, 1), reference_frame=god_map.world.search_for_link_name('base_footprint'))
         super().__init__(name=name,
                          tip_link=tip_link,
