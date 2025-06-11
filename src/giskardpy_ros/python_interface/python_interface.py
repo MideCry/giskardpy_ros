@@ -1824,7 +1824,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     end_condition=end_condition)
 
     def hsrb_open_door_goal(self,
-                            door_handle_link: Union[str, giskard_msgs.LinkName],
+                            handle_name: Union[str, giskard_msgs.LinkName],
                             tip_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName(
                                 name='hand_gripper_tool_frame'),
                             name: str = 'HSRB_open_door',
@@ -1836,7 +1836,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         """
         HSRB specific open door goal wrapper
 
-        :param door_handle_link: Link of the door handle
+        :param handle_name: Link of the door handle
         :param tip_link: Link that's grasping the door handle
         :param name: name of the goal for distinction between same goals
         :param handle_limit: Limits the handle opening to given value
@@ -1846,7 +1846,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param end_condition: expression that ends goal
         """
         return self.add_open_door_goal(tip_link=tip_link,
-                                       door_handle_link=door_handle_link,
+                                       handle_name=handle_name,
                                        name=name,
                                        handle_limit=handle_limit,
                                        hinge_limit=hinge_limit,
@@ -1930,7 +1930,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                              end_condition=end_condition)
 
     def add_move_around_hinge(self,
-                              handle_name: str,
+                              handle_name: Union[str, giskard_msgs.LinkName],
                               tip_gripper_axis: Vector3Stamped = None,
                               root_link: Union[str, giskard_msgs.LinkName] = 'map',
                               tip_link: Union[str, giskard_msgs.LinkName] = 'hand_gripper_tool_frame',
@@ -1963,6 +1963,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             root_link = giskard_msgs.LinkName(name=root_link)
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
+        if isinstance(handle_name, str):
+            handle_name = giskard_msgs.LinkName(name=handle_name)
         if isinstance(align_gripper, int):
             try:
                 align_gripper = MoveAroundHingeAlign(align_gripper)
@@ -2241,7 +2243,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_open_door_goal(self,
                            tip_link: Union[str, giskard_msgs.LinkName],
-                           door_handle_link: Union[str, giskard_msgs.LinkName],
+                           handle_name: Union[str, giskard_msgs.LinkName],
                            name: str = None,
                            handle_limit: Optional[float] = None,
                            hinge_limit: Optional[float] = None,
@@ -2252,7 +2254,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         Adds OpenDoorGoal to motion goal execution plan
 
         :param tip_link: Link that is grasping the door handle
-        :param door_handle_link: Link of the door handle of the door that is to be opened
+        :param handle_name: Link of the door handle of the door that is to be opened
         :param name: Name of the Goal for distinction between similar goals
         :param handle_limit: Limits the handle opening to given value
         :param hinge_limit: Limits the hinge opening to given value
@@ -2260,13 +2262,13 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition: expression that pauses goal
         :param end_condition: expression that ends goal
         """
-        if isinstance(door_handle_link, str):
-            door_handle_link = giskard_msgs.LinkName(name=door_handle_link)
+        if isinstance(handle_name, str):
+            handle_name = giskard_msgs.LinkName(name=handle_name)
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(class_name=OpenDoorGoal.__name__,
                                     tip_link=tip_link,
-                                    door_handle_link=door_handle_link,
+                                    handle_name=handle_name,
                                     name=name,
                                     handle_limit=handle_limit,
                                     hinge_limit=hinge_limit,
@@ -3990,7 +3992,7 @@ class GiskardWrapper:
 
         close_gripper = self.monitors.add_close_hsr_gripper()
 
-        self.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=handle_turn_limit,
+        self.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=handle_turn_limit,
                                               hinge_limit=hinge_turn_limit,
                                               start_condition=close_gripper)
 

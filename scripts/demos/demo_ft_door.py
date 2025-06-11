@@ -4,10 +4,10 @@ import numpy as np
 import rospy
 from geometry_msgs.msg import Vector3Stamped, PointStamped, Vector3, PoseStamped, PoseWithCovarianceStamped, \
     QuaternionStamped
-from giskardpy.data_types.suturo_types import MoveAroundHingeAlign
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from rospy import Publisher
 
+from giskardpy.data_types.suturo_types import MoveAroundHingeAlign
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 
@@ -205,7 +205,7 @@ def full_opening():
     goal_orientation.header.frame_id = tip
     goal_orientation.quaternion.w = 1
 
-    open_goal = gis.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name,
+    open_goal = gis.motion_goals.hsrb_open_door_goal(handle_name=handle_name,
                                                      handle_limit=handle_turn_limit,
                                                      hinge_limit=pre_push_hinge_turn_limit,
                                                      name=open_door_name,
@@ -219,7 +219,7 @@ def full_opening():
                                                root_link=root,
                                                tip_link=tip,
                                                name='fix_rotation_on_retract',
-                                               start_condition=open_gripper,
+                                               start_condition=slep,
                                                end_condition=retract_name)
 
     open_goal_retract = gis.motion_goals.add_cartesian_position(root_link=root,
@@ -230,13 +230,6 @@ def full_opening():
                                                                 start_condition=open_gripper,
                                                                 end_condition=retract_name)
 
-    # js = {'arm_flex_joint': -np.pi/2}
-    # joint_suggest = gis.motion_goals.add_joint_position(goal_state=js,
-    #                                                     name='extend_arm',
-    #                                                     start_condition=retract_name,
-    #                                                     end_condition=move_around_name)
-
-    # TODO: Test with different align areas like arm instead of just gripper?? to get whole arm behind door instead of half clipping into arm
     open_goal_moving_around = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
                                                                      tip_gripper_axis=tip_grasp_axis,
                                                                      root_link=root,
@@ -268,10 +261,113 @@ def full_opening():
 
     gis.motion_goals.allow_collision(group1='arm',
                                      group2='iai_kitchen')
-    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_retract)  # TODO: maybe use min_distance?
+    gis.motion_goals.avoid_all_collisions(start_condition=open_goal_retract)
     gis.motion_goals.allow_collision(group1='arm',
                                      group2='iai_kitchen',
                                      start_condition=open_goal_moving_around)
+    # gis.motion_goals.allow_all_collisions()
+    gis.monitors.add_end_motion(start_condition=open_full)
+    gis.execute()
+
+
+def full_opening_in_parts():
+    grasping()
+
+    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
+    door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
+    door_center = "iai_kitchen/iai_kitchen:arena:door_center"
+    handle_turn_limit = 0.4
+    pre_push_hinge_turn_limit = -0.5
+    full_hinge_turn_limit = -1.4
+    open_door_name = 'OpenDoorGoal'
+    tip = 'hand_gripper_tool_frame'
+    root = 'map'
+    tip_grasp_axis = Vector3Stamped()
+    tip_grasp_axis.header.frame_id = tip
+    tip_grasp_axis.vector = Vector3(1, 0, 0)
+    move_around_name = 'MovingAroundAtTheSpeedOfSound'
+    multipliers = [(7 / 5, -0.3, 'down_long'),
+                   (7 / 5, 0.4, 'up_long'),
+                   (0.8, 0.7, 'up_short')]
+
+    offset = Vector3Stamped()
+    offset.header.frame_id = root
+    offset.vector = Vector3(0, 0, -0.15)
+
+    retract_name = 'retract_after_ft'
+    handle_retract_distance = -0.15
+    handle_retract = PointStamped()
+    handle_retract.header.frame_id = tip
+    handle_retract.point.z = handle_retract_distance
+    goal_orientation = QuaternionStamped()
+    goal_orientation.header.frame_id = tip
+    goal_orientation.quaternion.w = 1
+
+    open_goal = gis.motion_goals.hsrb_open_door_goal(handle_name=handle_name,
+                                                     handle_limit=handle_turn_limit,
+                                                     hinge_limit=pre_push_hinge_turn_limit,
+                                                     name=open_door_name,
+                                                     end_condition=open_door_name)
+
+    slep = gis.monitors.add_sleep(seconds=2, start_condition=open_goal)
+
+    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=slep)
+
+    gis.motion_goals.add_cartesian_orientation(goal_orientation=goal_orientation,
+                                               root_link=root,
+                                               tip_link=tip,
+                                               name='fix_rotation_on_retract',
+                                               start_condition=slep,
+                                               end_condition=retract_name)
+
+    open_goal_retract = gis.motion_goals.add_cartesian_position(root_link=root,
+                                                                tip_link=tip,
+                                                                goal_point=handle_retract,
+                                                                name=retract_name,
+                                                                threshold=0.001,
+                                                                start_condition=open_gripper,
+                                                                end_condition=retract_name)
+
+    gis.motion_goals.allow_collision(group1='arm',
+                                     group2='iai_kitchen')
+    gis.monitors.add_end_motion(open_goal_retract)
+    gis.execute()
+
+    open_goal_moving_around = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
+                                                                     tip_gripper_axis=tip_grasp_axis,
+                                                                     root_link=root,
+                                                                     tip_link=tip,
+                                                                     goal_angle=pre_push_hinge_turn_limit,
+                                                                     multipliers=multipliers,
+                                                                     offset=offset,
+                                                                     align_gripper=MoveAroundHingeAlign.ALL,
+                                                                     name=move_around_name,
+                                                                     start_condition='',
+                                                                     end_condition=move_around_name)
+
+    gis.motion_goals.avoid_all_collisions()
+    gis.monitors.add_end_motion(move_around_name)
+    gis.execute()
+
+    close_gripper = gis.monitors.add_close_hsr_gripper()
+
+    pre_push = gis.motion_goals.add_pre_push_door(root_link=root,
+                                                  tip_link=tip,
+                                                  door_handle=door_handle_for_hinge,
+                                                  weight=WEIGHT_ABOVE_CA,
+                                                  door_object=door_center,
+                                                  start_condition=close_gripper)
+    gis.update_end_condition(pre_push, pre_push)
+
+    open_full = gis.motion_goals.add_open_container(tip_link=tip,
+                                                    environment_link=door_center,
+                                                    name='Push open door',
+                                                    goal_joint_state=full_hinge_turn_limit,
+                                                    start_condition=pre_push)
+    gis.update_end_condition(open_full, open_full)
+
+    gis.motion_goals.allow_collision(group1='arm',
+                                     group2='iai_kitchen')
     # gis.motion_goals.allow_all_collisions()
     gis.monitors.add_end_motion(start_condition=open_full)
     gis.execute()
@@ -282,7 +378,7 @@ rospy.init_node('giskard_demo')
 init_pub = rospy.Publisher('/initialpose', data_class=PoseWithCovarianceStamped, queue_size=10)
 
 gis = GiskardWrapper()
-test = 1
+test = 3
 
 setup(init_pose_pub=init_pub)
 
@@ -292,5 +388,7 @@ if test == 1:
     full_opening()
 elif test == 2:
     grasping()
+elif test == 3:
+    full_opening_in_parts()
 else:
     gis.hsr_door_opening(ft_timeout=10000)

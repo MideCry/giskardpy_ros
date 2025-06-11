@@ -1127,7 +1127,7 @@ class OldGiskardWrapper(GiskardWrapper):
         :param name: Name of the Goal for distinction between similar goals
         """
         self.motion_goals.add_open_door_goal(tip_link=tip_link,
-                                             door_handle_link=door_handle_link,
+                                             handle_name=door_handle_link,
                                              name=name)
 
     def set_hsrb_open_door_goal(self,

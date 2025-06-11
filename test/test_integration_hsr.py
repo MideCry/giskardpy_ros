@@ -823,7 +823,7 @@ class TestSUTURO:
         door_setup.allow_all_collisions()
         door_setup.close_gripper()
 
-        door_setup.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=0.35,
+        door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=0.35,
                                                     hinge_limit=-0.8)
 
         door_setup.allow_all_collisions()
@@ -875,7 +875,7 @@ class TestSUTURO:
 
         door_setup.close_gripper()
 
-        door_setup.motion_goals.hsrb_open_door_goal(door_handle_link=handle_name, handle_limit=0.35,
+        door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=0.35,
                                                     hinge_limit=-0.8)
 
         door_setup.allow_all_collisions()
