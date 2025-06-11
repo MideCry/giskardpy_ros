@@ -211,7 +211,7 @@ def full_opening():
                                                      name=open_door_name,
                                                      end_condition=open_door_name)
 
-    slep = gis.monitors.add_sleep(seconds=2, start_condition=open_goal)
+    slep = gis.monitors.add_sleep(seconds=0.5, start_condition=open_goal)
 
     open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=slep)
 
@@ -309,7 +309,7 @@ def full_opening_in_parts():
                                                      name=open_door_name,
                                                      end_condition=open_door_name)
 
-    slep = gis.monitors.add_sleep(seconds=2, start_condition=open_goal)
+    slep = gis.monitors.add_sleep(seconds=0.5, start_condition=open_goal)
 
     open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=slep)
 
