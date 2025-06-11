@@ -190,7 +190,7 @@ def full_opening():
     multiplier = [(11 / 10, -0.7, 'down_short')]
     multipliers = [(7 / 5, -0.3, 'down_long'),
                    (7 / 5, 0.4, 'up_long'),
-                   (0.9, 0.7, 'up_short')]
+                   (0.8, 0.7, 'up_short')]
 
     offset = Vector3Stamped()
     offset.header.frame_id = root
@@ -202,7 +202,9 @@ def full_opening():
                                                      name=open_door_name,
                                                      end_condition=open_door_name)
 
-    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=open_goal)
+    slep = gis.monitors.add_sleep(seconds=2, start_condition=open_goal)
+
+    open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=slep)
 
     open_goal_moving_around_first = gis.motion_goals.add_move_around_hinge(handle_name=door_handle_for_hinge,
                                                                            tip_gripper_axis=tip_grasp_axis,
