@@ -115,8 +115,8 @@ class JustinTestWrapper(GiskardTestWrapper):
                               robot_interface_config=JustinStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(publish_tf=True, debug_mode=True,
                                                                       visualization_mode=VisualizationMode.VisualsFrameLocked),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125,
-                                                                      control_dt=None))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      control_dt=0.05))
         super().__init__(giskard)
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
         # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
