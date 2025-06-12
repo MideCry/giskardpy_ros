@@ -29,7 +29,12 @@ class WorldWithICubConfig(WorldConfig):
         self.add_empty_link(self.map_name)
         self.add_robot_urdf(self.urdf)
         root_link_name = self.get_root_link_of_group(self.robot_group_name)
-        self.add_fixed_joint(parent_link=self.map_name, child_link=root_link_name)
+        self.add_fixed_joint(parent_link=self.map_name, child_link=root_link_name,
+                             homogenous_transform=np.array([[1., 0., 0., -0.8],
+                                                            [0., 1., 0., 0.],
+                                                            [0., 0., 1., 0.550],
+                                                            [0., 0., 0., 1.]]))
+
 
 class ICubVelocityIAIInterface(RobotInterfaceConfig):
     map_name: str
@@ -40,6 +45,7 @@ class ICubVelocityIAIInterface(RobotInterfaceConfig):
     def __init__(self,
                  map_name: str = 'map'):
         self.map_name = map_name
+
     def setup(self):
         self.sync_joint_state_topic('/world/iCub/joint_states')
         self.add_joint_velocity_group_controller(namespace='world/iCub/left_arm_velocity_controller')
