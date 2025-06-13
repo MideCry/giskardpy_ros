@@ -111,10 +111,10 @@ class ProcessWorldUpdate(GiskardBehavior):
             res.links = list(sorted(str(x.short_name) for x in group.link_names_as_set))
             res.child_groups = list(sorted(str(x) for x in group.groups.keys()))
             res.root_link_pose = msg_converter.trans_matrix_to_pose_stamped(group.base_pose)
-            for key, value in group.state.items():
-                res.joint_state.name.append(str(key))
-                res.joint_state.position.append(value.position)
-                res.joint_state.velocity.append(value.velocity)
+            for v in group.free_variables:
+                res.joint_state.name.append(str(v.name))
+                res.joint_state.position.append(god_map.world.state[v.name].position)
+                res.joint_state.velocity.append(god_map.world.state[v.name].velocity)
         except KeyError as e:
             get_middleware().logerr(f'no object with the name {req.group_name} was found')
             res.error_codes = GetGroupInfo_Response.GROUP_NOT_FOUND_ERROR
