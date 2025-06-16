@@ -10,22 +10,22 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, PointStamped, Vect
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
+import giskard_msgs
+import giskardpy_ros.ros1.tfwrapper as tf
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException, ObjectForceTorqueThresholdException
-from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
-from giskardpy.motion_statechart.tasks.pointing import Pointing
-
 from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes, ObjectTypes
 from giskardpy.god_map import god_map
+from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.lidar_monitor import LidarPayloadMonitor
+from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
-import giskardpy_ros.ros1.tfwrapper as tf
-
+from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
 from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 
 if 'GITHUB_WORKFLOW' not in os.environ:
@@ -1901,7 +1901,7 @@ class TestArenaActions:
                                                                    end_condition=grasped)
 
         first_close = kitchen_setup.monitors.add_close_hsr_gripper(name='first close gripper',
-                                                       start_condition=grasped)
+                                                                   start_condition=grasped)
 
         half_open_joint = kitchen_setup.monitors.add_joint_position(name='half open joint',
                                                                     goal_state={hinge_joint: goal_angle_half},
@@ -1916,7 +1916,7 @@ class TestArenaActions:
                                                       end_condition=half_open_joint)
 
         final_open = kitchen_setup.monitors.add_open_hsr_gripper(name='final open gripper',
-                                                      start_condition=half_open_joint)
+                                                                 start_condition=half_open_joint)
 
         # around_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='around door local min',
         #                                                                     start_condition=final_open)
@@ -1946,7 +1946,7 @@ class TestArenaActions:
                                                           end_condition=align_push_door_local_min)
 
         final_close = kitchen_setup.monitors.add_close_hsr_gripper(name='final close gripper',
-                                                       start_condition=align_push_door_local_min)
+                                                                   start_condition=align_push_door_local_min)
 
         pre_push_local_min = kitchen_setup.monitors.add_local_minimum_reached(name='pre push local min',
                                                                               start_condition=final_close)
@@ -1989,3 +1989,24 @@ class TestArenaActions:
 
         kitchen_setup.motion_goals.allow_collision(env_name, gripper_group)
         kitchen_setup.execute(add_local_minimum_reached=False)
+
+    def test_hand_camera_visual_servoing(self, zero_pose: HSRTestWrapper):
+
+        maq = giskard_msgs.msg.LinkName('map', '')
+        base = giskard_msgs.msg.LinkName('hand_camera_frame', '')
+        zero_pose.motion_goals.add_motion_goal(class_name=HandleOffsetCorrectionRealtime.__name__,
+                                               root_link=maq,
+                                               tip_link=base,
+                                               threshold=50)
+
+        zero_pose.motion_goals.add_joint_position(goal_state={'head_pan_joint': 0.0,
+                                                              'head_tilt_joint': 0.0,
+                                                              'arm_flex_joint': 0.0,
+                                                              'arm_roll_joint': 0.0,
+                                                              'wrist_flex_joint': -np.pi / 2,
+                                                              'wrist_roll_joint': -np.pi / 2},
+                                                  threshold=0.05,
+                                                  name='park arms monitor',
+                                                  weight=WEIGHT_ABOVE_CA)
+
+        zero_pose.execute(add_local_minimum_reached=False)

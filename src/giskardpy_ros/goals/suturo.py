@@ -4,12 +4,10 @@ from enum import Enum
 from typing import Optional, List, Tuple
 
 import numpy as np
-from geometry_msgs.msg import Vector3Stamped
-from rospy import Subscriber
 from std_msgs.msg import ColorRGBA
 
 from giskardpy import casadi_wrapper as w, casadi_wrapper as cas
-from giskardpy.data_types.data_types import PrefixName, ObservationState
+from giskardpy.data_types.data_types import PrefixName
 from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
 from giskardpy.data_types.suturo_types import GraspTypes, ForceTorqueThresholds, MoveAroundHingeAlign
 from giskardpy.data_types.suturo_types import ObjectTypes, TakePoseTypes
@@ -26,8 +24,7 @@ from giskardpy.motion_statechart.monitors.payload_monitors import Sleep
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task, WEIGHT_BELOW_CA
-from giskardpy.symbol_manager import symbol_manager
-from giskardpy_ros.ros1 import msg_converter
+from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     pass
@@ -1037,6 +1034,7 @@ class GraspWithForceTorqueGoal(Goal):
                  handle_name: PrefixName,
                  tip_grasp_axis: cas.Vector3,
                  bar_axis: cas.Vector3,
+                 tip_push: cas.Point3,
                  tip_retract: cas.Point3,
                  handle_align_axis: cas.Vector3,
                  tip_align_axis: cas.Vector3,
@@ -1047,6 +1045,7 @@ class GraspWithForceTorqueGoal(Goal):
                  timeout: float = 10,
                  ft_topic: str = '/filtered_raw/diff',
                  ft_grasp_ref_speed: float = 1,
+                 camera_link: Optional[PrefixName] = None,
                  name: str = None):
         """
         Complex grasping motion using the ForceTorqueMonitor.
@@ -1104,37 +1103,60 @@ class GraspWithForceTorqueGoal(Goal):
         ap_pre_grasp.start_condition = self.start_condition
         self.add_task(ap_pre_grasp)
 
+        if camera_link is not None:
+            handle_correction = HandleOffsetCorrectionRealtime(root_link=root_link,
+                                                               tip_link=camera_link,
+                                                               threshold=30,
+                                                               magic=500)
+            handle_correction.start_condition = pre_grasp
+            handle_correction.end_condition = handle_correction
+            self.add_task(handle_correction)
+            next_condition = handle_correction
+        else:
+            next_condition = pre_grasp
+
         sleep_cancel = Sleep(seconds=timeout, name='ft sleep cancel')
-        sleep_cancel.start_condition = pre_grasp
+        sleep_cancel.start_condition = next_condition
         self.add_monitor(sleep_cancel)
 
         ft_monitor = PayloadForceTorque(threshold_enum=ForceTorqueThresholds.DOOR.value,
                                         object_type='',
                                         name='grasp ft monitor',
                                         topic=ft_topic)
-        ft_monitor.start_condition = pre_grasp
+        ft_monitor.start_condition = next_condition
         self.add_monitor(ft_monitor)
 
-        ft_grasp = GraspBarOffset(name='ft grasp',
-                                  root_link=root_link,
-                                  tip_link=tip_link,
-                                  tip_grasp_axis=tip_grasp_axis,
-                                  bar_center=bar_center,
-                                  bar_axis=bar_axis,
-                                  bar_length=bar_length,
-                                  grasp_axis_offset=pre_grasp_axis_offset,
-                                  reference_linear_velocity=self.reference_linear_velocity,
-                                  reference_angular_velocity=self.reference_angular_velocity)
-        ft_grasp.start_condition = pre_grasp
-        ft_grasp.end_condition = ft_monitor
-        self.add_goal(ft_grasp)
+        if camera_link is not None:
+            ft_grasp = CartesianPosition(root_link=root_link,
+                                         tip_link=tip_link,
+                                         goal_point=tip_push,
+                                         name='ft grasp',
+                                         reference_velocity=self.reference_linear_velocity,
+                                         threshold=0.001)
+            ft_grasp.start_condition = next_condition
+            ft_grasp.end_condition = ft_monitor
+            self.add_task(ft_grasp)
+        else:
+            ft_grasp = GraspBarOffset(name='ft grasp',
+                                      root_link=root_link,
+                                      tip_link=tip_link,
+                                      tip_grasp_axis=tip_grasp_axis,
+                                      bar_center=bar_center,
+                                      bar_axis=bar_axis,
+                                      bar_length=bar_length,
+                                      grasp_axis_offset=pre_grasp_axis_offset,
+                                      reference_linear_velocity=self.reference_linear_velocity,
+                                      reference_angular_velocity=self.reference_angular_velocity)
+            ft_grasp.start_condition = next_condition
+            ft_grasp.end_condition = ft_monitor
+            self.add_goal(ft_grasp)
 
         ap_tip_grasp = AlignPlanes(name='tip grasp align',
                                    root_link=root_link,
                                    tip_link=tip_link,
                                    tip_normal=tip_grasp_axis,
                                    goal_normal=bar_axis)
-        ap_tip_grasp.start_condition = pre_grasp
+        ap_tip_grasp.start_condition = next_condition
         self.add_task(ap_tip_grasp)
 
         retract = CartesianPosition(root_link=root_link,
@@ -1499,51 +1521,6 @@ class GraspBarOffset(Goal):
         god_map.debug_expression_manager.add_debug_expression('tip V tip grasp axis', tip_V_tip_grasp_axis)
 
         self.observation_expression = cas.less_equal(dist, threshold)
-
-
-class HandleOffsetCorrection(Goal):
-
-    def __init__(self,
-                 root_link: PrefixName,
-                 goal_vector: cas.Vector3,
-                 name: str = None):
-        if name is None:
-            name = f'{self.__class__}'
-        super().__init__(name=name)
-        self.root = root_link
-
-        self.root_V_goal_point = god_map.world.transform(self.root, goal_vector).to_np()
-
-        root_V_goal_point = symbol_manager.get_expr(self.ref_str +
-                                                    '.root_V_goal_point',
-                                                    input_type_hint=np.ndarray,
-                                                    output_type_hint=cas.Vector3)
-
-        god_map.debug_expression_manager.add_debug_expression(name='root_V_goal_point',
-                                                              expression=root_V_goal_point)
-
-        self.observation_expression = ObservationState.unknown
-
-
-class HandleOffsetCorrectionRealtime(HandleOffsetCorrection):
-
-    def __init__(self,
-                 root_link: PrefixName,
-                 name: str = None):
-        if name is None:
-            name = f'{self.__class__}'
-        initial_vector = cas.Vector3().from_xyz(0, 0, 0,
-                                                reference_frame=god_map.world.search_for_link_name('hand_camera_frame'))
-        super().__init__(name=name,
-                         root_link=root_link,
-                         goal_vector=initial_vector)
-
-        self.sub = Subscriber(name='/robokudo/handle_offset', data_class=Vector3Stamped, callback=self.cb)
-
-    def cb(self, data):
-        data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
-        data = god_map.world.transform(self.root, data).to_np()
-        self.root_V_goal_point = data
 
 
 def check_context_element(name: str,

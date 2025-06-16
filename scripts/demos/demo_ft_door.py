@@ -95,12 +95,16 @@ def setup(init_pose_pub: Publisher):
     gis.execute()
 
 
-def grasping():
+def grasping(with_camera: bool = False):
     # handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
     # hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
     handle_name = "iai_kitchen/living_room:arena:door_handle_inside"
     hinge_joint = "iai_kitchen/living_room:arena:door_origin_revolute_joint"
     tip = 'hand_gripper_tool_frame'
+    if with_camera:
+        camera_link = 'hand_camera_frame'
+    else:
+        camera_link = None
     handle_length = 0.01
     ref_speed = 0.5
     # handle_retract_distance = -0.058
@@ -141,6 +145,10 @@ def grasping():
     handle_retract.header.frame_id = tip
     handle_retract.point.z = handle_retract_distance
 
+    grasp_push = PointStamped()
+    grasp_push.header.frame_id = tip
+    grasp_push.point.z = grasp_into_distance - pre_grasp_distance
+
     js = {
         'head_pan_joint': 0,
         'head_tilt_joint': 0,
@@ -161,6 +169,7 @@ def grasping():
                                                       tip_grasp_axis=tip_grasp_axis,
                                                       bar_axis=bar_axis,
                                                       tip_retract=handle_retract,
+                                                      tip_push=grasp_push,
                                                       handle_align_axis=x_goal,
                                                       tip_align_axis=x_gripper,
                                                       grasp_axis_offset=grasp_axis_offset,
@@ -168,6 +177,7 @@ def grasping():
                                                       hinge_joint=hinge_joint,
                                                       timeout=ft_timeout,
                                                       ft_grasp_ref_speed=ref_speed,
+                                                      camera_link=camera_link,
                                                       start_condition=open_gripper)
     gis.update_end_condition(node_name=grasp, condition=grasp)
 
@@ -393,7 +403,7 @@ rospy.init_node('giskard_demo')
 init_pub = rospy.Publisher('/initialpose', data_class=PoseWithCovarianceStamped, queue_size=10)
 
 gis = GiskardWrapper()
-test = 3
+test = 2
 
 setup(init_pose_pub=init_pub)
 
@@ -402,7 +412,7 @@ setup(init_pose_pub=init_pub)
 if test == 1:
     full_opening()
 elif test == 2:
-    grasping()
+    grasping(True)
 elif test == 3:
     full_opening_in_parts()
 else:

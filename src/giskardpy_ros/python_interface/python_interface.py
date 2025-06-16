@@ -61,6 +61,7 @@ from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundHinge, Reaching
 from giskardpy_ros.ros1 import msg_converter
 from giskardpy_ros.ros1 import tfwrapper as tf
 from giskardpy_ros.ros1.msg_converter import kwargs_to_json
+from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy_ros.utils.utils import make_world_body_box
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
@@ -1750,12 +1751,48 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     end_condition=end_condition,
                                     **kwargs)
 
+    def add_handle_offset(self,
+                          root_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('map', ''),
+                          tip_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('hand_camera_frame', ''),
+                          threshold: float = 50,
+                          weight: Optional[float] = None,
+                          name: Optional[str] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
+        """
+        Adds tip_link correction to handle using visual servoing with robokudo handle_offset pipeline
+
+        :param root_link: root link of the kinematic chain
+        :param tip_link: tip link of the kinematic chain
+        :param threshold: threshold in pixel that determines when the handle is correctly orientated
+        :param weight:
+        :param name:
+        :param start_condition: expression that starts goal
+        :param pause_condition: expression that pauses goal
+        :param end_condition: expression that ends goal
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        self.add_motion_goal(class_name=HandleOffsetCorrectionRealtime.__name__,
+                             root_link=root_link,
+                             tip_link=tip_link,
+                             threshold=threshold,
+                             name=name,
+                             weight=weight,
+                             start_condition=start_condition,
+                             pause_condition=pause_condition,
+                             end_condition=end_condition)
+
     def add_grasp_with_ft_sensor(self,
                                  root_link: Union[str, giskard_msgs.LinkName],
                                  tip_link: Union[str, giskard_msgs.LinkName],
                                  handle_name: Union[str, giskard_msgs.LinkName],
                                  tip_grasp_axis: Vector3Stamped,
                                  bar_axis: Vector3Stamped,
+                                 tip_push: PointStamped,
                                  tip_retract: PointStamped,
                                  handle_align_axis: Vector3Stamped,
                                  tip_align_axis: Vector3Stamped,
@@ -1766,6 +1803,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                  timeout: float = 10,
                                  ft_topic: str = '/filtered_raw/diff',
                                  ft_grasp_ref_speed: float = 1,
+                                 camera_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
                                  name: str = None,
                                  start_condition: str = '',
                                  pause_condition: str = '',
@@ -1788,6 +1826,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param timeout: duration after which the ft-grasping is cancelled.
         :param ft_topic: topic of the sensor-data for the ft-monitor.
         :param ft_grasp_ref_speed: reference-speed-modifier for the ft-grasping motion.
+        :param camera_link: Link-name of camera_link when using camera offset via visual servoing
         :param name: Name of the Goal
         :param start_condition: expression that starts goal
         :param pause_condition: expression that pauses goal
@@ -1801,6 +1840,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             handle_name = giskard_msgs.LinkName(name=handle_name)
         if isinstance(hinge_joint, str):
             hinge_joint = giskard_msgs.LinkName(name=hinge_joint)
+        if isinstance(camera_link, str):
+            camera_link = giskard_msgs.LinkName(name=camera_link)
 
         return self.add_motion_goal(class_name=GraspWithForceTorqueGoal.__name__,
                                     root_link=root_link,
@@ -1808,6 +1849,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     handle_name=handle_name,
                                     tip_grasp_axis=tip_grasp_axis,
                                     bar_axis=bar_axis,
+                                    tip_push=tip_push,
                                     tip_retract=tip_retract,
                                     handle_align_axis=handle_align_axis,
                                     tip_align_axis=tip_align_axis,
@@ -1818,6 +1860,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     timeout=timeout,
                                     ft_topic=ft_topic,
                                     ft_grasp_ref_speed=ft_grasp_ref_speed,
+                                    camera_link=camera_link,
                                     name=name,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
