@@ -103,7 +103,8 @@ def grasping():
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
     ref_speed = 0.5
-    handle_retract_distance = -0.058
+    # handle_retract_distance = -0.058
+    handle_retract_distance = -0.065
     bar_center_offset = 0.01
     pre_grasp_distance = -0.15
     grasp_into_distance = 0.2
@@ -289,7 +290,7 @@ def full_opening_in_parts():
     door_handle_for_hinge = "iai_kitchen/living_room:arena:door_handle_link"
     door_center = "iai_kitchen/living_room:arena:door_center"
     # handle_turn_limit = 0.4
-    handle_turn_limit = 0.5
+    handle_turn_limit = 0.55
     pre_push_hinge_turn_limit = -0.5
     # full_hinge_turn_limit = -1.4
     full_hinge_turn_limit = -1.0
