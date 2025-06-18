@@ -12,12 +12,16 @@ from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 
 def setup(init_pose_pub: Publisher):
-    handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
-    hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
+    # handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
+    # hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
+    handle_joint = "iai_kitchen/living_room:arena:door_handle_joint"
+    hinge_joint = "iai_kitchen/living_room:arena:door_origin_revolute_joint"
     base_pose = PoseStamped()
     base_pose.header.frame_id = 'map'
     base_pose.pose.position.x = 1.8
-    base_pose.pose.position.y = -0.8
+    base_pose.pose.position.y = 3.0
+    # base_pose.pose.position.x = 1.8
+    # base_pose.pose.position.y = -0.8
     base_pose.pose.orientation.z = -1
 
     odom = gis.monitors.add_local_minimum_reached()
@@ -92,8 +96,10 @@ def setup(init_pose_pub: Publisher):
 
 
 def grasping():
-    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
+    # handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
+    # hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
+    handle_name = "iai_kitchen/living_room:arena:door_handle_inside"
+    hinge_joint = "iai_kitchen/living_room:arena:door_origin_revolute_joint"
     tip = 'hand_gripper_tool_frame'
     handle_length = 0.01
     ref_speed = 0.5
@@ -101,7 +107,7 @@ def grasping():
     bar_center_offset = 0.01
     pre_grasp_distance = -0.15
     grasp_into_distance = 0.2
-    ft_timeout = 1000
+    ft_timeout = 10
 
     bar_axis = Vector3Stamped()
     bar_axis.header.frame_id = handle_name
@@ -175,9 +181,12 @@ def grasping():
 def full_opening():
     grasping()
 
-    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
-    door_center = "iai_kitchen/iai_kitchen:arena:door_center"
+    # handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
+    # door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
+    # door_center = "iai_kitchen/iai_kitchen:arena:door_center"
+    handle_name = "iai_kitchen/living_room:arena:door_handle_inside"
+    door_handle_for_hinge = "iai_kitchen/living_room:arena:door_handle_link"
+    door_center = "iai_kitchen/living_room:arena:door_center"
     handle_turn_limit = 0.4
     pre_push_hinge_turn_limit = -0.5
     full_hinge_turn_limit = -1.4
@@ -273,12 +282,17 @@ def full_opening():
 def full_opening_in_parts():
     grasping()
 
-    handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
-    door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
-    door_center = "iai_kitchen/iai_kitchen:arena:door_center"
-    handle_turn_limit = 0.4
+    # handle_name = "iai_kitchen/iai_kitchen:arena:door_handle_inside"
+    # door_handle_for_hinge = "iai_kitchen/iai_kitchen:arena:door_handle_link"
+    # door_center = "iai_kitchen/iai_kitchen:arena:door_center"
+    handle_name = "iai_kitchen/living_room:arena:door_handle_inside"
+    door_handle_for_hinge = "iai_kitchen/living_room:arena:door_handle_link"
+    door_center = "iai_kitchen/living_room:arena:door_center"
+    # handle_turn_limit = 0.4
+    handle_turn_limit = 0.5
     pre_push_hinge_turn_limit = -0.5
-    full_hinge_turn_limit = -1.4
+    # full_hinge_turn_limit = -1.4
+    full_hinge_turn_limit = -1.0
     open_door_name = 'OpenDoorGoal'
     tip = 'hand_gripper_tool_frame'
     root = 'map'
@@ -391,4 +405,4 @@ elif test == 2:
 elif test == 3:
     full_opening_in_parts()
 else:
-    gis.hsr_door_opening(ft_timeout=10000)
+    gis.hsr_door_opening(ft_timeout=1000)
