@@ -256,7 +256,7 @@ class GiskardTester:
             joint_state_msg = position_dict_to_joint_states(joint_state)
             self.env_joint_state_pubs[object_name].publish(joint_state_msg)
         self.wait_heartbeats(3)
-        current_js = god_map.world.groups[object_name].state
+        current_js = god_map.world.state
         joint_names_with_prefix = set(j.long_name for j in current_js)
         joint_state_names = list()
         for j_n in joint_state.keys():
@@ -267,7 +267,12 @@ class GiskardTester:
         assert set(joint_state_names).difference(joint_names_with_prefix) == set()
         for joint_name, state in current_js.items():
             if joint_name.short_name in joint_state:
-                np.testing.assert_almost_equal(state.position, joint_state[joint_name.short_name], 2)
+                jn = joint_name.short_name
+            elif joint_name in joint_state:
+                jn = joint_name
+            else:
+                continue
+            np.testing.assert_almost_equal(current_js[joint_name].position, joint_state[jn], 2)
 
     def compare_joint_state(self, current_js: Dict[Union[str, PrefixName], float],
                             goal_js: Dict[Union[str, PrefixName], float],
