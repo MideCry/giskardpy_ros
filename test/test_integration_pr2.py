@@ -40,6 +40,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit, Un
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
+from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
@@ -177,7 +178,9 @@ class PR2Tester(GiskardTester):
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
                               qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      control_dt=0.05,
                                                                       retries_with_relaxed_constraints=10,
+                                                                      qp_formulation=QPFormulation(double_qp=True)
                                                                       # qp_solver=SupportedQPSolver.gurobi,
                                                                       ))
         super().__init__(giskard)
@@ -2455,7 +2458,7 @@ class TestCartGoals:
         p.pose.position.x = -0.1
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.r_tip, root_link='base_footprint')
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.r_tip, root_link='map')
         zero_pose.execute()
 
     def test_10_cart_goals(self, zero_pose: PR2Tester):
