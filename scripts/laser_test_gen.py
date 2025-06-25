@@ -17,6 +17,8 @@ import giskardpy_ros.ros1.tfwrapper as tf
 MARKER_SCALE = 0.3
 
 
+# to run, run following command in terminal first: rosrun tf static_transform_publisher 0 0 0 0 0 0 map base_laser_link 100
+
 def line_circle_intersection(line_point, line_direction, circle_center, circle_radius):
     # Compute the direction vector of the line
     line_direction = line_direction / np.linalg.norm(line_direction)
@@ -70,15 +72,15 @@ class IMServer(object):
         """
         self.topic_name = topic_name
         self.root = 'map'
-        self.tip = 'head_mount_kinect_rgb_optical_frame'
+        self.tip = 'base_laser_link'
         self.point = PointStamped()
-        self.point.header.frame_id = 'base_footprint'
+        self.point.header.frame_id = self.tip
         self.point.point.x = 1
         self.point.point.z = 1
         self.point = tf.transform_msg(self.root, self.point)
-        pointing_axis = Vector3Stamped()
-        pointing_axis.header.frame_id = self.tip
-        pointing_axis.vector.z = 1
+        # pointing_axis = Vector3Stamped()
+        # pointing_axis.header.frame_id = self.tip
+        # pointing_axis.vector.z = 1
         self.markers = {}
 
         # marker server
@@ -90,8 +92,7 @@ class IMServer(object):
                                                int_marker.name,
                                                self.topic_name,
                                                self)
-        self.server.insert(int_marker, self.processor
-                           )
+        self.server.insert(int_marker, self.processor)
         self.menu_handler.apply(self.server, int_marker.name)
         self.server.applyChanges()
 
@@ -132,7 +133,9 @@ class IMServer(object):
         int_marker.pose.orientation.w = 1
         int_marker.scale = MARKER_SCALE
 
-        int_marker.name = 'eef_{}_to_{}'.format(root_link, tip_link)
+        #int_marker.name = 'eef_{}_to_{}'.format(root_link, tip_link)
+        int_marker.name = self.topic_name + '_marker'
+        print(int_marker.name)
 
         # insert a box
         self.make_sphere_control(int_marker)
@@ -214,7 +217,7 @@ class IMServer(object):
             self.radius = 0.2
             self.transformed_target = None
             self.frame_id = 'base_laser_link'
-            self.timer = Timer(rospy.Duration(0.1), self.timer_cb)
+            self.timer = Timer(rospy.Duration(1.5), self.timer_cb)
 
         def timer_cb(self, timer_event: TimerEvent):
             # if self.transformed_target is None:
@@ -287,7 +290,8 @@ class IMServer(object):
             m.pose.position.x += muh[0]
             m.pose.position.y += muh[1]
             m.pose.position.z += muh[2]
-            m.pose.orientation = Quaternion(*quaternion_multiply(old_q, quaternion_from_axis_angle([0, 1, 0], np.pi / 2)))
+            m.pose.orientation = Quaternion(
+                *quaternion_multiply(old_q, quaternion_from_axis_angle([0, 1, 0], np.pi / 2)))
             m.color.r = 1
             m.color.g = 0
             m.color.b = 0
@@ -302,7 +306,8 @@ class IMServer(object):
             m.pose.position.x += muh[0]
             m.pose.position.y += muh[1]
             m.pose.position.z += muh[2]
-            m.pose.orientation = Quaternion(*quaternion_multiply(old_q, quaternion_from_axis_angle([1, 0, 0], -np.pi / 2)))
+            m.pose.orientation = Quaternion(
+                *quaternion_multiply(old_q, quaternion_from_axis_angle([1, 0, 0], -np.pi / 2)))
             m.color.r = 0
             m.color.g = 1
             m.color.b = 0
@@ -327,7 +332,75 @@ class IMServer(object):
             self.marker_pub.publish(ma)
 
 
+class LaserScanMerger:
+    """
+    Merges the laser scans from each individual sphere marker and
+    publishes them onto the /hsrb/base_scan topic
+    """
+
+    def __init__(self, input_topic, output_topic):
+        self.input_topic = input_topic
+        self.output_topic = output_topic
+        self.latest_scans = {topic: None for topic in self.input_topic}
+        self.pub = rospy.Publisher(self.output_topic, LaserScan, queue_size=10)
+
+        for topic in self.input_topic:
+            rospy.Subscriber(topic, LaserScan, self.make_callback(topic))
+
+        self.timer = rospy.Timer(rospy.Duration(1.5), self.publish_merged_scan)
+
+    def make_callback(self, topic):
+        def callback(msg):
+            self.latest_scans[topic] = msg
+
+        return callback
+
+    def publish_merged_scan(self, event):
+        scans = [scan for scan in self.latest_scans.values() if scan is not None]
+        if not scans:
+            return
+        base = scans[0]
+        merged = LaserScan()
+        merged.header.stamp = rospy.Time.now()
+        merged.header.frame_id = base.header.frame_id
+        merged.angle_min = base.angle_min
+        merged.angle_max = base.angle_max
+        merged.angle_increment = base.angle_increment
+        merged.time_increment = base.time_increment
+        merged.scan_time = base.scan_time
+        merged.range_min = base.range_min
+        merged.range_max = base.range_max
+
+        num_ranges = len(base.ranges)
+        merged.ranges = [base.range_max + 1.0] * num_ranges
+
+        for scan in scans:
+            for i in range(min(num_ranges, len(scan.ranges))):
+                r = scan.ranges[i]
+                if merged.ranges[i] > r >= scan.range_min:
+                    merged.ranges[i] = r
+
+        self.pub.publish(merged)
+
+
 rospy.init_node('laser_scanner')
+
+sphere_configs = [
+    {'name': 'sphere_1', 'topic': 'scan/sphere_1'},
+    {'name': 'sphere_2', 'topic': 'scan/sphere_2'},
+    {'name': 'sphere_3', 'topic': 'scan/sphere_3'},
+    {'name': 'sphere_4', 'topic': 'scan/sphere_4'}
+]
 # im1 = IMServer('scan')
-im2 = IMServer('hsrb/base_scan')
+# im2 = IMServer('hsrb/base_scan')
+
+servers = []
+
+for cfg in sphere_configs:
+    server = IMServer(cfg['topic'])
+    servers.append(server)
+
+scan_topics = [cfg['topic'] for cfg in sphere_configs]
+merger = LaserScanMerger(input_topic=scan_topics, output_topic='/hsrb/base_scan')
+
 rospy.spin()
