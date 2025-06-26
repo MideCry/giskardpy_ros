@@ -6,6 +6,7 @@ from operator import itemgetter
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
+from geometry_msgs.msg import Vector3Stamped
 
 from sensor_msgs.msg import LaserScan
 import rospy
@@ -60,6 +61,7 @@ class VectorFieldHistogram:
     # code vfh task
     # hand steering direction angle to task as directional vector, so robot is pushed in said direction - first half done
     # do benchmarking - done
+    # Unit testing by checking steering angles
 
     # Get LiDAR Data from /hsrb/base_scan topic
     def laser_callback(self, data: LaserScan):
@@ -123,7 +125,7 @@ class VectorFieldHistogram:
             clipped_dists = np.clip(sector_dists, 0, self.d_max)
             magnitudes = 1 - (clipped_dists / self.d_max)  # magnitude stuff
             polar_histogram[sector] = np.sum(magnitudes)
-        polar_histogram = polar_histogram[::-1] # flips histogram, because we have a right hand coord system
+        polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
         print(polar_histogram)
 
             # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
@@ -237,7 +239,11 @@ class VectorFieldHistogram:
         # calculation of directional vector
         if theta_deg is not None:
             theta_rad = math.radians(theta_deg)
-            direction_vector = (math.cos(theta_rad), math.sin(theta_rad), 0.0)
+            direction_vector = Vector3Stamped()
+            direction_vector.header.frame_id = "base_footprint"
+            direction_vector.vector.x = math.cos(theta_rad)
+            direction_vector.vector.y = math.sin(theta_rad)
+            direction_vector.vector.z = 0.0
         else:
             direction_vector = (0.0, 0.0, 0.0)
         print(f"Directional Vector: {direction_vector}")
