@@ -11,12 +11,12 @@ from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.tasks.pointing import Pointing
+from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
-from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.god_map import god_map
+from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 
 
@@ -35,7 +35,8 @@ class HSRTester(GiskardTester):
     def __init__(self, giskard=None):
         self.tip = 'hand_gripper_tool_frame'
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithHSRConfig(),
+            robot_desc = load_xacro('package://hsrb_description/robots/hsrb4s.urdf.xacro')
+            giskard = Giskard(world_config=WorldWithHSRConfig(urdf=robot_desc),
                               collision_avoidance_config=HSRCollisionAvoidanceConfig(),
                               robot_interface_config=HSRStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
@@ -70,7 +71,7 @@ class HSRTester(GiskardTester):
 
 @pytest.fixture(scope='module')
 def giskard(request, ros):
-    launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
+    # launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
     c = HSRTester()
     # c = HSRTestWrapperMujoco()
     request.addfinalizer(c.tear_down)
@@ -82,9 +83,9 @@ def box_setup(zero_pose: HSRTester) -> HSRTester:
     p = PoseStamped()
     p.header.frame_id = 'map'
     p.pose.position.x = 1.2
-    p.pose.position.y = 0
+    p.pose.position.y = 0.0
     p.pose.position.z = 0.1
-    p.pose.orientation.w = 1
+    p.pose.orientation.w = 1.0
     zero_pose.add_box_to_world(name='box', size=(1, 1, 1), pose=p)
     return zero_pose
 
@@ -107,19 +108,19 @@ class TestJointGoals:
         compare_poses(hand_T_finger_current.pose, hand_T_finger_expected.pose)
 
         js = {'torso_lift_joint': 0.1}
-        zero_pose.set_joint_goal(js, add_monitor=False)
+        zero_pose.api.motion_goals.add_joint_position(js)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
         np.testing.assert_almost_equal(god_map.world.state[arm_lift_joint].position, 0.2, decimal=2)
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = 'base_footprint'
-        base_T_torso.pose.position.x = 0
-        base_T_torso.pose.position.y = 0
+        base_T_torso.pose.position.x = 0.0
+        base_T_torso.pose.position.y = 0.0
         base_T_torso.pose.position.z = 0.8518
-        base_T_torso.pose.orientation.x = 0
-        base_T_torso.pose.orientation.y = 0
-        base_T_torso.pose.orientation.z = 0
-        base_T_torso.pose.orientation.w = 1
+        base_T_torso.pose.orientation.x = 0.0
+        base_T_torso.pose.orientation.y = 0.0
+        base_T_torso.pose.orientation.z = 0.0
+        base_T_torso.pose.orientation.w = 1.0
         base_T_torso2 = zero_pose.compute_fk_pose('base_footprint', 'torso_lift_link')
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
@@ -131,21 +132,21 @@ class TestJointGoals:
         p = PoseStamped()
         p.header.frame_id = tip
         p.pose.position.z = 0.2
-        p.pose.orientation.w = 1
-        zero_pose.set_cart_goal(goal_pose=p, tip_link=tip,
-                                root_link='base_footprint')
+        p.pose.orientation.w = 1.0
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=tip,
+                                                      root_link='base_footprint')
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
         np.testing.assert_almost_equal(god_map.world.state[arm_lift_joint].position, 0.2, decimal=2)
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = 'base_footprint'
-        base_T_torso.pose.position.x = 0
-        base_T_torso.pose.position.y = 0
+        base_T_torso.pose.position.x = 0.0
+        base_T_torso.pose.position.y = 0.0
         base_T_torso.pose.position.z = 0.8518
-        base_T_torso.pose.orientation.x = 0
-        base_T_torso.pose.orientation.y = 0
-        base_T_torso.pose.orientation.z = 0
-        base_T_torso.pose.orientation.w = 1
+        base_T_torso.pose.orientation.x = 0.0
+        base_T_torso.pose.orientation.y = 0.0
+        base_T_torso.pose.orientation.z = 0.0
+        base_T_torso.pose.orientation.w = 1.0
         base_T_torso2 = zero_pose.compute_fk_pose('base_footprint', 'torso_lift_link')
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
@@ -156,20 +157,20 @@ class TestJointGoals:
         p = PoseStamped()
         p.header.frame_id = tip
         p.pose.position.z = 0.15
-        p.pose.orientation.w = 1
-        zero_pose.set_cart_goal(goal_pose=p, tip_link=tip,
-                                root_link='base_footprint')
+        p.pose.orientation.w = 1.0
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=tip,
+                                                      root_link='base_footprint')
         zero_pose.execute()
         np.testing.assert_almost_equal(god_map.world.state[arm_lift_joint].position, 0.3, decimal=2)
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = 'base_footprint'
-        base_T_torso.pose.position.x = 0
-        base_T_torso.pose.position.y = 0
+        base_T_torso.pose.position.x = 0.0
+        base_T_torso.pose.position.y = 0.0
         base_T_torso.pose.position.z = 0.902
-        base_T_torso.pose.orientation.x = 0
-        base_T_torso.pose.orientation.y = 0
-        base_T_torso.pose.orientation.z = 0
-        base_T_torso.pose.orientation.w = 1
+        base_T_torso.pose.orientation.x = 0.0
+        base_T_torso.pose.orientation.y = 0.0
+        base_T_torso.pose.orientation.z = 0.0
+        base_T_torso.pose.orientation.w = 1.0
         base_T_torso2 = zero_pose.compute_fk_pose('base_footprint', 'torso_lift_link')
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
@@ -181,7 +182,7 @@ class TestJointGoals:
         assert ll == -0.075
         assert ul == 0.075
         joint_goal = {'torso_lift_joint': 0.25}
-        zero_pose.set_joint_goal(joint_goal, add_monitor=False)
+        zero_pose.api.motion_goals.add_joint_position(joint_goal)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
         np.testing.assert_almost_equal(god_map.world.state['hsrb/arm_lift_joint'].position, 0.5, decimal=2)
@@ -192,7 +193,7 @@ class TestCartGoals:
         box1_name = 'box1'
         pose = PoseStamped()
         pose.header.frame_id = kitchen_setup.default_root
-        pose.pose.orientation.w = 1
+        pose.pose.orientation.w = 1.0
         kitchen_setup.add_box_to_world(name=box1_name,
                                        size=(1, 1, 1),
                                        pose=pose,
@@ -202,43 +203,43 @@ class TestCartGoals:
     def test_move_base(self, zero_pose: HSRTester):
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
-        map_T_odom.pose.position.x = 1
-        map_T_odom.pose.position.y = 1
+        map_T_odom.pose.position.x = 1.0
+        map_T_odom.pose.position.y = 1.0
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3])
+        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         zero_pose.teleport_base(map_T_odom)
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.position.x = 1
+        base_goal.pose.position.x = 1.0
         q = quaternion_from_axis_angle([0, 0, 1], pi)
-        base_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3])
-        zero_pose.set_cart_goal(goal_pose=base_goal, tip_link='base_footprint', root_link='map')
+        base_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map')
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
 
     def test_move_base_1m_forward(self, zero_pose: HSRTester):
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
-        map_T_odom.pose.position.x = 1
-        map_T_odom.pose.orientation.w = 1
+        map_T_odom.pose.position.x = 1.0
+        map_T_odom.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.move_base(map_T_odom)
 
     def test_move_base_1m_left(self, zero_pose: HSRTester):
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
-        map_T_odom.pose.position.y = 1
-        map_T_odom.pose.orientation.w = 1
+        map_T_odom.pose.position.y = 1.0
+        map_T_odom.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.move_base(map_T_odom)
 
     def test_move_base_1m_diagonal(self, zero_pose: HSRTester):
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
-        map_T_odom.pose.position.x = 1
-        map_T_odom.pose.position.y = 1
-        map_T_odom.pose.orientation.w = 1
+        map_T_odom.pose.position.x = 1.0
+        map_T_odom.pose.position.y = 1.0
+        map_T_odom.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.move_base(map_T_odom)
 
@@ -246,16 +247,16 @@ class TestCartGoals:
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3])
+        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.move_base(map_T_odom)
 
     def test_move_base_forward_rotate(self, zero_pose: HSRTester):
         map_T_odom = PoseStamped()
         map_T_odom.header.frame_id = 'map'
-        map_T_odom.pose.position.x = 1
+        map_T_odom.pose.position.x = 1.0
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3])
+        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.move_base(map_T_odom)
 
@@ -263,8 +264,8 @@ class TestCartGoals:
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.tip
         q = quaternion_from_axis_angle([0, 0, 1], pi)
-        r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3])
-        zero_pose.set_cart_goal(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
+        r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
 
@@ -272,11 +273,11 @@ class TestCartGoals:
         goal_state = {
             'arm_flex_joint': -1.5,
             'arm_lift_joint': 0.5,
-            'arm_roll_joint': 0,
-            'head_pan_joint': 0,
-            'head_tilt_joint': 0,
+            'arm_roll_joint': 0.0,
+            'head_pan_joint': 0.0,
+            'head_tilt_joint': 0.0,
             'wrist_flex_joint': -1.5,
-            'wrist_roll_joint': 0,
+            'wrist_roll_joint': 0.0,
         }
 
         zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=goal_state)
@@ -290,8 +291,8 @@ class TestCartGoals:
         hole_point.pose.position.x = 0.5
         hole_point.pose.position.z = 0.3
         wiggle = zero_pose.api.motion_goals.add_wiggle_insert(root_link=root_link,
-                                                          tip_link=hpl,
-                                                          hole_point=hole_point)
+                                                              tip_link=hpl,
+                                                              hole_point=hole_point)
         # zero_pose.motion_goals.update_end_condition(wiggle, wiggle)
         zero_pose.execute(local_min_end=False)
 
@@ -304,21 +305,21 @@ class TestConstraints:
         goal_point.header.frame_id = 'map'
         goal_point.point.x = 0.5
         goal_point.point.y = -0.5
-        goal_point.point.z = 1
+        goal_point.point.z = 1.0
 
         pointing_axis = Vector3Stamped()
         pointing_axis.header.frame_id = tip_link
-        pointing_axis.vector.z = 1
+        pointing_axis.vector.z = 1.0
 
         zero_pose.api.motion_goals.add_motion_goal(class_name=Pointing.__name__,
                                                    name='pointy_cone',
-                                                   tip_link=LinkName(tip_link, ''),
-                                                   root_link=LinkName('map', ''),
+                                                   tip_link=LinkName(name=tip_link),
+                                                   root_link=LinkName(name='map'),
                                                    goal_point=goal_point,
                                                    pointing_axis=pointing_axis)
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.add_default_end_motion_conditions()
-        zero_pose.execute(add_local_minimum_reached=False)
+        zero_pose.api.add_default_end_motion_conditions()
+        zero_pose.execute(local_min_end=False)
 
     def test_open_fridge(self, kitchen_setup: HSRTester):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
@@ -326,46 +327,46 @@ class TestConstraints:
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.position = Point(0.3, -0.5, 0)
-        base_goal.pose.orientation.w = 1
+        base_goal.pose.position = Point(x=0.3, y=-0.5, z=0.0)
+        base_goal.pose.orientation.w = 1.0
         kitchen_setup.move_base(base_goal)
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
-        bar_axis.vector.z = 1
+        bar_axis.vector.z = 1.0
 
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_frame_id
 
         tip_grasp_axis = Vector3Stamped()
         tip_grasp_axis.header.frame_id = kitchen_setup.tip
-        tip_grasp_axis.vector.x = 1
+        tip_grasp_axis.vector.x = 1.0
 
-        kitchen_setup.set_grasp_bar_goal(root_link=kitchen_setup.default_root,
-                                         tip_link=kitchen_setup.tip,
-                                         tip_grasp_axis=tip_grasp_axis,
-                                         bar_center=bar_center,
-                                         bar_axis=bar_axis,
-                                         bar_length=.4)
+        kitchen_setup.api.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
+                                                     tip_link=kitchen_setup.tip,
+                                                     tip_grasp_axis=tip_grasp_axis,
+                                                     bar_center=bar_center,
+                                                     bar_axis=bar_axis,
+                                                     bar_length=.4)
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = kitchen_setup.tip
-        x_gripper.vector.z = 1
+        x_gripper.vector.z = 1.0
 
         x_goal = Vector3Stamped()
         x_goal.header.frame_id = handle_frame_id
-        x_goal.vector.x = -1
-        kitchen_setup.set_align_planes_goal(tip_link=kitchen_setup.tip,
-                                            tip_normal=x_gripper,
-                                            goal_normal=x_goal,
-                                            root_link='map')
+        x_goal.vector.x = -1.0
+        kitchen_setup.api.motion_goals.add_align_planes(tip_link=kitchen_setup.tip,
+                                                        tip_normal=x_gripper,
+                                                        goal_normal=x_goal,
+                                                        root_link='map')
         kitchen_setup.api.motion_goals.allow_all_collisions()
         # kitchen_setup.add_json_goal('AvoidJointLimits', percentage=10)
         kitchen_setup.execute()
         current_pose = kitchen_setup.compute_fk_pose(root_link='map', tip_link=kitchen_setup.tip)
 
-        kitchen_setup.set_open_container_goal(tip_link=kitchen_setup.tip,
-                                              environment_link=handle_name,
-                                              goal_joint_state=1.5)
+        kitchen_setup.api.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
+                                                          environment_link=handle_name,
+                                                          goal_joint_state=1.5)
         # kitchen_setup.set_json_goal('AvoidJointLimits', percentage=40)
         kitchen_setup.api.motion_goals.allow_all_collisions()
         # kitchen_setup.add_json_goal('AvoidJointLimits')
@@ -377,17 +378,17 @@ class TestConstraints:
                                                                      goal_pose=current_pose)
         kitchen_setup.api.monitors.add_end_motion(start_condition=pose_reached)
 
-        kitchen_setup.set_open_container_goal(tip_link=kitchen_setup.tip,
-                                              environment_link=handle_name,
-                                              goal_joint_state=0)
+        kitchen_setup.api.motion_goals.add_open_container(tip_link=kitchen_setup.tip,
+                                                          environment_link=handle_name,
+                                                          goal_joint_state=0.0)
         kitchen_setup.api.motion_goals.allow_all_collisions()
         # kitchen_setup.set_json_goal('AvoidJointLimits', percentage=40)
 
         kitchen_setup.execute()
 
-        kitchen_setup.set_env_state({'iai_fridge_door_joint': 0})
+        kitchen_setup.set_env_state({'iai_fridge_door_joint': 0.0})
 
-        kitchen_setup.set_joint_goal(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
         kitchen_setup.api.motion_goals.allow_self_collision()
         kitchen_setup.execute()
 
@@ -398,21 +399,21 @@ class TestConstraints:
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.position = Point(0.3, -0.5, 0)
-        base_goal.pose.orientation.w = 1
+        base_goal.pose.position = Point(x=0.3, y=-0.5, z=0.0)
+        base_goal.pose.orientation.w = 1.0
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.move_base(base_goal)
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
-        bar_axis.vector.z = 1
+        bar_axis.vector.z = 1.0
 
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_frame_id
 
         tip_grasp_axis = Vector3Stamped()
         tip_grasp_axis.header.frame_id = kitchen_setup.tip
-        tip_grasp_axis.vector.x = 1
+        tip_grasp_axis.vector.x = 1.0
 
         # %% phase 1 grasp handle
         bar_grasped = kitchen_setup.api.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
@@ -425,7 +426,7 @@ class TestConstraints:
 
         # %% close gripper
         gripper_closed = kitchen_setup.api.motion_goals.add_joint_position(name='close gripper',
-                                                                           goal_state={'hand_motor_joint': 0})
+                                                                           goal_state={'hand_motor_joint': 0.0})
         gripper_opened = kitchen_setup.api.motion_goals.add_joint_position(name='open gripper',
                                                                            goal_state={'hand_motor_joint': 1.23})
 
@@ -438,7 +439,7 @@ class TestConstraints:
         kitchen_setup.api.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
 
         kitchen_setup.api.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
-        kitchen_setup.update_end_condition(node_name=gripper_closed, condition=gripper_closed)
+        kitchen_setup.api.update_end_condition(node_name=gripper_closed, condition=gripper_closed)
 
         kitchen_setup.api.update_start_condition(node_name=door_open, condition=gripper_closed)
         kitchen_setup.api.update_start_condition(node_name=gripper_opened, condition=f'{door_open}')
@@ -447,7 +448,7 @@ class TestConstraints:
 
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.api.monitors.add_end_motion(start_condition=f'{gripper_opened}')
-        kitchen_setup.execute(add_local_minimum_reached=False)
+        kitchen_setup.execute(local_min_end=False)
 
     def test_open_fridge_sequence_semi_simple(self, kitchen_setup: HSRTester):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
@@ -456,21 +457,21 @@ class TestConstraints:
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.position = Point(0.3, -0.5, 0)
-        base_goal.pose.orientation.w = 1
+        base_goal.pose.position = Point(x=0.3, y=-0.5, z=0.0)
+        base_goal.pose.orientation.w = 1.0
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.move_base(base_goal)
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
-        bar_axis.vector.z = 1
+        bar_axis.vector.z = 1.0
 
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_frame_id
 
         tip_grasp_axis = Vector3Stamped()
         tip_grasp_axis.header.frame_id = kitchen_setup.tip
-        tip_grasp_axis.vector.x = 1
+        tip_grasp_axis.vector.x = 1.0
 
         handle_detected = kitchen_setup.api.monitors.add_const_true(name='Detect Handle')
 
@@ -479,7 +480,7 @@ class TestConstraints:
                                                               name='laser violated')
         camera_z = Vector3Stamped()
         camera_z.header.frame_id = camera_link
-        camera_z.vector.z = 1
+        camera_z.vector.z = 1.0
 
         bar_grasped = kitchen_setup.api.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
                                                                    tip_link=kitchen_setup.tip,
@@ -491,7 +492,7 @@ class TestConstraints:
 
         # %% close gripper
         gripper_closed = kitchen_setup.api.motion_goals.add_joint_position(name='close gripper',
-                                                                           goal_state={'hand_motor_joint': 0})
+                                                                           goal_state={'hand_motor_joint': 0.0})
         gripper_opened = kitchen_setup.api.motion_goals.add_joint_position(name='open gripper',
                                                                            goal_state={'hand_motor_joint': 1.23})
 
@@ -505,14 +506,13 @@ class TestConstraints:
 
         kitchen_setup.api.update_start_condition(node_name=laser_violated, condition=handle_detected)
         kitchen_setup.api.update_start_condition(node_name=bar_grasped, condition=handle_detected)
-        kitchen_setup.api.update_end_condition(node_name=handle_name, condition=handle_detected)
+        kitchen_setup.api.update_end_condition(node_name=gripper_closed, condition=gripper_closed)
 
         kitchen_setup.api.update_end_condition(node_name=laser_violated, condition=bar_grasped)
         kitchen_setup.api.update_end_condition(node_name=bar_grasped, condition=bar_grasped)
         kitchen_setup.api.update_pause_condition(node_name=bar_grasped, condition=laser_violated)
 
-        # kitchen_setup.api.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
-
+        kitchen_setup.api.update_start_condition(node_name=gripper_closed, condition=bar_grasped)
         kitchen_setup.api.update_start_condition(node_name=door_open, condition=gripper_closed)
         kitchen_setup.api.update_start_condition(node_name=slipped, condition=gripper_closed)
         kitchen_setup.api.update_start_condition(node_name=gripper_opened, condition=f'{slipped} or {door_open}')
@@ -532,7 +532,7 @@ class TestConstraints:
 
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.api.monitors.add_end_motion(start_condition=f'{door_open} and {gripper_opened} and not {slipped}')
-        kitchen_setup.execute(add_local_minimum_reached=False)
+        kitchen_setup.execute(local_min_end=False)
 
     def test_open_fridge_sequence(self, kitchen_setup: HSRTester):
         handle_frame_id = 'iai_kitchen/iai_fridge_door_handle'
@@ -541,28 +541,28 @@ class TestConstraints:
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()
         base_goal.header.frame_id = 'map'
-        base_goal.pose.position = Point(0.3, -0.5, 0)
-        base_goal.pose.orientation.w = 1
+        base_goal.pose.position = Point(x=0.3, y=-0.5, z=0.0)
+        base_goal.pose.orientation.w = 1.0
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.move_base(base_goal)
 
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
-        bar_axis.vector.z = 1
+        bar_axis.vector.z = 1.0
 
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_frame_id
 
         tip_grasp_axis = Vector3Stamped()
         tip_grasp_axis.header.frame_id = kitchen_setup.tip
-        tip_grasp_axis.vector.x = 1
+        tip_grasp_axis.vector.x = 1.0
 
         # %% phase 1 grasp handle
         laser_violated = kitchen_setup.api.monitors.add_pulse(after_ticks=20,
                                                               name='laser violated')
         camera_z = Vector3Stamped()
         camera_z.header.frame_id = camera_link
-        camera_z.vector.z = 1
+        camera_z.vector.z = 1.0
         pointing_at = kitchen_setup.api.motion_goals.add_pointing(goal_point=bar_center,
                                                                   tip_link=camera_link,
                                                                   name='look at handle',
@@ -578,11 +578,11 @@ class TestConstraints:
                                                                    name='grasp handle')
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = kitchen_setup.tip
-        x_gripper.vector.z = 1
+        x_gripper.vector.z = 1.0
 
         x_goal = Vector3Stamped()
         x_goal.header.frame_id = handle_frame_id
-        x_goal.vector.x = -1
+        x_goal.vector.x = -1.0
         align_planes = kitchen_setup.api.motion_goals.add_align_planes(tip_link=kitchen_setup.tip,
                                                                        tip_normal=x_gripper,
                                                                        goal_normal=x_goal,
@@ -592,7 +592,7 @@ class TestConstraints:
         # %% close gripper
         gripper_closed = 'close gripper'
         kitchen_setup.api.motion_goals.add_joint_position(name=gripper_closed,
-                                                          goal_state={'hand_motor_joint': 0},
+                                                          goal_state={'hand_motor_joint': 0.0},
                                                           end_condition=gripper_closed)
         gripper_opened = kitchen_setup.api.motion_goals.add_joint_position(name='open gripper',
                                                                            goal_state={'hand_motor_joint': 1.23})
@@ -645,7 +645,7 @@ class TestCollisionAvoidanceGoals:
 
     def test_self_collision_avoidance_empty(self, zero_pose: HSRTester):
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute(expected_error_type=EmptyProblemException, add_local_minimum_reached=False)
+        zero_pose.execute(expected_error_type=EmptyProblemException, local_min_end=False)
         current_state = god_map.world.state.to_position_dict()
         current_state = {k.short_name: v for k, v in current_state.items()}
         zero_pose.compare_joint_state(current_state, zero_pose.default_pose)
@@ -654,8 +654,8 @@ class TestCollisionAvoidanceGoals:
         r_goal = PoseStamped()
         r_goal.header.frame_id = zero_pose.tip
         r_goal.pose.position.z = 0.5
-        r_goal.pose.orientation.w = 1
-        zero_pose.set_cart_goal(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
+        r_goal.pose.orientation.w = 1.0
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
         zero_pose.execute()
 
     def test_self_collision_avoidance2(self, zero_pose: HSRTester):
@@ -668,23 +668,23 @@ class TestCollisionAvoidanceGoals:
             'wrist_flex_joint': -1.55,
             'wrist_roll_joint': 0.11,
         }
-        zero_pose.set_seed_configuration(js)
+        zero_pose.api.monitors.add_set_seed_configuration(js)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
 
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = 'hand_palm_link'
         goal_pose.pose.position.x = 0.5
-        goal_pose.pose.orientation.w = 1
-        zero_pose.set_cart_goal(goal_pose=goal_pose, tip_link=zero_pose.tip, root_link='map')
+        goal_pose.pose.orientation.w = 1.0
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=goal_pose, tip_link=zero_pose.tip, root_link='map')
         zero_pose.execute()
 
     def test_attached_collision1(self, box_setup: HSRTester):
         box_name = 'asdf'
         box_pose = PoseStamped()
         box_pose.header.frame_id = 'map'
-        box_pose.pose.position = Point(0.85, 0.3, .66)
-        box_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+        box_pose.pose.position = Point(x=0.85, y=0.3, z=.66)
+        box_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
 
         box_setup.add_box_to_world(box_name, (0.07, 0.04, 0.1), box_pose)
         box_setup.open_gripper()
@@ -727,25 +727,25 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.monitors.add_end_motion(start_condition=success)
         box_setup.api.monitors.add_cancel_motion(start_condition=stop_retry, error=Exception('too many retries'))
         box_setup.api.motion_goals.allow_all_collisions()
-        box_setup.execute(add_local_minimum_reached=False)
+        box_setup.execute(local_min_end=False)
         box_setup.update_parent_link_of_group(box_name, box_setup.tip)
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = box_setup.default_root
         base_goal.pose.position.x -= 0.5
-        base_goal.pose.orientation.w = 1
+        base_goal.pose.orientation.w = 1.0
         box_setup.move_base(base_goal)
 
     def test_schnibbeln_sequence(self, box_setup: HSRTester):
         box_name = 'Schnibbler'
         box_pose = PoseStamped()
         box_pose.header.frame_id = box_setup.tip
-        box_pose.pose.position = Point(0.0, 0.0, 0.06)
+        box_pose.pose.position = Point(x=0.0, y=0.0, z=0.06)
         box_pose.pose.orientation.w = 1.0
         bread_name = 'Bernd'
         bread_pose = PoseStamped()
         bread_pose.header.frame_id = 'map'
-        bread_pose.pose.position = Point(0.91, 0.25, .62)
+        bread_pose.pose.position = Point(x=0.91, y=0.25, z=.62)
         bread_pose.pose.orientation.w = 1.0
 
         box_setup.add_box_to_world(name=box_name, size=(0.05, 0.01, 0.15), pose=box_pose, parent_link=box_setup.tip)
@@ -756,7 +756,7 @@ class TestCollisionAvoidanceGoals:
 
         pre_schnibble_pose = PoseStamped()
         pre_schnibble_pose.header.frame_id = 'map'
-        pre_schnibble_pose.pose.position = Point(0.85, 0.2, .75)
+        pre_schnibble_pose.pose.position = Point(x=0.85, y=0.2, z=.75)
         q = quaternion_from_rotation_matrix([[0, 0, 1, 0],
                                              [0, -1, 0, 0],
                                              [1, 0, 0, 0],
@@ -799,24 +799,24 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.monitors.add_end_motion(start_condition=schnibbel_done)
         # box_setup.api.monitors.add_cancel_motion(start_condition=f'not {no_contact}', error=Exception('no contact'))
         box_setup.api.motion_goals.allow_all_collisions()
-        box_setup.execute(add_local_minimum_reached=False)
+        box_setup.execute(local_min_end=False)
         # box_setup.update_parent_link_of_group(box_name, box_setup.tip)
 
     def test_collision_avoidance(self, zero_pose: HSRTester):
         js = {'arm_flex_joint': -np.pi / 2}
-        zero_pose.set_joint_goal(js)
+        zero_pose.api.motion_goals.add_joint_position(js)
         zero_pose.execute()
 
         p = PoseStamped()
         p.header.frame_id = 'map'
         p.pose.position.x = 0.9
-        p.pose.position.y = 0
+        p.pose.position.y = 0.0
         p.pose.position.z = 0.5
-        p.pose.orientation.w = 1
+        p.pose.orientation.w = 1.0
         zero_pose.add_box_to_world(name='box', size=(1, 1, 0.01), pose=p)
 
-        js = {'arm_flex_joint': 0}
-        zero_pose.set_joint_goal(js, add_monitor=False)
+        js = {'arm_flex_joint': 0.0}
+        zero_pose.api.motion_goals.add_joint_position(js)
         zero_pose.execute()
 
     #
@@ -834,9 +834,9 @@ class TestCollisionAvoidanceGoals:
     #     base_goal.header.frame_id = 'base_footprint'
     #     base_goal.pose.position.x = -0.3
     #     base_goal.pose.orientation.w = 1
-    #     box_setup.set_cart_goal(base_goal, tip_link='base_footprint', root_link='map', weight=WEIGHT_ABOVE_CA)
+    #     box_setup.api.motion_goals.add_joint_position(base_goal, tip_link='base_footprint', root_link='map', weight=WEIGHT_ABOVE_CA)
     #     box_setup.set_max_traj_length(30)
-    #     box_setup.execute(add_local_minimum_reached=False)
+    #     box_setup.execute(local_min_end=False)
     #     box_setup.check_cpi_geq(['base_link'], 0.048)
     #     box_setup.check_cpi_leq(['base_link'], 0.07)
 
@@ -846,12 +846,12 @@ class TestAddObject:
         box1_name = 'box1'
         pose = PoseStamped()
         pose.header.frame_id = zero_pose.default_root
-        pose.pose.orientation.w = 1
-        pose.pose.position.x = 1
+        pose.pose.orientation.w = 1.0
+        pose.pose.position.x = 1.0
         zero_pose.add_box_to_world(name=box1_name,
                                    size=(1, 1, 1),
                                    pose=pose,
                                    parent_link='hand_palm_link')
 
-        zero_pose.set_joint_goal({'arm_flex_joint': -0.7})
+        zero_pose.api.motion_goals.add_joint_position({'arm_flex_joint': -0.7})
         zero_pose.execute()
