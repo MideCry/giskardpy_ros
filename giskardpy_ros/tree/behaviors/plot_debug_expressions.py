@@ -24,11 +24,14 @@ class PlotDebugExpressions(PlotTrajectory):
         # create_path(self.path_to_data_folder)
 
     def split_traj(self, traj) -> Trajectory:
+        """
+        if the trajectory has entries that describe vectors or matrices, split them into separate entries
+        """
         new_traj = Trajectory()
         for time, js in traj.items():
             new_js = JointStates()
             for name, js_ in js.items():
-                if isinstance(js_.position, np.ndarray):
+                if isinstance(js_[0], np.ndarray):
                     if len(js_.position.shape) == 1:
                         for x in range(js_.position.shape[0]):
                             tmp_name = PrefixName(f'{name}|{x}')

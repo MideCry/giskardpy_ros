@@ -235,8 +235,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             # self.add_gantt_chart_plotter()
             # self.add_goal_graph_plotter()
             self.add_trajectory_plotter(wait=True)
-            # self.add_debug_trajectory_plotter(wait=True)
-            # self.add_debug_trajectory_plotter(wait=True)
+            self.add_debug_trajectory_plotter(wait=True)
             self.add_debug_marker_publisher()
         # self.add_debug_marker_publisher()
         if self.publish_js:

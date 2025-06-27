@@ -52,7 +52,8 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList
     MirrorJointPosition
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling, \
+    MaxManipulabilityAsEq3
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
 from giskardpy_ros.ros2 import msg_converter, rospy
@@ -497,6 +498,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                            goal_pose: PoseStamped,
                            tip_link: Union[str, giskard_msgs.LinkName],
                            root_link: Union[str, giskard_msgs.LinkName],
+                           working_frame: Optional[giskard_msgs.LinkName] = None,
                            name: Optional[str] = None,
                            reference_linear_velocity: Optional[float] = None,
                            reference_angular_velocity: Optional[float] = None,
@@ -527,6 +529,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     goal_pose=goal_pose,
                                     tip_link=tip_link,
                                     root_link=root_link,
+                                    working_frame=working_frame,
                                     reference_linear_velocity=reference_linear_velocity,
                                     reference_angular_velocity=reference_angular_velocity,
                                     weight=weight,
@@ -602,7 +605,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             root_link = giskard_msgs.LinkName(name=root_link)
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=MaxManipulability.__name__,
+        return self.add_motion_goal(class_name=MaxManipulabilityAsEq3.__name__,
                                     name=name,
                                     tip_link=tip_link,
                                     root_link=root_link,

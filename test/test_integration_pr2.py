@@ -11,6 +11,7 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Po
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
 from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName, MotionStatechartNode
+from giskardpy.motion_statechart.tasks.cartesian_tasks import MoveBase
 from numpy import pi
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -2455,11 +2456,64 @@ class TestCartGoals:
     def test_cart_goal_1eef(self, zero_pose: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
-        p.pose.position.x = -0.1
+        p.pose.position.x = -0.2
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.r_tip, root_link='map')
         zero_pose.execute()
+
+    def test_cart_goal_1eef_and_base(self, zero_pose: PR2Tester):
+        eef_goal = PoseStamped()
+        eef_goal.header.frame_id = 'r_gripper_tool_frame'
+        eef_goal.pose.position.x = -0.1
+        eef_goal.pose.orientation.w = 1.0
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'base_footprint'
+        base_goal.pose.position.x = 0.1
+        base_goal.pose.orientation.w = 1.0
+
+        zero_pose.api.motion_goals.allow_all_collisions()
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=eef_goal, tip_link='r_gripper_tool_frame',
+                                                      working_frame=LinkName(name='map'),
+                                                      root_link='base_footprint')
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map')
+        zero_pose.execute()
+        assert god_map.world.compute_fk_np(PrefixName('map'), PrefixName('r_gripper_tool_frame', 'pr2'))[0,3] < 0.9
+
+    def test_cart_goal_1eef_base_follow_forward(self, better_pose: PR2Tester):
+        p = PoseStamped()
+        p.header.frame_id = better_pose.r_tip
+        p.pose.position.x = 1.0
+        p.pose.orientation.w = 1.0
+        better_pose.api.motion_goals.allow_all_collisions()
+        better_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=better_pose.r_tip,
+                                                        working_frame=LinkName(name='map'),
+                                                        root_link='base_footprint')
+        better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
+                                                     name='walky',
+                                                     radius=0.7,
+                                                     drive_link=LinkName(name='base_footprint'),
+                                                     tip_links=[LinkName(name=better_pose.r_tip),
+                                                                LinkName(name=better_pose.l_tip)])
+        better_pose.execute()
+
+    def test_cart_goal_1eef_base_follow_sideways(self, better_pose: PR2Tester):
+        p = PoseStamped()
+        p.header.frame_id = better_pose.r_tip
+        p.pose.position.y = -1.0
+        p.pose.orientation.w = 1.0
+        better_pose.api.motion_goals.allow_all_collisions()
+        better_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=better_pose.r_tip,
+                                                        working_frame=LinkName(name='map'),
+                                                        root_link='base_footprint')
+        better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
+                                                     name='walky',
+                                                     radius=0.5,
+                                                     drive_link=LinkName(name='base_footprint'),
+                                                     tip_links=[LinkName(name=better_pose.r_tip),
+                                                                LinkName(name=better_pose.l_tip)])
+        better_pose.execute()
 
     def test_10_cart_goals(self, zero_pose: PR2Tester):
         p1 = PoseStamped()
@@ -4582,7 +4636,7 @@ class TestWeightScaling:
                    0] >= m_threshold
 
     def test_manip2(self, zero_pose: PR2Tester):
-        m_threshold = 0.16
+        m_threshold = 0.05
         p = PoseStamped()
         p.header.stamp = rospy.node.get_clock().now().to_msg()
         p.header.frame_id = zero_pose.r_tip
