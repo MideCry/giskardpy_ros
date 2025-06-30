@@ -53,6 +53,9 @@ class ROSMsgVisualization:
         self.publisher = rospy.node.create_publisher(MarkerArray,
                                                    f'{rospy.node.get_name()}/visualization_marker_array',
                                                10)
+        self.publisher_aux = rospy.node.create_publisher(MarkerArray,
+                                                   f'{rospy.node.get_name()}/visualization_marker_array/aux',
+                                               10)
         self.marker_ids = {}
         if tf_frame is None:
             self.tf_root = str(god_map.world.root_link_name)
@@ -166,7 +169,7 @@ class ROSMsgVisualization:
         if not self.mode == VisualizationMode.Nothing:
             marker_array = MarkerArray()
             if force or (not self.frame_locked or self.frame_locked and self.has_world_changed()):
-                self.clear_marker(world_ns)
+                # self.clear_marker(world_ns)
                 marker_array.markers.extend(self.create_world_markers(name_space=world_ns))
             marker_array.markers.extend(self.create_collision_markers(name_space=collision_ns))
             if len(marker_array.markers) > 0:
@@ -390,7 +393,7 @@ class ROSMsgVisualization:
                     map_V_d = np.dot(map_T_ref, ref_V_d)
                     map_P_vis = map_T_vis[:4, 3:].T[0]
                     map_P_p1 = map_P_vis
-                    map_P_p2 = map_P_vis + map_V_d * 0.5
+                    map_P_p2 = map_P_vis + map_V_d
                     m.points.append(Point(x=map_P_p1[0], y=map_P_p1[1], z=map_P_p1[2]))
                     m.points.append(Point(x=map_P_p2[0], y=map_P_p2[1], z=map_P_p2[2]))
                     m.type = Marker.ARROW
@@ -420,3 +423,20 @@ class ROSMsgVisualization:
                     color_counter += 1
                 ms.append(m)
         return ms
+
+    def pub_box_marker(self, name: str, frame_id: str, xyz: List[float], color: ColorRGBA) -> None:
+        m = Marker()
+        m.scale.x = xyz[0]
+        m.scale.y = xyz[1]
+        m.scale.z = xyz[2]
+        m.frame_locked = True
+        m.header.frame_id = frame_id
+        m.ns = name
+        m.id = 3213
+        m.type = Marker.CUBE
+        m.action = Marker.ADD
+        m.color = color
+        m.pose.orientation.w = 1.0
+        marker_array = MarkerArray()
+        marker_array.markers.append(m)
+        self.publisher_aux.publish(marker_array)

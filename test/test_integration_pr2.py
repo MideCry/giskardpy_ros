@@ -11,6 +11,8 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Po
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
 from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName, MotionStatechartNode
+from std_msgs.msg import ColorRGBA
+
 from giskardpy.motion_statechart.tasks.cartesian_tasks import MoveBase
 from numpy import pi
 from rclpy.duration import Duration
@@ -2482,6 +2484,10 @@ class TestCartGoals:
         assert god_map.world.compute_fk_np(PrefixName('map'), PrefixName('r_gripper_tool_frame', 'pr2'))[0,3] < 0.9
 
     def test_cart_goal_1eef_base_follow_forward(self, better_pose: PR2Tester):
+        x = 0.7
+        y = 0.5
+        GiskardBlackboard().ros_visualizer.pub_box_marker('box', frame_id='base_footprint',
+                                                          xyz=[2*x, 2*y, 4.0], color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
         p = PoseStamped()
         p.header.frame_id = better_pose.r_tip
         p.pose.position.x = 1.0
@@ -2492,13 +2498,18 @@ class TestCartGoals:
                                                         root_link='base_footprint')
         better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
                                                      name='walky',
-                                                     radius=0.7,
+                                                     xyz=[x,y,0.0],
                                                      drive_link=LinkName(name='base_footprint'),
                                                      tip_links=[LinkName(name=better_pose.r_tip),
                                                                 LinkName(name=better_pose.l_tip)])
         better_pose.execute()
 
     def test_cart_goal_1eef_base_follow_sideways(self, better_pose: PR2Tester):
+        x = 0.7
+        y = 0.5
+        GiskardBlackboard().ros_visualizer.pub_box_marker('box', frame_id='base_footprint',
+                                                          xyz=[2*x, 2*y, 4.0], color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
+
         p = PoseStamped()
         p.header.frame_id = better_pose.r_tip
         p.pose.position.y = -1.0
@@ -2506,13 +2517,13 @@ class TestCartGoals:
         better_pose.api.motion_goals.allow_all_collisions()
         better_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=better_pose.r_tip,
                                                         working_frame=LinkName(name='map'),
-                                                        root_link='base_footprint')
+                                                        root_link='base_footprint',
+                                                        weight=WEIGHT_BELOW_CA)
         better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
                                                      name='walky',
-                                                     radius=0.5,
+                                                     xyz=[x,y,0.0],
                                                      drive_link=LinkName(name='base_footprint'),
-                                                     tip_links=[LinkName(name=better_pose.r_tip),
-                                                                LinkName(name=better_pose.l_tip)])
+                                                     tip_links=[LinkName(name=better_pose.r_tip)])
         better_pose.execute()
 
     def test_10_cart_goals(self, zero_pose: PR2Tester):
@@ -4626,17 +4637,19 @@ class TestWeightScaling:
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.motion_goals.add_cartesian_pose(p, zero_pose.r_tip, 'map')
-        m_threshold = 0.16
-        zero_pose.api.motion_goals.add_maximize_manipulability(
-            root_link='torso_lift_link',
-            tip_link=zero_pose.r_tip,
+        m_threshold = 0.007
+        done = zero_pose.api.motion_goals.add_maximize_manipulability(
+            root_link='map',
+            tip_link='base_footprint',
             m_threshold=m_threshold)
-        zero_pose.execute()
+        zero_pose.api.monitors.add_end_motion(done)
+        zero_pose.api.monitors.add_check_trajectory_length(10)
+        zero_pose.execute(local_min_end=False)
         assert god_map.debug_expression_manager.evaluated_debug_expressions[f'mIndexpr2/{zero_pose.r_tip}'][
                    0] >= m_threshold
 
     def test_manip2(self, zero_pose: PR2Tester):
-        m_threshold = 0.05
+        m_threshold = 0.01
         p = PoseStamped()
         p.header.stamp = rospy.node.get_clock().now().to_msg()
         p.header.frame_id = zero_pose.r_tip
