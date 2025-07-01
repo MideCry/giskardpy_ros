@@ -51,7 +51,7 @@ RUN workon giskardpy && \
 
 # Install qpSWIFT
 RUN workon giskardpy &&  \
-    pip install pybind11 && \
+    pip3 install pybind11 && \
     cd ~ && \
     git clone https://github.com/SemRoCo/qpSWIFT && \
     cd qpSWIFT && \
