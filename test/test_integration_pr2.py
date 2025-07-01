@@ -10,10 +10,9 @@ import pytest
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, QuaternionStamped
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
-from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName, MotionStatechartNode
+from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName
 from std_msgs.msg import ColorRGBA
 
-from giskardpy.motion_statechart.tasks.cartesian_tasks import MoveBase
 from numpy import pi
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -29,7 +28,7 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
+from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence, ToDriveOrNotToDrive
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.sequence_goal import SimpleSequenceGoal
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
@@ -183,7 +182,7 @@ class PR2Tester(GiskardTester):
                               qp_controller_config=QPControllerConfig(mpc_dt=0.05,
                                                                       control_dt=0.05,
                                                                       retries_with_relaxed_constraints=10,
-                                                                      qp_formulation=QPFormulation(double_qp=True)
+                                                                      qp_formulation=QPFormulation()
                                                                       # qp_solver=SupportedQPSolver.gurobi,
                                                                       ))
         super().__init__(giskard)
@@ -2481,34 +2480,34 @@ class TestCartGoals:
                                                       root_link='base_footprint')
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map')
         zero_pose.execute()
-        assert god_map.world.compute_fk_np(PrefixName('map'), PrefixName('r_gripper_tool_frame', 'pr2'))[0,3] < 0.9
+        assert god_map.world.compute_fk_np(PrefixName('map'), PrefixName('r_gripper_tool_frame', 'pr2'))[0, 3] < 0.9
 
     def test_cart_goal_1eef_base_follow_forward(self, better_pose: PR2Tester):
         x = 0.7
-        y = 0.5
+        y = 0.55
         GiskardBlackboard().ros_visualizer.pub_box_marker('box', frame_id='base_footprint',
-                                                          xyz=[2*x, 2*y, 4.0], color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
+                                                          xyz=[2 * x, 2 * y, 4.0],
+                                                          color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
         p = PoseStamped()
         p.header.frame_id = better_pose.r_tip
         p.pose.position.x = 1.0
         p.pose.orientation.w = 1.0
         better_pose.api.motion_goals.allow_all_collisions()
         better_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=better_pose.r_tip,
-                                                        working_frame=LinkName(name='map'),
-                                                        root_link='base_footprint')
-        better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
+                                                        root_link='map',
+                                                        weight=WEIGHT_BELOW_CA)
+        better_pose.api.motion_goals.add_motion_goal(class_name=ToDriveOrNotToDrive.__name__,
                                                      name='walky',
-                                                     xyz=[x,y,0.0],
-                                                     drive_link=LinkName(name='base_footprint'),
-                                                     tip_links=[LinkName(name=better_pose.r_tip),
-                                                                LinkName(name=better_pose.l_tip)])
+                                                     xyz=[x, y, 0.0],
+                                                     tip_link=LinkName(name=better_pose.r_tip))
         better_pose.execute()
 
     def test_cart_goal_1eef_base_follow_sideways(self, better_pose: PR2Tester):
         x = 0.7
         y = 0.5
         GiskardBlackboard().ros_visualizer.pub_box_marker('box', frame_id='base_footprint',
-                                                          xyz=[2*x, 2*y, 4.0], color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
+                                                          xyz=[2 * x, 2 * y, 4.0],
+                                                          color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5))
 
         p = PoseStamped()
         p.header.frame_id = better_pose.r_tip
@@ -2519,11 +2518,10 @@ class TestCartGoals:
                                                         working_frame=LinkName(name='map'),
                                                         root_link='base_footprint',
                                                         weight=WEIGHT_BELOW_CA)
-        better_pose.api.motion_goals.add_motion_goal(class_name=MoveBase.__name__,
+        better_pose.api.motion_goals.add_motion_goal(class_name=ToDriveOrNotToDrive.__name__,
                                                      name='walky',
-                                                     xyz=[x,y,0.0],
-                                                     drive_link=LinkName(name='base_footprint'),
-                                                     tip_links=[LinkName(name=better_pose.r_tip)])
+                                                     xyz=[x, y, 0.0],
+                                                     tip_link=LinkName(name=better_pose.r_tip))
         better_pose.execute()
 
     def test_10_cart_goals(self, zero_pose: PR2Tester):
