@@ -59,7 +59,6 @@ RUN workon giskardpy &&  \
     cmake --build build --config Release && \
     cmake --build build --target install && \
     cd python && \
-    echo -e "[build-system]\nrequires = [\"setuptools\", \"wheel\", \"numpy\"]\nbuild-backend = \"setuptools.build_meta\"" > pyproject.toml && \
     pip3 install .
 
 # Install betterpybullet
