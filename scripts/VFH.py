@@ -128,8 +128,8 @@ class VectorFieldHistogram:
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
         print(polar_histogram)
 
-            # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
-            # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
+        # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
+        # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
         free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]  # replace obstacle threshold with POD
         # valley calculation
         valleys = []
@@ -164,7 +164,7 @@ class VectorFieldHistogram:
             print(f"Steering Valley: {selected_valley}")
             print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
             print(f"Steering angle: {theta_deg:.2f}°")
-
+        # Start searching for adjacent free valley
         else:
             total_sectors = len(polar_histogram)
             print("Target point is behind obstacle, choosing largest adjacent Valley")
@@ -175,7 +175,7 @@ class VectorFieldHistogram:
             for valley in valleys:
                 if not set(valley).isdisjoint(nearby_sectors):
                     candidate_valleys.append(valley)
-
+            # candidate valley has been found in first iteration
             if candidate_valleys:
                 selected_valley = max(candidate_valleys, key=len)
                 print(f"Selected adjacent Valley: {selected_valley}")
@@ -191,14 +191,12 @@ class VectorFieldHistogram:
                 print(f"Steering Valley: {selected_valley}")
                 print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
                 print(f"Steering angle: {theta_deg:.2f}°")
-
+            # Dynamically expand search radius if no candidate is found in first iteration
             else:
                 print("No immediately adjacent Valleys found, expanding search radius")
                 found_valley = None
                 max_search_expansion = total_sectors // 2
                 for radius in range(2, max_search_expansion + 1):
-                    # nearby_sectors = set(
-                    #     (target_sector + offset) % total_sectors for offset in range(-radius, radius + 1))
                     nearby_sectors = set()
                     for offset in range(-radius, radius + 1):
                         candidate_sector = target_sector + offset
@@ -215,7 +213,7 @@ class VectorFieldHistogram:
                         found_valley = max(candidate_valleys, key=len)
                         print(f"Found valley at radius {radius}: {found_valley}")
                         break
-
+                # calculate directional vector
                 if found_valley:
                     selected_valley = found_valley
                     k_near = min(selected_valley)
@@ -277,7 +275,7 @@ class VectorFieldHistogram:
     #             print(f'IDX:{idx}')
     #
     #     return smoothed
-
+    # ------------------- ONLY USE THE PLOT FOR TESTING ---------------------
     def histogram_plot(self, target_point):
         # Start of plot gen
         fig = plt.figure(figsize=(12, 6))
@@ -298,7 +296,6 @@ class VectorFieldHistogram:
         ax1.set_title('Polar Histogram')
         ax1.set_theta_direction(-1)
         ax1.set_theta_zero_location('W', 30)
-       # ax1.set_theta_offset(-0.174533) #4.45059
         colors = ['green' if self.polar_histogram[i] < self.obstacle_threshold else 'red'
                   for i in range(len(self.polar_histogram))]
         angles_rad = np.deg2rad(np.arange(0, 240, self.sector_angle))
