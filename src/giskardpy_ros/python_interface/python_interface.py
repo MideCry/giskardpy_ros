@@ -1792,7 +1792,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                  handle_name: Union[str, giskard_msgs.LinkName],
                                  tip_grasp_axis: Vector3Stamped,
                                  bar_axis: Vector3Stamped,
-                                 tip_push: PointStamped,
                                  tip_retract: PointStamped,
                                  handle_align_axis: Vector3Stamped,
                                  tip_align_axis: Vector3Stamped,
@@ -1804,6 +1803,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                  ft_topic: str = '/filtered_raw/diff',
                                  ft_grasp_ref_speed: float = 1,
                                  camera_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
+                                 tip_push: Optional[PointStamped] = None,
+                                 handle_correction_offset: Optional[PointStamped] = None,
                                  name: str = None,
                                  start_condition: str = '',
                                  pause_condition: str = '',
@@ -1816,6 +1817,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param handle_name: LinkName of the environment-link that is to be grasped.
         :param tip_grasp_axis: axis of tip-link that is to be aligned with bar axis.
         :param bar_axis: axis of the handle along which the handlebar is.
+        :param tip_push:
         :param tip_retract: distance the tip will retract after force-torque-threshold is reached.
         :param handle_align_axis: axis of the handle which will be aligned with the grasp_axis while grasping.
         :param tip_align_axis: axis of the tip_link along which is grasped. e.g. z-axis of the hsrb-gripper.
@@ -1827,6 +1829,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param ft_topic: topic of the sensor-data for the ft-monitor.
         :param ft_grasp_ref_speed: reference-speed-modifier for the ft-grasping motion.
         :param camera_link: Link-name of camera_link when using camera offset via visual servoing
+        :param handle_correction_offset: Offset after visual servoing to adjust for middle of handle
         :param name: Name of the Goal
         :param start_condition: expression that starts goal
         :param pause_condition: expression that pauses goal
@@ -1861,6 +1864,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     ft_topic=ft_topic,
                                     ft_grasp_ref_speed=ft_grasp_ref_speed,
                                     camera_link=camera_link,
+                                    handle_correction_offset=handle_correction_offset,
                                     name=name,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,

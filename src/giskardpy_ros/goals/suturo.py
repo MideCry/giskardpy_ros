@@ -1034,7 +1034,6 @@ class GraspWithForceTorqueGoal(Goal):
                  handle_name: PrefixName,
                  tip_grasp_axis: cas.Vector3,
                  bar_axis: cas.Vector3,
-                 tip_push: cas.Point3,
                  tip_retract: cas.Point3,
                  handle_align_axis: cas.Vector3,
                  tip_align_axis: cas.Vector3,
@@ -1046,6 +1045,8 @@ class GraspWithForceTorqueGoal(Goal):
                  ft_topic: str = '/filtered_raw/diff',
                  ft_grasp_ref_speed: float = 1,
                  camera_link: Optional[PrefixName] = None,
+                 tip_push: Optional[cas.Point3] = None,
+                 handle_correction_offset: Optional[cas.Point3] = None,
                  name: str = None):
         """
         Complex grasping motion using the ForceTorqueMonitor.
@@ -1103,7 +1104,7 @@ class GraspWithForceTorqueGoal(Goal):
         ap_pre_grasp.start_condition = self.start_condition
         self.add_task(ap_pre_grasp)
 
-        if camera_link is not None:
+        if camera_link is not None and tip_push is not None:
             handle_correction = HandleOffsetCorrectionRealtime(root_link=root_link,
                                                                tip_link=camera_link,
                                                                threshold=30,
@@ -1111,7 +1112,20 @@ class GraspWithForceTorqueGoal(Goal):
             handle_correction.start_condition = pre_grasp
             handle_correction.end_condition = handle_correction
             self.add_task(handle_correction)
-            next_condition = handle_correction
+
+            if handle_correction_offset is not None:
+                midpoint_offset = CartesianPosition(root_link=root_link,
+                                                    tip_link=tip_link,
+                                                    goal_point=handle_correction_offset,
+                                                    name='offset handle midpoint',
+                                                    threshold=0.001)
+                midpoint_offset.start_condition = handle_correction
+                midpoint_offset.end_condition = midpoint_offset
+                self.add_task(midpoint_offset)
+
+                next_condition = midpoint_offset
+            else:
+                next_condition = handle_correction
         else:
             next_condition = pre_grasp
 
@@ -1126,7 +1140,7 @@ class GraspWithForceTorqueGoal(Goal):
         ft_monitor.start_condition = next_condition
         self.add_monitor(ft_monitor)
 
-        if camera_link is not None:
+        if camera_link is not None and tip_push is not None:
             ft_grasp = CartesianPosition(root_link=root_link,
                                          tip_link=tip_link,
                                          goal_point=tip_push,

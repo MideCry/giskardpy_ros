@@ -163,13 +163,16 @@ def grasping(with_camera: bool = False):
 
     open_gripper = gis.monitors.add_open_hsr_gripper(start_condition=jps)
 
+    handle_correction_offset = PointStamped()
+    handle_correction_offset.header.frame_id = tip
+    handle_correction_offset.point.x = 0.02
+
     grasp = gis.motion_goals.add_grasp_with_ft_sensor(root_link='map',
                                                       tip_link=tip,
                                                       handle_name=handle_name,
                                                       tip_grasp_axis=tip_grasp_axis,
                                                       bar_axis=bar_axis,
                                                       tip_retract=handle_retract,
-                                                      tip_push=grasp_push,
                                                       handle_align_axis=x_goal,
                                                       tip_align_axis=x_gripper,
                                                       grasp_axis_offset=grasp_axis_offset,
@@ -178,6 +181,8 @@ def grasping(with_camera: bool = False):
                                                       timeout=ft_timeout,
                                                       ft_grasp_ref_speed=ref_speed,
                                                       camera_link=camera_link,
+                                                      tip_push=grasp_push,
+                                                      handle_correction_offset=handle_correction_offset,
                                                       start_condition=open_gripper)
     gis.update_end_condition(node_name=grasp, condition=grasp)
 
