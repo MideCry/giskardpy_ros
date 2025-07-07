@@ -35,7 +35,7 @@ class HSRTester(GiskardTester):
     def __init__(self, giskard=None):
         self.tip = 'hand_gripper_tool_frame'
         if giskard is None:
-            robot_desc = load_xacro('package://hsrb_description/robots/hsrb4s.urdf.xacro')
+            robot_desc = load_xacro('package://hsr_description/robots/hsrb4s.urdf.xacro')
             giskard = Giskard(world_config=WorldWithHSRConfig(urdf=robot_desc),
                               collision_avoidance_config=HSRCollisionAvoidanceConfig(),
                               robot_interface_config=HSRStandaloneInterface(),
