@@ -1527,7 +1527,7 @@ class TestSUTURO:
                              s_max=12,
                              input_topic="/hsrb/base_scan",
                              output_topic="/hsrb/VFH")
-        time.sleep(6)
+
         zero_pose.motion_goals.add_motion_goal(class_name=RealMoveDir.__name__,
                                                root_link=god_map.world.search_for_link_name('map', ""),
                                                tip_link=god_map.world.search_for_link_name('base_footprint', "hsrb"),

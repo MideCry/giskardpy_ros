@@ -11,6 +11,7 @@ from geometry_msgs.msg import Vector3Stamped
 from sensor_msgs.msg import LaserScan
 import rospy
 import timeit
+import tf
 
 matplotlib.use('Qt5Agg')
 
@@ -35,6 +36,7 @@ class VectorFieldHistogram:
 
         self.topic = input_topic  # "/hsrb/base_scan"
         self.robot_position = (0.0, 0.0)
+        self.tf_listener = tf.TransformListener()
         self.distances = np.array([])
         self.angles = np.array([])
         self.polar_histogram = None
@@ -46,27 +48,8 @@ class VectorFieldHistogram:
         self.pub = rospy.Publisher(name=output_topic, data_class=Vector3Stamped, queue_size=10)
         self.rate = rospy.Rate(10)
 
-    # # Parameters
-    # # HSR LIDAR Scanner range -120° - 120° (-2,099rad - 2,099rad)
-    # num_readings = 240
-    # max_range = 60.0  # meters (LIDAR Scanner max range 60.0)
-    # grid_size = 0.1  # meters
-    # robot_position = (0, 0)
-    # sector_angle = 5  # degrees
-    # threshold = 10
-    # s_max = 12
-    # target_sector = 0
-
-    # subscribe to lidar scanner topic (hsrb/base_scan) - done
-    # map ranges (ranges in Laserscan messages) onto histogram (one reading per ~0,24998148602°) - done
-    # add calculation of magnitude of obstacle vector - done
-    # map readings onto sectors - done
     # calculate polar obstacle density, as indicator how many obstacles are within a sector - tbd
-    # add consideration of threshold(e.g. only obstacle vector of a certain magnitude should be considered when choosing steering direction) - done
-    # code vfh task
-    # hand steering direction angle to task as directional vector, so robot is pushed in said direction - first half done
-    # do benchmarking - done
-    # Unit testing by checking steering angles
+    # Unit testing by checking steering angles - tbd
 
     # Get LiDAR Data from /hsrb/base_scan topic
     def laser_callback(self, data: LaserScan):
@@ -79,9 +62,14 @@ class VectorFieldHistogram:
     def target_sim(self):
         # start_time = time.perf_counter() - benchmark stuff
         target_point = (2, 3.5)
-        # (0, 3.5)
-        # (0, 4)
-        # (-2,4)
+
+        try:
+            (trans, rot) = self.tf_listener.lookupTransform("map", "base_footprint", rospy.Time(0))
+            self.robot_position = (trans[0], trans[1])
+            print(f'R_POS:{self.robot_position}')
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            self.robot_position = (0.0, 0.0)
+
         # calculating sector that target is in
         tx, ty = target_point
         target_angle = np.arctan2(ty - self.robot_position[1], tx - self.robot_position[0])
@@ -147,10 +135,6 @@ class VectorFieldHistogram:
         selected_valley = None
 
         for valley in valleys:
-            # print(f"Selected Valley: {selected_valley}")
-            # print(min(valley))
-            # print(max(valley))
-            # print(target_sector)
             if min(valley) <= target_sector <= max(valley):
                 selected_valley = valley
                 print(f"Selected Valley: {selected_valley}")
@@ -298,6 +282,7 @@ class VectorFieldHistogram:
         ax0.set_title('LIDAR Map')
         ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
         ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
+        ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
         ax0.set_xlim(-self.max_range, self.max_range)
         ax0.set_ylim(-self.max_range, self.max_range)
         ax0.set_aspect('equal')

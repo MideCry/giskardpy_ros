@@ -36,9 +36,9 @@ class VFHMoveDir(Task):
         self.root_V_goal_angle = god_map.world.transform(self.root, goal_vector).to_np()
 
         root_V_goal_angle: cas.Vector3 = symbol_manager.get_expr(self.ref_str +
-                                                                      '.root_V_goal_angle',
-                                                                      input_type_hint=np.ndarray,
-                                                                      output_type_hint=cas.Vector3)
+                                                                 '.root_V_goal_angle',
+                                                                 input_type_hint=np.ndarray,
+                                                                 output_type_hint=cas.Vector3)
         root_V_goal_angle.vis_frame = tip_link
 
         root_V_goal_angle.reference_frame = self.root
@@ -66,7 +66,7 @@ class RealMoveDir(VFHMoveDir):
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_BELOW_CA,
                  name: Optional[str] = None):
-        initial_goal = cas.Vector3((1, 0, 0), reference_frame=god_map.world.search_for_link_name(tip_link))
+        initial_goal = cas.Vector3((0, 0, 0), reference_frame=god_map.world.search_for_link_name(tip_link))
         super().__init__(name=name,
                          tip_link=tip_link,
                          goal_vector=initial_goal,
