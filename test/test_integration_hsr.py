@@ -1,4 +1,5 @@
 import os
+import time
 from copy import deepcopy
 from typing import Dict
 
@@ -19,14 +20,16 @@ from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.lidar_monitor import LidarPayloadMonitor
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
+from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
+from giskardpy_ros.tasks.vfh_task import RealMoveDir
 from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
+from giskardpy_ros.goals.VFH import VectorFieldHistogram
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from giskardpy_ros.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
@@ -1031,7 +1034,7 @@ class TestSUTURO:
         zero_pose.execute()
 
         zero_pose.open_gripper()
-
+        # might need offset upwards, to not grasp around handle
         zero_pose.motion_goals.add_motion_goal(class_name=Reaching.__name__,
                                                object_name=mesh_name,
                                                goal_pose=mesh_goal_pose,
@@ -1513,6 +1516,26 @@ class TestSUTURO:
         zero_pose.execute(add_local_minimum_reached=False)
 
         return
+
+    def test_full_VFH(self, zero_pose: HSRTestWrapper):
+
+        VectorFieldHistogram(num_readings=240,
+                             max_range=5.0,
+                             grid_size=0.1,
+                             sector_angle=5,
+                             obstacle_threshold=8,
+                             s_max=12,
+                             input_topic="/hsrb/base_scan",
+                             output_topic="/hsrb/VFH")
+        time.sleep(6)
+        zero_pose.motion_goals.add_motion_goal(class_name=RealMoveDir.__name__,
+                                               root_link=god_map.world.search_for_link_name('map', ""),
+                                               tip_link=god_map.world.search_for_link_name('base_footprint', "hsrb"),
+                                               topic_name="/hsrb/VFH",
+                                               max_velocity=0.3,
+                                               weight=WEIGHT_BELOW_CA)
+
+        zero_pose.execute(add_local_minimum_reached=False)
 
 
 class TestArenaActions:

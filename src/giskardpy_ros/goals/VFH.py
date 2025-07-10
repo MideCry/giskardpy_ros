@@ -23,14 +23,17 @@ class VectorFieldHistogram:
                  sector_angle: int,
                  obstacle_threshold: float,
                  s_max: int,
-                 ):
+                 input_topic: str,
+                 output_topic: str):
         self.num_readings = num_readings
         self.max_range = max_range
         self.grid_size = grid_size
         self.sector_angle = sector_angle
         self.obstacle_threshold = obstacle_threshold
         self.s_max = s_max
+        self.output_topic = output_topic
 
+        self.topic = input_topic  # "/hsrb/base_scan"
         self.robot_position = (0.0, 0.0)
         self.distances = np.array([])
         self.angles = np.array([])
@@ -39,7 +42,9 @@ class VectorFieldHistogram:
         self.d_max = self.max_range
         self.obstacle_density = None
 
-        rospy.Subscriber("/hsrb/base_scan", LaserScan, self.laser_callback)
+        rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
+        self.pub = rospy.Publisher(name=output_topic, data_class=Vector3Stamped, queue_size=10)
+        self.rate = rospy.Rate(10)
 
     # # Parameters
     # # HSR LIDAR Scanner range -120° - 120° (-2,099rad - 2,099rad)
@@ -236,14 +241,21 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            theta_rad = math.radians(theta_deg)
+            # TODO: Puts out slightly wrong directional vector, even though the math should be right...WHY U NO MATH?ß?!1
+            theta_rad = math.radians(-(theta_deg - 120.0))
+
             direction_vector = Vector3Stamped()
             direction_vector.header.frame_id = "base_footprint"
             direction_vector.vector.x = math.cos(theta_rad)
             direction_vector.vector.y = math.sin(theta_rad)
             direction_vector.vector.z = 0.0
+
+            self.pub.publish(direction_vector)
         else:
             direction_vector = (0.0, 0.0, 0.0)
+        print(direction_vector.vector.x)
+        print(direction_vector.vector.y)
+        print(direction_vector.vector.z)
         print(f"Directional Vector: {direction_vector}")
         print("---------------------------------------")
 
@@ -320,6 +332,8 @@ if __name__ == '__main__':
                                grid_size=0.1,
                                sector_angle=5,
                                obstacle_threshold=8,
-                               s_max=12)
+                               s_max=12,
+                               input_topic="/hsrb/base_scan",
+                               output_topic="/hsrb/VFH")
 
     rospy.spin()
