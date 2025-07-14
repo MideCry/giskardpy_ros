@@ -293,8 +293,8 @@ class ROSMsgVisualization:
                 for i in range(3):
                     m = Marker()
                     m.header.frame_id = self.tf_root
-                    m.header.stamp = rospy.Time.now()
-                    m.pose.orientation.w = 1
+                    m.header.stamp = rospy.node.get_clock().now().to_msg()
+                    m.pose.orientation.w = 1.0
                     m.ns = f'debug/{name}'
                     m.id = i + marker_id_offset
                     m.type = Marker.ARROW
@@ -304,7 +304,7 @@ class ROSMsgVisualization:
                     # Arrow properties
                     m.scale.x = width / 2
                     m.scale.y = width
-                    m.scale.z = 0
+                    m.scale.z = 0.0
 
                     m.color = colors[i]
 
