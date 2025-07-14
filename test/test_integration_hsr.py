@@ -292,19 +292,19 @@ class TestCartGoals:
         hole_point.point.z = 0.3
         wiggle = 'wiggle'
         zero_pose.api.motion_goals.add_wiggle_insert(name=wiggle,
-                                                 root_link=root_link,
-                                                 tip_link=hpl,
-                                                 hole_point=hole_point,
-                                                 end_condition=wiggle)
+                                                     root_link=root_link,
+                                                     tip_link=hpl,
+                                                     hole_point=hole_point,
+                                                     end_condition=wiggle)
         resistence_point = PointStamped()
         resistence_point.header.frame_id = 'map'
         resistence_point.point.x = 0.5
         resistence_point.point.z = 0.4
         timer = zero_pose.api.monitors.add_sleep(5)
         zero_pose.api.motion_goals.add_cartesian_position(root_link=root_link,
-                                                      tip_link=hpl,
-                                                      goal_point=resistence_point,
-                                                      end_condition=timer)
+                                                          tip_link=hpl,
+                                                          goal_point=resistence_point,
+                                                          end_condition=timer)
         zero_pose.api.monitors.add_end_motion(start_condition=wiggle)
         zero_pose.execute(local_min_end=False)
 
@@ -644,13 +644,13 @@ class TestConstraints:
         kitchen_setup.api.update_reset_condition(node_name=laser_violated, condition=reset)
         kitchen_setup.api.update_reset_condition(node_name=gripper_closed, condition=reset)
         kitchen_setup.api.update_reset_condition(node_name=door_open, condition=reset)
-        # kitchen_setup.api.update_reset_condition(node_name=slipped, condition=reset)
+        kitchen_setup.api.update_reset_condition(node_name=slipped, condition=reset)
         kitchen_setup.api.update_reset_condition(node_name=gripper_opened, condition=reset)
         kitchen_setup.api.update_reset_condition(node_name=reset, condition=reset)
 
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.api.monitors.add_end_motion(start_condition=f'{door_open} and {gripper_opened} and not {slipped}')
-        kitchen_setup.execute()
+        kitchen_setup.execute(local_min_end=False)
 
 
 class TestCollisionAvoidanceGoals:
