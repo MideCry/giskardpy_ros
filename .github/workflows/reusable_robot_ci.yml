@@ -171,15 +171,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: 'giskard_ws/src/hsr_description'
-          repository: code-iai/hsr_description
-          ref: master
-      - if: ${{ inputs.robot == 'hsr' }}
-        name: Checkout hsr_meshes
-        uses: actions/checkout@v3
-        with:
-          path: 'giskard_ws/src/hsr_meshes'
-          repository: ToyotaResearchInstitute/hsr_meshes
-          ref: master
+          repository: MideCry/hsr_description
+          ref: ros2-jazzy-main
+      # - if: ${{ inputs.robot == 'hsr' }}
+      #   name: Checkout hsr_meshes
+      #   uses: actions/checkout@v3
+      #   with:
+      #     path: 'giskard_ws/src/hsr_meshes'
+      #     repository: ToyotaResearchInstitute/hsr_meshes
+      #     ref: master
       - if: ${{ inputs.robot == 'donbot' }}
         name: Checkout iai_robots
         uses: actions/checkout@v3
