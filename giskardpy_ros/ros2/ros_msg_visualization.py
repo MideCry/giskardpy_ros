@@ -285,9 +285,9 @@ class ROSMsgVisualization:
 
             if isinstance(expr, cas.RotationMatrix):
                 colors = [
-                    ColorRGBA(1.0, 0.0, 0.0, 1.0),  # Red (X)
-                    ColorRGBA(0.0, 1.0, 0.0, 1.0),  # Green (Y)
-                    ColorRGBA(0.0, 0.0, 1.0, 1.0)  # Blue (Z)
+                    ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0),  # Red (X)
+                    ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0),  # Green (Y)
+                    ColorRGBA(r=0.0, g=0.0, b=1.0, a=1.0)  # Blue (Z)
                 ]
 
                 for i in range(3):
@@ -300,7 +300,7 @@ class ROSMsgVisualization:
                     m.type = Marker.ARROW
                     m.action = Marker.ADD
                     axis = value[:, i] * 0.5
-                    m.points = [Point(), Point(axis[0], axis[1], axis[2])]  # Start and Endpoints
+                    m.points = [Point(), Point(x=axis[0], y=axis[1], z=axis[2])]  # Start and Endpoints
                     # Arrow properties
                     m.scale.x = width / 2
                     m.scale.y = width
