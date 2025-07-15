@@ -1,8 +1,7 @@
 from itertools import chain
 from typing import List
 
-import giskardpy.casadi_wrapper as w
-from giskardpy.data_types.data_types import Derivatives
+import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
 from giskardpy.qp.constraint import EqualityConstraint, InequalityConstraint, DerivativeInequalityConstraint
@@ -46,10 +45,10 @@ class InitQPController(GiskardBehavior):
                                 derivative_constraints: List[DerivativeInequalityConstraint]):
         symbols = set()
         for c in chain(eq_constraints, neq_constraints, derivative_constraints):
-            symbols.update(str(s) for s in w.free_symbols(c.expression))
-        free_variables = list(sorted([v for v in god_map.world.free_variables.values() if v.position_name in symbols],
+            symbols.update(str(s) for s in cas.free_symbols(c.expression))
+        free_variables = list(sorted([v for v in god_map.world.degrees_of_freedoms.values() if v.position_name in symbols],
                                      key=lambda x: x.position_name))
         if len(free_variables) == 0:
             raise EmptyProblemException('Goal parsing resulted in no free variables.')
-        god_map.free_variables = free_variables
+        god_map.degrees_of_freedoms = free_variables
         return free_variables

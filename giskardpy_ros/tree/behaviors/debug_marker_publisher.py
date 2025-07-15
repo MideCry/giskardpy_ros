@@ -10,7 +10,7 @@ from tf2_msgs.msg import TFMessage
 from visualization_msgs.msg import Marker, MarkerArray
 from line_profiler import profile
 
-import giskardpy.casadi_wrapper as w
+import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior

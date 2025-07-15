@@ -1,7 +1,7 @@
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 
-a_T_b = cas.TransMatrix()
-b_T_c = cas.TransMatrix()
+a_T_b = cas.TransformationMatrix()
+b_T_c = cas.TransformationMatrix()
 
 c_P_x = cas.Point3()
 c_V_x = cas.Vector3()

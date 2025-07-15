@@ -7,7 +7,7 @@ from line_profiler import profile
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
@@ -201,7 +201,7 @@ class ROSMsgVisualization:
         self.publisher.publish(marker_array)
 
     def publish_debug_trajectory(self,
-                                 debug_expressions: Dict[PrefixName, Union[cas.TransMatrix,
+                                 debug_expressions: Dict[PrefixName, Union[cas.TransformationMatrix,
                                  cas.Point3,
                                  cas.Vector3,
                                  cas.Quaternion]],
@@ -268,7 +268,7 @@ class ROSMsgVisualization:
         self.marker_ids = {}
 
     def debug_state_to_vectors_markers(self,
-                                       debug_expressions: Dict[PrefixName, Union[cas.TransMatrix,
+                                       debug_expressions: Dict[PrefixName, Union[cas.TransformationMatrix,
                                        cas.Point3,
                                        cas.Vector3,
                                        cas.Quaternion,
@@ -312,7 +312,7 @@ class ROSMsgVisualization:
                     m.color = colors[i]
 
                     ms.append(m)
-            elif isinstance(expr, cas.TransMatrix):
+            elif isinstance(expr, cas.TransformationMatrix):
                 ref_T_d = value
                 map_T_d = np.dot(map_T_ref, ref_T_d)
                 map_P_d = map_T_d[:4, 3:]

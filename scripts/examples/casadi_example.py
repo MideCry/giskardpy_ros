@@ -1,6 +1,6 @@
 import numpy as np
 
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 
 a = cas.Symbol('a')
 b = cas.Symbol('b')

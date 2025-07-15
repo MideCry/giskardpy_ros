@@ -20,10 +20,10 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.joints import OmniDrive
 from giskardpy.motion_statechart.monitors.monitors import Monitor, EndMotion
-from giskardpy.symbol_manager import symbol_manager
+from semantic_world.spatial_types.symbol_manager import symbol_manager
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_COLLISION_AVOIDANCE, Task
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.utils.decorators import clear_memo, memoize_with_counter
 from giskardpy_ros.ros2 import rospy
@@ -883,7 +883,7 @@ class FollowNavPath(Goal):
 #         final_orientation = self.create_and_add_task('final orientation')
 #         frame_R_current = root_T_bf.to_rotation()
 #         current_R_frame_eval = god_map.world.compose_fk_evaluated_expression(self.tip, self.root).to_rotation()
-#         frame_R_goal = cas.TransMatrix(path.poses[-1]).to_rotation()
+#         frame_R_goal = cas.TransformationMatrix(path.poses[-1]).to_rotation()
 #         final_orientation.add_rotation_goal_constraints(frame_R_current=frame_R_current,
 #                                                         frame_R_goal=frame_R_goal,
 #                                                         current_R_frame_eval=current_R_frame_eval,

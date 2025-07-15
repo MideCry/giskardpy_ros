@@ -20,7 +20,7 @@ from rclpy_message_converter.message_converter import \
     convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
 
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.data_types import JointStates, PrefixName, ColorRGBA, Derivatives
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException, UnknownGoalException
@@ -51,7 +51,7 @@ def is_ros_message(obj: Any) -> bool:
 
 # %% to ros
 def to_ros_message(data):
-    if isinstance(data, cas.TransMatrix):
+    if isinstance(data, cas.TransformationMatrix):
         return trans_matrix_to_pose_stamped(data)
     if isinstance(data, cas.Point3):
         return point3_to_point_stamped(data)
@@ -140,7 +140,7 @@ def color_rgba_to_ros_msg(data) -> std_msgs.ColorRGBA:
     return std_msgs.ColorRGBA(r=data.r, g=data.g, b=data.b, a=data.a)
 
 
-def trans_matrix_to_pose_stamped(data: cas.TransMatrix) -> geometry_msgs.PoseStamped:
+def trans_matrix_to_pose_stamped(data: cas.TransformationMatrix) -> geometry_msgs.PoseStamped:
     pose_stamped = geometry_msgs.PoseStamped()
     pose_stamped.header.frame_id = str(data.reference_frame)
     position = data.to_position().to_np()
@@ -177,7 +177,7 @@ def point3_to_point_stamped(data: cas.Point3) -> geometry_msgs.PointStamped:
     return point_stamped
 
 
-def trans_matrix_to_transform_stamped(data: cas.TransMatrix) -> geometry_msgs.TransformStamped:
+def trans_matrix_to_transform_stamped(data: cas.TransformationMatrix) -> geometry_msgs.TransformStamped:
     transform_stamped = geometry_msgs.TransformStamped()
     transform_stamped.header.frame_id = data.reference_frame
     transform_stamped.child_frame_id = data.child_frame
@@ -468,18 +468,18 @@ def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: ColorRGBA) -> Lin
         raise NotImplementedError()
     elif msg.type == msg.PRIMITIVE_BODY:
         if msg.shape.type == msg.shape.BOX:
-            geometry = BoxGeometry(link_T_geometry=cas.TransMatrix(),
+            geometry = BoxGeometry(link_T_geometry=cas.TransformationMatrix(),
                                    depth=msg.shape.dimensions[msg.shape.BOX_X],
                                    width=msg.shape.dimensions[msg.shape.BOX_Y],
                                    height=msg.shape.dimensions[msg.shape.BOX_Z],
                                    color=color)
         elif msg.shape.type == msg.shape.CYLINDER:
-            geometry = CylinderGeometry(link_T_geometry=cas.TransMatrix(),
+            geometry = CylinderGeometry(link_T_geometry=cas.TransformationMatrix(),
                                         height=msg.shape.dimensions[msg.shape.CYLINDER_HEIGHT],
                                         radius=msg.shape.dimensions[msg.shape.CYLINDER_RADIUS],
                                         color=color)
         elif msg.shape.type == msg.shape.SPHERE:
-            geometry = SphereGeometry(link_T_geometry=cas.TransMatrix(),
+            geometry = SphereGeometry(link_T_geometry=cas.TransformationMatrix(),
                                       radius=msg.shape.dimensions[msg.shape.SPHERE_RADIUS],
                                       color=color)
         else:
@@ -487,7 +487,7 @@ def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: ColorRGBA) -> Lin
     elif msg.type == msg.MESH_BODY:
         if msg.scale.x == 0 or msg.scale.y == 0 or msg.scale.z == 0:
             raise CorruptShapeException(f'Scale of mesh contains 0: {msg.scale}')
-        geometry = MeshGeometry(link_T_geometry=cas.TransMatrix(),
+        geometry = MeshGeometry(link_T_geometry=cas.TransformationMatrix(),
                                 file_name=msg.mesh,
                                 scale=[msg.scale.x, msg.scale.y, msg.scale.z],
                                 color=color)
@@ -496,31 +496,31 @@ def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: ColorRGBA) -> Lin
     return geometry
 
 
-def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: WorldTree) -> cas.TransMatrix:
+def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: WorldTree) -> cas.TransformationMatrix:
     p = cas.Point3.from_xyz(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
     R = cas.Quaternion.from_xyzw(msg.pose.orientation.x, msg.pose.orientation.y,
                                  msg.pose.orientation.z, msg.pose.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
+    result = cas.TransformationMatrix.from_point_rotation_matrix(point=p,
                                                         rotation_matrix=R,
                                                         reference_frame=world.search_for_link_name(msg.header.frame_id))
     return result
 
 
-def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
+def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
     p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
     R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
                                  msg.orientation.z, msg.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
+    result = cas.TransformationMatrix.from_point_rotation_matrix(point=p,
                                                         rotation_matrix=R,
                                                         reference_frame=None)
     return result
 
 
-def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
+def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
     p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
     R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
                                  msg.orientation.z, msg.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
+    result = cas.TransformationMatrix.from_point_rotation_matrix(point=p,
                                                         rotation_matrix=R,
                                                         reference_frame=None)
     return result

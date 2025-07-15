@@ -56,7 +56,7 @@ class CleanUpPlanning(CleanUp):
     def initialise(self):
         super().initialise()
         GiskardBlackboard().fill_trajectory_velocity_values = None
-        god_map.free_variables = []
+        god_map.degrees_of_freedoms = []
 
     @catch_and_raise_to_blackboard
     def update(self):

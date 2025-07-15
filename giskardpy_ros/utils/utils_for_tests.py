@@ -19,7 +19,7 @@ from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
 from tf2_py import LookupException, ExtrapolationException
 
-import giskardpy.casadi_wrapper as cas
+import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.data_types.data_types import PrefixName, Derivatives
@@ -31,19 +31,17 @@ from giskardpy.model.joints import OneDofJoint, OmniDrive, DiffDrive, Joint
 from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.free_variable import FreeVariable
-from giskardpy.qp.qp_controller import available_solvers
-from giskardpy.qp.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
-def compare_poses(actual_pose: Union[cas.TransMatrix, Pose], desired_pose: Union[cas.TransMatrix, Pose],
+def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose], desired_pose: Union[cas.TransformationMatrix, Pose],
                   decimal: int = 2) -> None:
-    if isinstance(actual_pose, cas.TransMatrix):
+    if isinstance(actual_pose, cas.TransformationMatrix):
         actual_pose = msg_converter.to_ros_message(actual_pose).pose
-    if isinstance(desired_pose, cas.TransMatrix):
+    if isinstance(desired_pose, cas.TransformationMatrix):
         desired_pose = msg_converter.to_ros_message(desired_pose).pose
     compare_points(actual_point=actual_pose.position,
                    desired_point=desired_pose.position,
@@ -415,7 +413,7 @@ class GiskardTester:
         return trajectory2
 
     def are_joint_limits_violated(self, eps=1e-2):
-        active_free_variables: List[FreeVariable] = god_map.qp_controller.free_variables
+        active_free_variables: List[FreeVariable] = god_map.qp_controller.degrees_of_freedoms
         for free_variable in active_free_variables:
             if free_variable.has_position_limits():
                 lower_limit = free_variable.get_lower_limit(Derivatives.position)
