@@ -28,7 +28,7 @@ class InitQPController(GiskardBehavior):
             return Status.SUCCESS
 
         god_map.qp_controller.init(
-            free_variables=free_variables,
+            degrees_of_freedom=free_variables,
             equality_constraints=eq_constraints,
             inequality_constraints=neq_constraints,
             eq_derivative_constraints=eq_derivative_constraints,
