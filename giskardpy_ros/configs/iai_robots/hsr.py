@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
@@ -17,13 +19,15 @@ class WorldWithHSRConfig(WorldConfig):
                  localization_joint_name: str = 'localization',
                  odom_link_name: str = 'odom',
                  drive_joint_name: str = 'brumbrum',
-                 description_name: str = 'robot_description'):
+                 description_name: str = 'robot_description',
+                 urdf: Optional[str] = None):
         super().__init__()
         self.map_name = map_name
         self.localization_joint_name = localization_joint_name
         self.odom_link_name = odom_link_name
         self.drive_joint_name = drive_joint_name
         self.robot_description_name = description_name
+        self.robot_description = urdf
 
     def setup(self):
         self.set_default_color(1, 1, 1, 1)
@@ -34,7 +38,10 @@ class WorldWithHSRConfig(WorldConfig):
         self.add_6dof_joint(parent_link=self.map_name, child_link=self.odom_link_name,
                             joint_name=self.localization_joint_name)
         self.add_empty_link(PrefixName(self.odom_link_name))
-        self.add_robot_urdf(urdf=rospy.get_param(self.robot_description_name))
+        if self.robot_description is None:
+            self.add_robot_urdf(urdf=rospy.get_param(self.robot_description_name))
+        else:
+            self.add_robot_urdf(urdf=self.robot_description)
         root_link_name = self.get_root_link_of_group(self.robot_group_name)
         self.add_omni_drive_joint(parent_link_name=self.odom_link_name,
                                   child_link_name=root_link_name,
@@ -65,7 +72,7 @@ class HSRCollisionAvoidanceConfig(CollisionAvoidanceConfig):
         self.drive_joint_name = drive_joint_name
 
     def setup(self):
-        self.load_self_collision_matrix('package://giskardpy_ros/self_collision_matrices/iai/hsrb.srdf')
+        self.load_self_collision_matrix('self_collision_matrices/iai/hsrb.srdf')
         self.set_default_external_collision_avoidance(soft_threshold=0.05,
                                                       hard_threshold=0.0)
         self.overwrite_external_collision_avoidance('wrist_roll_joint',

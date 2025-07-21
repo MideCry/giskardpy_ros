@@ -58,7 +58,10 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def terminate(self, new_status: Status) -> None:
         if hasattr(self, 'sleeper') and self.sleeper is not None:
-            get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
+            try:
+                get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
+            except Exception as e:
+                pass  # sometimes the sleeper is not defined yet
         self.set_status(Status.FAILURE)
         try:
             self.update_thread.join()

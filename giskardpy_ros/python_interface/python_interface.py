@@ -53,6 +53,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
 from giskardpy_ros.ros2 import msg_converter, rospy
@@ -866,6 +867,64 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
                                     **kwargs)
+
+    def add_wiggle_insert(self,
+                          root_link: giskard_msgs.LinkName,
+                          tip_link: giskard_msgs.LinkName,
+                          hole_point: PointStamped,
+                          name: Optional[str] = None,
+                          down_velocity: float = 0.2,
+                          noise_translation: float = 0.5,
+                          noise_angle: float = 10,
+                          random_walk: bool = True,
+                          vector_momentum_factor: float = 0.9,
+                          angular_momentum_factor: float = 0.9,
+                          center_pull_strength_angle: float = 0.1,
+                          center_pull_strength_vector: float = 0.25,
+                          weight: Optional[float] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
+        """
+        Press down while wiggling the end effector.
+        :param root_link:
+        :param tip_link:
+        :param hole_point: Center point of the hole
+        :param hole_normal: Vector perpendicular to the hole. default = z-axis of map
+        :param threshold: threshold for distance to hole_point to end task
+        :param noise_translation: describes how strong the translation wiggle is.
+        :param noise_angle: describes how strong the angular wiggle is.
+        :param random_walk: determines if random walk or random sample strategy is used
+        :param vector_momentum_factor: (only when random_walk=True) Higher value increases influence of momentum,
+                                                                    creating smoother but less random translation movement
+        :param angular_momentum_factor: (only when random_walk=True) Higher value increases influence of momentum,
+                                                                     creating smoother but less random angular movement
+        :param center_pull_strength_angle: (only when random_walk=True) Forces angular movement faster back towards
+                                                                        starting angle
+        :param center_pull_strength_vector: (only when random_walk=True) Forces translation movement faster back towards
+                                                                         hole_point
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        return self.add_motion_goal(class_name=WiggleInsert.__name__,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    name=name,
+                                    down_velocity=down_velocity,
+                                    hole_point=hole_point,
+                                    noise_translation=noise_translation,
+                                    noise_angle=noise_angle,
+                                    random_walk=random_walk,
+                                    vector_momentum_factor=vector_momentum_factor,
+                                    angular_momentum_factor=angular_momentum_factor,
+                                    center_pull_strength_angle=center_pull_strength_angle,
+                                    center_pull_strength_vector=center_pull_strength_vector,
+                                    weight=weight,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def _add_collision_avoidance(self,
                                  collisions: List[CollisionEntry],
