@@ -171,8 +171,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: 'giskard_ws/src/hsr_description'
-          repository: MideCry/hsr_description
-          ref: ros2-jazzy-main
+          repository: code-iai/hsr_description
+          ref: ros2-jazzy
       # - if: ${{ inputs.robot == 'hsr' }}
       #   name: Checkout hsr_meshes
       #   uses: actions/checkout@v3
