@@ -51,7 +51,15 @@ RUN workon giskardpy && \
 
 # Install qpSWIFT
 RUN workon giskardpy &&  \
-    pip3 install pybind11 qpSWIFT-sparse-bindings
+    pip3 install pybind11 && \
+    cd ~ && \
+    git clone https://github.com/SemRoCo/qpSWIFT && \
+    cd qpSWIFT && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --config Release && \
+    cmake --build build --target install && \
+    cd python && \
+    pip3 install .
 
 # Install betterpybullet
 RUN workon giskardpy && \
