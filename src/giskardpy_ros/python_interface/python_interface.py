@@ -1393,7 +1393,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)
-
+    # --tbr
     def add_follow_nav_path(self,
                             path: Path,
                             name: Optional[str] = None,
