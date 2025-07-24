@@ -58,7 +58,11 @@ def make_urdf_world_body(name, urdf):
     return wb
 
 
-def load_xacro(path: str) -> str:
+def load_xacro(path: str, additional_mappings: Optional[dict[str, str]] = None) -> str:
+    if additional_mappings is None:
+        mappings = {'radius': '0.9'}
+    else:
+        mappings = {'radius': '0.9'} | additional_mappings
     path = get_middleware().resolve_iri(path)
-    doc = xacro.process_file(path, mappings={'radius': '0.9'})
+    doc = xacro.process_file(path, mappings=mappings)
     return doc.toprettyxml(indent='  ')
