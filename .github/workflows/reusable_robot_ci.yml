@@ -207,14 +207,104 @@ jobs:
 #          cd giskard_ws
 #          touch src/iai_pr2/iai_pr2_sim/CATKIN_IGNORE
 #          touch src/iai_pr2/iai_pr2_donbot/CATKIN_IGNORE
-      - if: ${{ inputs.robot == 'tiago' }} # tiago has to be pulled now because it has fucked up package.xml
-        name: Checkout iai_tiago
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout launch_pal
         uses: actions/checkout@v3
         with:
-          path: 'giskard_ws/src/iai_tiago'
-          repository: code-iai/iai_tiago
+          path: 'giskard_ws/src/launch_pal'
+          repository: pal-robotics/launch_pal
+          ref: master
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout launch_param_builder
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/launch_param_builder'
+          repository: PickNikRobotics/launch_param_builder
           ref: main
-          submodules: recursive
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pal_gripper
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pal_gripper'
+          repository: pal-robotics/pal_gripper
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pal_hey5
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pal_hey5'
+          repository: pal-robotics/pal_hey5
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pal_robotiq_gripper
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pal_robotiq_gripper'
+          repository: pal-robotics/pal_robotiq_gripper
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pal_urdf_utils
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pal_urdf_utils'
+          repository: pal-robotics/pal_urdf_utils
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pmb2_robot
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pmb2_robot'
+          repository: pal-robotics/pmb2_robot
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout tiago_dual_robot
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/tiago_dual_robot'
+          repository: pal-robotics/tiago_dual_robot
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout tiago_robot
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/tiago_robot'
+          repository: pal-robotics/tiago_robot
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout urdf_test
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/urdf_test'
+          repository: pal-robotics/urdf_test
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout omni_base_robot
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/omni_base_robot'
+          repository: pal-robotics/omni_base_robot
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout play_motion2
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/play_motion2'
+          repository: pal-robotics/play_motion2
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout pal_gazebo_worlds
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/pal_gazebo_worlds'
+          repository: pal-robotics/pal_gazebo_worlds
+          ref: humble-devel
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout gazebo_planar_move_plugin
+        uses: actions/checkout@v3
+        with:
+          path: 'giskard_ws/src/gazebo_planar_move_plugin'
+          repository: Boeing/gazebo_planar_move_plugin
+          ref: humble
       # build workspace ------------------------------------------------------------------------------------------------
       - name: Create workspace II
         run: |
