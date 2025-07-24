@@ -6,7 +6,7 @@ from operator import itemgetter
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-from geometry_msgs.msg import Vector3Stamped
+from geometry_msgs.msg import Vector3Stamped, PointStamped
 
 from sensor_msgs.msg import LaserScan
 import rospy
@@ -17,6 +17,9 @@ matplotlib.use('Qt5Agg')
 
 
 class VectorFieldHistogram:
+    """
+
+    """
     def __init__(self,
                  num_readings: int,
                  max_range: float,
@@ -24,15 +27,14 @@ class VectorFieldHistogram:
                  sector_angle: int,
                  obstacle_threshold: float,
                  s_max: int,
-                 input_topic: str,
-                 output_topic: str):
+                 input_topic: str):
         self.num_readings = num_readings
         self.max_range = max_range
         self.grid_size = grid_size
         self.sector_angle = sector_angle
         self.obstacle_threshold = obstacle_threshold
         self.s_max = s_max
-        self.output_topic = output_topic
+        self.direction_vector = None
 
         self.topic = input_topic  # "/hsrb/base_scan"
         self.robot_position = (0.0, 0.0)
@@ -44,8 +46,7 @@ class VectorFieldHistogram:
         self.d_max = self.max_range
         self.obstacle_density = None
 
-        rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
-        self.pub = rospy.Publisher(name=output_topic, data_class=Vector3Stamped, queue_size=10)
+        self.sub = rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
         self.rate = rospy.Rate(10)
 
     # calculate polar obstacle density, as indicator how many obstacles are within a sector - tbd
@@ -56,20 +57,42 @@ class VectorFieldHistogram:
         self.distances = np.array(data.ranges)
         self.angles = data.angle_min + np.arange(len(self.distances)) * data.angle_increment
 
-        self.run()
+        self.laser_points_x = []
+        self.laser_points_y = []
 
-    # Target point for cool stuff
-    def target_sim(self):
+        for i, r in enumerate(self.distances):
+            if np.isnan(r) or np.isinf(r):
+                continue
+
+            angle = self.angles[i]
+
+            point = PointStamped()
+            point.header.frame_id = data.header.frame_id
+            point.header.stamp = data.header.stamp
+            point.point.x = np.cos(angle)
+            point.point.y = np.sin(angle)
+            point.point.z = 0.0
+
+            try:
+                transformed_point = self.tf_listener.transformPoint("map", point)
+                self.laser_points_x.append(transformed_point.point.x)
+                self.laser_points_y.append(transformed_point.point.y)
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                continue
+
+            self.x_points = np.array(self.laser_points_x)
+            self.y_points = np.array(self.laser_points_y)
+
+    def target_sim(self,
+                   target_point=(0.0, 0.0)):
         # start_time = time.perf_counter() - benchmark stuff
-        target_point = (2, 3.5)
 
         try:
             (trans, rot) = self.tf_listener.lookupTransform("map", "base_footprint", rospy.Time(0))
             self.robot_position = (trans[0], trans[1])
-            print(f'R_POS:{self.robot_position}')
+            # print(f'R_POS:{self.robot_position}')
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             self.robot_position = (0.0, 0.0)
-
         # calculating sector that target is in
         tx, ty = target_point
         target_angle = np.arctan2(ty - self.robot_position[1], tx - self.robot_position[0])
@@ -83,10 +106,11 @@ class VectorFieldHistogram:
         # rospy.loginfo(f"target_sim took {elapsed_time_ms:.3f} ms") - benchmark stuff
         return target_sector, target_angle_deg, target_point
 
-    def run(self):
+    def run(self,
+            target_point):
         if len(self.distances) == 0:
             return
-        target_sector, target_angle_deg, target_point = self.target_sim()
+        target_sector, target_angle_deg, target_point = self.target_sim(target_point=target_point)
         self.update_histogram(self.distances, self.angles, target_sector, target_angle_deg)
         self.histogram_plot(target_point)
 
@@ -119,7 +143,7 @@ class VectorFieldHistogram:
             magnitudes = 1 - (clipped_dists / self.d_max)  # magnitude stuff
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
-        print(polar_histogram)
+        # print(polar_histogram)
 
         # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
@@ -129,37 +153,37 @@ class VectorFieldHistogram:
         for k, g in groupby(enumerate(free_sectors), lambda ix: ix[0] - ix[1]):
             valley = list(map(itemgetter(1), g))
             valleys.append(valley)
-            print(f"Valley: {valley}")
-            print(f"Valleys: {valleys}")
+            # print(f"Valley: {valley}")
+            # print(f"Valleys: {valleys}")
         # Find the valley containing the target sector
         selected_valley = None
 
         for valley in valleys:
             if min(valley) <= target_sector <= max(valley):
                 selected_valley = valley
-                print(f"Selected Valley: {selected_valley}")
+                # print(f"Selected Valley: {selected_valley}")
                 break
 
         if selected_valley:
             k_near = min(selected_valley)
             k_far = k_near + self.s_max
             if len(selected_valley) <= self.s_max:
-                print("Valley is narrow")
+                # print("Valley is narrow")
                 k_far = max(selected_valley)
             theta = (k_near + k_far) / 2
             best_sector = int(theta)
             theta_deg = best_sector * self.sector_angle
-            print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
-            print(f"Steering Valley: {selected_valley}")
-            print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
-            print(f"Steering angle: {theta_deg:.2f}°")
+            # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
+            # print(f"Steering Valley: {selected_valley}")
+            # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+            # print(f"Steering angle: {theta_deg:.2f}°")
         # Start searching for adjacent free valley
         else:
             total_sectors = len(polar_histogram)
-            print("Target point is behind obstacle, choosing largest adjacent Valley")
+            # print("Target point is behind obstacle, choosing largest adjacent Valley")
             # check whether target sector is adjacent to any valleys, then check which of the two is larger
             nearby_sectors = set((target_sector + offset) % total_sectors for offset in range(-2, 2))
-            print(f"Nearby sectors: {nearby_sectors}")
+            # print(f"Nearby sectors: {nearby_sectors}")
             candidate_valleys = []
             for valley in valleys:
                 if not set(valley).isdisjoint(nearby_sectors):
@@ -167,11 +191,11 @@ class VectorFieldHistogram:
             # candidate valley has been found in first iteration
             if candidate_valleys:
                 selected_valley = max(candidate_valleys, key=len)
-                print(f"Selected adjacent Valley: {selected_valley}")
+                # print(f"Selected adjacent Valley: {selected_valley}")
                 k_near = min(selected_valley)
                 k_far = k_near + self.s_max
                 if len(selected_valley) <= self.s_max:
-                    print("Valley is narrow")
+                    # print("Valley is narrow")
                     k_far = max(selected_valley)
                 theta = (k_near + k_far) / 2
                 best_sector = int(theta)
@@ -182,7 +206,7 @@ class VectorFieldHistogram:
                 print(f"Steering angle: {theta_deg:.2f}°")
             # Dynamically expand search radius if no candidate is found in first iteration
             else:
-                print("No immediately adjacent Valleys found, expanding search radius")
+                # print("No immediately adjacent Valleys found, expanding search radius")
                 found_valley = None
                 max_search_expansion = total_sectors // 2
                 for radius in range(2, max_search_expansion + 1):
@@ -191,7 +215,7 @@ class VectorFieldHistogram:
                         candidate_sector = target_sector + offset
                         if 0 <= candidate_sector < total_sectors:
                             nearby_sectors.add(candidate_sector)
-                    print(f"Trying nearby sectors with radius {radius}: {sorted(nearby_sectors)}")
+                    # print(f"Trying nearby sectors with radius {radius}: {sorted(nearby_sectors)}")
 
                     # check whether target sector is adjacent to any valleys, then check which of the two is larger
                     candidate_valleys = []
@@ -200,7 +224,7 @@ class VectorFieldHistogram:
                             candidate_valleys.append(valley)
                     if candidate_valleys and len(candidate_valleys) >= 2:
                         found_valley = max(candidate_valleys, key=len)
-                        print(f"Found valley at radius {radius}: {found_valley}")
+                        # print(f"Found valley at radius {radius}: {found_valley}")
                         break
                 # calculate directional vector
                 if found_valley:
@@ -208,7 +232,7 @@ class VectorFieldHistogram:
                     k_near = min(selected_valley)
                     k_far = k_near + self.s_max
                     if len(selected_valley) <= self.s_max:
-                        print("Valley is narrow")
+                        # print("Valley is narrow")
                         k_far = max(selected_valley)
                     theta = (k_near + k_far) / 2
                     best_sector = int(theta)
@@ -225,24 +249,23 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            # TODO: Puts out slightly wrong directional vector, even though the math should be right...WHY U NO MATH?ß?!1
-            theta_rad = math.radians(-(theta_deg - 120.0))
-
-            direction_vector = Vector3Stamped()
-            direction_vector.header.frame_id = "base_footprint"
-            direction_vector.vector.x = math.cos(theta_rad)
-            direction_vector.vector.y = math.sin(theta_rad)
-            direction_vector.vector.z = 0.0
-
-            self.pub.publish(direction_vector)
+            theta_rad = math.radians(-(theta_deg - 120.0)) # -- maybe np. instead of .math?
+            # direction_vector = Vector3Stamped()
+            # direction_vector.header.frame_id = "base_footprint"
+            # direction_vector.vector.x = math.cos(theta_rad)
+            # direction_vector.vector.y = math.sin(theta_rad)
+            # direction_vector.vector.z = 0.0
+            direction_vector = np.array([math.cos(theta_rad), math.sin(theta_rad), 0])
+            print(f"Directional Vector: {direction_vector}")
+            # print("---------------------------------------")
+            self.direction_vector = direction_vector
+            return direction_vector
         else:
-            direction_vector = (0.0, 0.0, 0.0)
-        print(direction_vector.vector.x)
-        print(direction_vector.vector.y)
-        print(direction_vector.vector.z)
-        print(f"Directional Vector: {direction_vector}")
-        print("---------------------------------------")
-
+            direction_vector = np.array([0.0, 0.0, 0.0])
+            print(f"Directional Vector: {direction_vector}")
+            # print("---------------------------------------")
+            self.direction_vector = direction_vector
+            return direction_vector
         # benchmark stuff
         # end_time = time.perf_counter()  # End timing
         # elapsed_time_ms = (end_time - start_time) * 1000
@@ -310,15 +333,14 @@ class VectorFieldHistogram:
         plt.savefig('/home/yannis/Documents/vfh.png')
 
 
-if __name__ == '__main__':
-    rospy.init_node('vfh_node')
-    vfh = VectorFieldHistogram(num_readings=240,
-                               max_range=5.0,
-                               grid_size=0.1,
-                               sector_angle=5,
-                               obstacle_threshold=8,
-                               s_max=12,
-                               input_topic="/hsrb/base_scan",
-                               output_topic="/hsrb/VFH")
-
-    rospy.spin()
+# if __name__ == '__main__':
+#     rospy.init_node('vfh_node')
+#     vfh = VectorFieldHistogram(num_readings=240,
+#                                max_range=5.0,
+#                                grid_size=0.1,
+#                                sector_angle=5,
+#                                obstacle_threshold=8,
+#                                s_max=12,
+#                                input_topic="/hsrb/base_scan")
+#
+#     rospy.spin()
