@@ -46,8 +46,8 @@ class InitQPController(GiskardBehavior):
         symbols = set()
         for c in chain(eq_constraints, neq_constraints, derivative_constraints):
             symbols.update(str(s) for s in cas.free_symbols(c.expression))
-        free_variables = list(sorted([v for v in god_map.world.degrees_of_freedoms.values() if v.position_name in symbols],
-                                     key=lambda x: x.position_name))
+        free_variables = list(sorted([v for v in god_map.world.degrees_of_freedom if v.symbols.position in symbols],
+                                     key=lambda x: x.symbols.position.name))
         if len(free_variables) == 0:
             raise EmptyProblemException('Goal parsing resulted in no free variables.')
         god_map.degrees_of_freedoms = free_variables

@@ -10,17 +10,10 @@ from line_profiler import profile
 
 class KinSimPlugin(GiskardBehavior):
 
-    def initialise(self):
-        def f(joint_symbol):
-            return god_map.expr_to_key[joint_symbol][-2]
-
-        self.symbol_to_joint_map = KeyDefaultDict(f)
-        super().initialise()
-
     @record_time
     def update(self):
         next_cmds = god_map.qp_solver_solution
-        god_map.world.update_state(next_cmds, god_map.qp_controller.mpc_dt,
-                                   max_derivative=god_map.qp_controller.max_derivative)
+        god_map.world.apply_control_commands(next_cmds, god_map.qp_controller.config.mpc_dt,
+                                             derivative=god_map.qp_controller.config.max_derivative)
         # god_map.world.notify_state_change()
         return Status.SUCCESS

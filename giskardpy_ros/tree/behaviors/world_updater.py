@@ -2,7 +2,6 @@ import traceback
 from copy import deepcopy
 from threading import Thread
 
-from giskard_msgs.action import World
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.srv import GetGroupNames, GetGroupInfo, DyeGroup, GetGroupInfo_Response, GetGroupInfo_Request, \
     GetGroupNames_Request, GetGroupNames_Response, DyeGroup_Response, DyeGroup_Request
@@ -25,6 +24,8 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2.tfwrapper import transform_pose
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from line_profiler import profile
+
+from semantic_world.robots import AbstractRobot
 
 
 class ProcessWorldUpdate(GiskardBehavior):
@@ -96,10 +97,11 @@ class ProcessWorldUpdate(GiskardBehavior):
         return res
 
     def get_group_names_cb(self, req: GetGroupNames_Request, res: GetGroupNames_Response) -> GetGroupNames_Response:
-        group_names = god_map.world.group_names
+        group_names = [str(v.name) for v in god_map.world.views]
+        robot_names = [str(v.name) for v in god_map.world.views if isinstance(v, AbstractRobot)]
         groups = list(sorted(group_names))
         # make sure robots are at the front
-        groups = list(sorted(groups, key=lambda elem: elem not in god_map.world.robot_names))
+        groups = list(sorted(groups, key=lambda elem: elem not in robot_names))
         res.group_names = groups
         return res
 
@@ -133,7 +135,7 @@ class ProcessWorldUpdate(GiskardBehavior):
             raise TransformException('Frame_id in pose is not set.')
         try:
             # first try to transform to map using tf to deal with time stamps
-            pose = transform_pose(target_frame=god_map.world.root_link_name, pose=req.pose, timeout=0.5)
+            pose = transform_pose(target_frame=god_map.world.root.name, pose=req.pose, timeout=0.5)
         except:
             # tf is not available, just ignore this step
             pass
@@ -200,15 +202,14 @@ class ProcessWorldUpdate(GiskardBehavior):
 
     def clear_world(self):
         tmp_state = deepcopy(god_map.world.state)
-        god_map.world.clear()
         with god_map.world.modify_world():
+            god_map.world.clear()
             GiskardBlackboard().giskard.world_config.setup()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
         # copy only state of joints that didn't get deleted
-        remaining_free_variables = set(god_map.world.degrees_of_freedoms.keys()).union(
-            god_map.world.virtual_free_variables.keys())
-        for v in god_map.world.state:
-            if v not in remaining_free_variables:
+        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
+        for v in tmp_state.keys():
+            if v not in dof_names:
                 del god_map.world.state[v]
         god_map.world.notify_state_change()
         god_map.collision_scene.sync()

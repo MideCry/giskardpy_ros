@@ -19,6 +19,8 @@ from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy.utils.utils import get_all_classes_in_package
+from semantic_world.connections import ActiveConnection
+from semantic_world.robots import AbstractRobot
 
 
 class Giskard:
@@ -80,7 +82,7 @@ class Giskard:
         return f'{rospy.node.get_name()}/command'
 
     def set_defaults(self) -> None:
-        self.qp_controller_config.set_defaults()
+        # self.qp_controller_config.set_defaults() todo reimplement
         self.world_config.set_defaults()
         self.robot_interface_config.set_defaults()
         self.collision_avoidance_config.set_defaults()
@@ -92,6 +94,7 @@ class Giskard:
         """
         with god_map.world.modify_world():
             self.world_config.setup()
+        self.qp_controller_config.setup()
         self.behavior_tree_config._create_behavior_tree()
         self.behavior_tree_config.setup()
         self.robot_interface_config.setup()
@@ -105,14 +108,20 @@ class Giskard:
     def sanity_check(self):
         self._controlled_joints_sanity_check()
 
+    @property
+    def robot(self) -> AbstractRobot:
+        return god_map.world.search_for_views_of_type(AbstractRobot)[0]
+
     def _controlled_joints_sanity_check(self):
         world = god_map.world
-        non_controlled_joints = set(world.movable_joint_names).difference(set(world.controlled_joints))
-        if len(world.controlled_joints) == 0 and len(world.joints) > 0:
+        movable_joints = world.search_for_connections_of_type(ActiveConnection)
+        controlled_joints = self.robot.controlled_connections.connections
+        non_controlled_joints = set(movable_joints).difference(set(controlled_joints))
+        if len(controlled_joints) == 0 and len(world.connections) > 0:
             raise SetupException('No joints are flagged as controlled.')
         if len(non_controlled_joints) > 0:
             get_middleware().loginfo(f'The following joints are non-fixed according to the urdf, '
-                               f'but not flagged as controlled: {non_controlled_joints}.')
+                               f'but not flagged as controlled: {[c.name for c in non_controlled_joints]}.')
 
     def add_goal_package_name(self, package_name: str):
         new_goals = get_all_classes_in_package(package_name, Goal)

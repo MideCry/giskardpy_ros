@@ -50,9 +50,9 @@ class PlotDebugExpressions(PlotTrajectory):
         return new_traj
 
     def plot(self):
-        trajectory = god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.control_dt)
+        trajectory = god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt)
         if trajectory and len(trajectory.items()) > 0:
-            sample_period = god_map.qp_controller.mpc_dt
+            sample_period = god_map.qp_controller.config.mpc_dt
             traj = self.split_traj(trajectory)
             try:
                 traj.plot_trajectory(path_to_data_folder=self.path_to_data_folder,

@@ -11,12 +11,11 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Po
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
 from giskard_msgs.msg import WorldBody, CollisionEntry, LinkName
-from std_msgs.msg import ColorRGBA
-
 from numpy import pi
 from rclpy.duration import Duration
 from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
+from std_msgs.msg import ColorRGBA
 
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
@@ -26,31 +25,30 @@ from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengt
     EmptyProblemException, SetupException, UnknownJointException, ExecutionException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig
 from giskardpy.model.utils import hacky_urdf_parser_fix
-from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence, ToDriveOrNotToDrive
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
-from giskardpy.motion_statechart.goals.sequence_goal import SimpleSequenceGoal
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
-from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
-from giskardpy.motion_statechart.tasks.feature_functions import DistanceGoal, HeightGoal
 from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
 from giskardpy.motion_statechart.tasks.joint_tasks import JointVelocityLimit, UnlimitedJointGoal
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
-from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
+from giskardpy.qp.qp_controller_config import SupportedQPSolver
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, PR2StandaloneInterface, WorldWithPR2Config
+from giskardpy_ros.configs.iai_robots.pr2 import PR2StandaloneInterface, WorldWithPR2Config, \
+    PR2QPControllerConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester, compare_points
+from semantic_world.connections import RevoluteConnection
+from semantic_world.spatial_types.math import shortest_angular_distance
 
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
@@ -170,23 +168,20 @@ class PR2Tester(GiskardTester):
         drive_joint_name = 'brumbrum'
         robot_desc = load_xacro('package://iai_pr2_description/robots/pr2_with_ft2_cableguide.xacro')
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name,
-                                                              urdf=robot_desc),
-                              robot_interface_config=PR2StandaloneInterface(drive_joint_name=drive_joint_name),
-                              collision_avoidance_config=PR2CollisionAvoidance(drive_joint_name=drive_joint_name,
-                                                                               # collision_checker=CollisionCheckerLib.none),
-                                                                               ),
+            giskard = Giskard(world_config=WorldWithPR2Config(urdf=robot_desc),
+                              robot_interface_config=PR2StandaloneInterface(),
+                              collision_avoidance_config=DisableCollisionAvoidanceConfig(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
-                                                                      control_dt=0.05,
-                                                                      retries_with_relaxed_constraints=10,
-                                                                      qp_formulation=QPFormulation()
-                                                                      # qp_solver=SupportedQPSolver.gurobi,
-                                                                      ))
+                              qp_controller_config=PR2QPControllerConfig(mpc_dt=0.05,
+                                                                         # control_dt=0.05,
+                                                                         retries_with_relaxed_constraints=10,
+                                                                         qp_formulation=QPFormulation()
+                                                                         # qp_solver=SupportedQPSolver.gurobi,
+                                                                         ))
         super().__init__(giskard)
-        self.robot = god_map.world.groups[self.api.robot_name]
+        self.robot = god_map.world.get_view_by_name(self.api.robot_name)
 
     def get_l_gripper_links(self):
         return [str(x) for x in god_map.world.groups[self.l_gripper_group].link_names_with_collisions]
@@ -213,12 +208,10 @@ class PR2Tester(GiskardTester):
     def reset(self):
         self.open_l_gripper()
         self.open_r_gripper()
-        self.register_group('l_gripper',
-                            root_link_name=giskard_msgs.LinkName(name='l_wrist_roll_link',
-                                                                 group_name=self.api.robot_name))
-        self.register_group('r_gripper',
-                            root_link_name=giskard_msgs.LinkName(name='r_wrist_roll_link',
-                                                                 group_name=self.api.robot_name))
+        # self.register_group('l_gripper',
+        #                     root_link_name=giskard_msgs.LinkName(name='l_wrist_roll_link'))
+        # self.register_group('r_gripper',
+        #                     root_link_name=giskard_msgs.LinkName(name='r_wrist_roll_link'))
 
         # self.register_group('fl_l',
         #                     root_link_group_name=self.robot_name,
@@ -310,6 +303,12 @@ class TestJointGoals:
         zero_pose.api.motion_goals.add_joint_position(goal_state=js)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
+        for joint, goal in js.items():
+            connection = god_map.world.get_connection_by_name(joint)
+            if isinstance(connection, RevoluteConnection) and not connection.dof.has_position_limits():
+                assert shortest_angular_distance(god_map.world.state[connection.dof.name].position, goal) < 0.01
+            else:
+                assert np.isclose(god_map.world.state[connection.dof.name].position, goal, atol=1e-2)
 
     def test_joint_goal_projection(self, zero_pose: PR2Tester):
         js = {
@@ -1378,13 +1377,13 @@ class TestConstraints:
         zero_pose.api.monitors.add_check_trajectory_length(new_length)
         zero_pose.api.motion_goals.add_cartesian_pose(base_goal, tip_link='base_footprint', root_link='map')
         result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException)
-        dt = god_map.qp_controller.mpc_dt
+        dt = god_map.qp_controller.config.mpc_dt
         # due to rounding, its sometimes two or three steps longer, depending on dt
         assert new_length + dt * 2 <= len(result.trajectory.points) * dt <= new_length + dt * 3
 
         zero_pose.api.motion_goals.add_cartesian_pose(base_goal, tip_link='base_footprint', root_link='map')
         result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException)
-        dt = god_map.qp_controller.mpc_dt
+        dt = god_map.qp_controller.config.mpc_dt
         assert len(result.trajectory.points) * dt > new_length + 1.
 
     def test_CollisionAvoidanceHint(self, kitchen_setup: PR2Tester):
@@ -1657,7 +1656,7 @@ class TestConstraints:
                                                       weight=WEIGHT_BELOW_CA)
         zero_pose.execute()
 
-        for time, state in god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.control_dt).items():
+        for time, state in god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt).items():
             key = f'trans_error'
             assert key in state
             assert state[key].position <= base_linear_velocity + 2e3

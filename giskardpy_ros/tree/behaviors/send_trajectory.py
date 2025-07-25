@@ -96,7 +96,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         if fill_velocity_values is None:
             fill_velocity_values = self.fill_velocity_values
         goal.trajectory = msg_converter.trajectory_to_ros_trajectory(trajectory,
-                                                                     god_map.qp_controller.mpc_dt,
+                                                                     god_map.qp_controller.config.mpc_dt,
                                                                      start_time,
                                                                      self.controlled_joints,
                                                                      fill_velocity_values)

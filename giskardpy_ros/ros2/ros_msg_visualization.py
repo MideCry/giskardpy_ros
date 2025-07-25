@@ -12,13 +12,13 @@ import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
-from giskardpy.model.links import Link
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.utils.decorators import clear_memo, memoize
 from giskardpy.utils.math import rotation_matrix_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_world.world_entity import Body
 
 
 class ROSMsgVisualization:
@@ -39,7 +39,6 @@ class ROSMsgVisualization:
     frame_locked: bool
     world_version: int
 
-
     def __init__(self, tf_frame: Optional[str] = None,
                  visualization_topic: str = '~visualization_marker_array',
                  scale_scale: float = 1.0,
@@ -51,21 +50,21 @@ class ROSMsgVisualization:
                                           VisualizationMode.CollisionsDecomposedFrameLocked]
         # qos_profile = QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
         self.publisher = rospy.node.create_publisher(MarkerArray,
-                                                   f'{rospy.node.get_name()}/visualization_marker_array',
-                                               10)
+                                                     f'{rospy.node.get_name()}/visualization_marker_array',
+                                                     10)
         self.publisher_aux = rospy.node.create_publisher(MarkerArray,
-                                                   f'{rospy.node.get_name()}/visualization_marker_array/aux',
-                                               10)
+                                                         f'{rospy.node.get_name()}/visualization_marker_array/aux',
+                                                         10)
         self.marker_ids = {}
         if tf_frame is None:
-            self.tf_root = str(god_map.world.root_link_name)
+            self.tf_root = str(god_map.world.root.name)
         else:
             self.tf_root = tf_frame
         GiskardBlackboard().ros_visualizer = self
         self.world_version = -1
 
     @memoize
-    def link_to_marker(self, link: Link) -> List[Marker]:
+    def link_to_marker(self, link: Body) -> List[Marker]:
         ms = msg_converter.link_to_visualization_marker(data=link, mode=self.mode).markers
         for m in ms:
             m.scale.x *= self.scale_scale
@@ -77,29 +76,27 @@ class ROSMsgVisualization:
         clear_memo(self.link_to_marker)
 
     def has_world_changed(self) -> bool:
-        if self.world_version != god_map.world.model_version:
-            self.world_version = god_map.world.model_version
+        if self.world_version != god_map.world._model_version:
+            self.world_version = god_map.world._model_version
             return True
         return False
-
 
     def create_world_markers(self, name_space: str = 'world', marker_id_offset: int = 0) -> List[Marker]:
         markers = []
         time_stamp = rospy.node.get_clock().now().to_msg()
         if self.mode in [VisualizationMode.Visuals, VisualizationMode.VisualsFrameLocked]:
-            links = god_map.world.link_names
+            bodies = god_map.world.bodies
         else:
-            links = god_map.world.link_names_with_collisions
-        for i, link_name in enumerate(links):
-            link = god_map.world.links[link_name]
-            collision_markers = self.link_to_marker(link)
+            bodies = god_map.world.link_names_with_collisions
+        for i, body in enumerate(bodies):
+            collision_markers = self.link_to_marker(body)
             for j, marker in enumerate(collision_markers):
                 if self.frame_locked:
-                    marker.header.frame_id = link_name.short_name
+                    marker.header.frame_id = body.name.name
                 else:
                     marker.header.frame_id = self.tf_root
                 marker.action = Marker.ADD
-                link_id_key = f'{link_name}_{j}'
+                link_id_key = f'{body.name}_{j}'
                 if link_id_key not in self.marker_ids:
                     self.marker_ids[link_id_key] = len(self.marker_ids)
                 marker.id = self.marker_ids[link_id_key] + marker_id_offset
@@ -108,10 +105,9 @@ class ROSMsgVisualization:
                 if self.frame_locked:
                     marker.frame_locked = True
                 else:
-                    marker.pose = god_map.collision_scene.get_map_T_geometry(link_name, j)
+                    marker.pose = god_map.collision_scene.get_map_T_geometry(body.name, j)
                 markers.append(marker)
         return markers
-
 
     def create_collision_markers(self, name_space: str = 'collisions') -> List[Marker]:
         try:
@@ -140,13 +136,13 @@ class ROSMsgVisualization:
                 yellow_threshold = thresholds.soft_threshold
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
-                    map_T_a = god_map.world.compute_fk_np(god_map.world.root_link_name, collision.original_link_a)
+                    map_T_a = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_a)
                     map_P_pa = np.dot(map_T_a, collision.a_P_pa)
                 else:
                     map_P_pa = collision.map_P_pa
 
                 if collision.map_P_pb is None:
-                    map_T_b = god_map.world.compute_fk_np(god_map.world.root_link_name, collision.original_link_b)
+                    map_T_b = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_b)
                     map_P_pb = np.dot(map_T_b, collision.b_P_pb)
                 else:
                     map_P_pb = collision.map_P_pb
@@ -163,7 +159,6 @@ class ROSMsgVisualization:
         else:
             return []
         return [m]
-
 
     def publish_markers(self, world_ns: str = 'world', collision_ns: str = 'collisions', force: bool = False) -> None:
         if not self.mode == VisualizationMode.Nothing:
@@ -248,7 +243,8 @@ class ROSMsgVisualization:
                                                                   debug_values=point,
                                                                   marker_id_offset=len(marker_array.markers))
                     for m in markers:
-                        m.color = scale_color_to_white(m.color, start_alpha + (point_id+1)/len(raw_debug_trajectory))
+                        m.color = scale_color_to_white(m.color,
+                                                       start_alpha + (point_id + 1) / len(raw_debug_trajectory))
                         # m.color.r = min(1-m.color.r+compute_alpha(point_id), 1)
                         # m.color.g = min(1-m.color.g+compute_alpha(point_id), 1)
                         # m.color.b = min(1-m.color.b+compute_alpha(point_id), 1)
@@ -282,7 +278,7 @@ class ROSMsgVisualization:
             if not hasattr(expr, 'reference_frame'):
                 continue
             if expr.reference_frame is not None:
-                map_T_ref = god_map.world.compute_fk_np(god_map.world.root_link_name, expr.reference_frame)
+                map_T_ref = god_map.world.compute_fk_np(god_map.world.root.name, expr.reference_frame)
             else:
                 map_T_ref = np.eye(4)
 
@@ -387,7 +383,7 @@ class ROSMsgVisualization:
                 if isinstance(expr, cas.Vector3):
                     ref_V_d = value
                     if expr.vis_frame is not None:
-                        map_T_vis = god_map.world.compute_fk_np(god_map.world.root_link_name, expr.vis_frame)
+                        map_T_vis = god_map.world.compute_fk_np(god_map.world.root.name, expr.vis_frame)
                     else:
                         map_T_vis = np.eye(4)
                     map_V_d = np.dot(map_T_ref, ref_V_d)

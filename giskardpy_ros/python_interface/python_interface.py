@@ -61,6 +61,7 @@ from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy_ros.utils.utils import make_world_body_box
+from semantic_world.prefixed_name import PrefixedName
 
 
 class WorldWrapper:
@@ -275,13 +276,13 @@ class WorldWrapper:
         req.color.a = rgba[3]
         return self._dye_group_srv.call(req)
 
-    def get_group_names(self) -> List[str]:
+    def get_group_names(self) -> List[PrefixedName]:
         """
         Returns the names of every group in the world.
         """
         req = GetGroupNames_Request()
         resp: GetGroupNames_Response = self._get_group_names_srv.call(req)
-        return resp.group_names
+        return [PrefixedName(*reversed(name.split('/'))) for name in resp.group_names]
 
     def get_group_info(self, group_name: str) -> GetGroupInfo_Response:
         """

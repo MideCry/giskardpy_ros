@@ -170,6 +170,6 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     base_pose.pose.position.x = 1.5
     base_pose.pose.position.y = 2.4
     base_pose.pose.orientation.w = 1.
-    base_pose = better_pose.transform_msg(god_map.world.root_link_name, base_pose)
+    base_pose = better_pose.transform_msg(god_map.world.root.name, base_pose)
     better_pose.teleport_base(base_pose)
     return better_pose

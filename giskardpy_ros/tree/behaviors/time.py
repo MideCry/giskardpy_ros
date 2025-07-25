@@ -14,7 +14,7 @@ class TimePlugin(GiskardBehavior):
         super().__init__(name)
 
     def update(self):
-        god_map.time += god_map.qp_controller.mpc_dt
+        god_map.time += god_map.qp_controller.config.mpc_dt
         return Status.SUCCESS
 
 

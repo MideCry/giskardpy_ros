@@ -496,7 +496,7 @@ class TestCollisionAvoidance:
                                                                          [0, 0, 0, 1]]))
         apartment_setup.set_cart_goal(left_pose,
                                       tip_link=tcp,
-                                      root_link=god_map.world.root_link_name,
+                                      root_link=god_map.world.root.name,
                                       add_monitor=False)
         goal_point = PointStamped()
         goal_point.header.frame_id = 'cabinet1_door_top_left'

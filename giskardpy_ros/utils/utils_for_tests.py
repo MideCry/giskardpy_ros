@@ -19,22 +19,24 @@ from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
 from tf2_py import LookupException, ExtrapolationException
 
-import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
+import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import Collisions, Collision, CollisionEntry
-from giskardpy.model.joints import OneDofJoint, OmniDrive, DiffDrive, Joint
 from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
-from giskardpy.qp.free_variable import FreeVariable
+from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_world.connections import OmniDrive, PrismaticConnection, RevoluteConnection
+from semantic_world.degree_of_freedom import DegreeOfFreedom
+from semantic_world.robots import AbstractRobot
 
 
 def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose], desired_pose: Union[cas.TransformationMatrix, Pose],
@@ -126,24 +128,18 @@ class GiskardTester:
             GiskardBlackboard().tree.turn_off_visualization()
         if 'QP_SOLVER' in os.environ:
             god_map.qp_controller.set_qp_solver(SupportedQPSolver[os.environ['QP_SOLVER']])
-        self.robot_names = [list(god_map.world.groups.keys())[0]]
-        self.default_root = str(god_map.world.root_link_name)
+        self.robot_names = [v.name for v in god_map.world.search_for_views_of_type(AbstractRobot)]
+        self.default_root = str(god_map.world.root.name)
 
         # rospy.sleep(1)
-        self.original_number_of_links = len(god_map.world.links)
+        self.original_number_of_links = len(god_map.world.bodies)
         self.heart = Thread(target=GiskardBlackboard().tree.live, name='bt ticker')
         self.heart.start()
         self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name='tests')
 
-    def get_odometry_joint(self, group_name: Optional[str] = None) -> Joint:
-        if group_name is None:
-            group_name = self.api.robot_name
-        parent_joint_name = god_map.world.groups[group_name].root_link.parent_joint_name
-        if parent_joint_name is None:
-            raise WorldException('No odometry joint found')
-        joint_name = god_map.world.groups[group_name].root_link.child_joint_names[0]
-        return god_map.world.joints[joint_name]
+    def get_odometry_joint(self) -> OmniDrive:
+        return god_map.world.search_for_connections_of_type(OmniDrive)
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
         root_T_tip = god_map.world.compute_fk(root_link=god_map.world.search_for_link_name(root_link),
@@ -155,12 +151,12 @@ class GiskardTester:
                                                     tip_link=god_map.world.search_for_link_name(tip_link))
         return msg_converter.to_ros_message(root_T_tip)
 
-    def has_odometry_joint(self, group_name: Optional[str] = None) -> bool:
+    def has_odometry_joint(self) -> bool:
         try:
-            joint = self.get_odometry_joint(group_name)
+            joint = self.get_odometry_joint()
         except WorldException as e:
             return False
-        return isinstance(joint, (OmniDrive, DiffDrive))
+        return isinstance(joint, (OmniDrive,))
 
     def set_seed_odometry(self, base_pose, group_name: Optional[str] = None):
         if group_name is None:
@@ -211,20 +207,20 @@ class GiskardTester:
                                 'max_derivative',
                                 'data'])
 
-            for solver_id, solver_class in available_solvers.items():
-                times = solver_class.get_solver_times()
-                for (filtered_variables, variables, eq_constraints, neq_constraints, num_eq_slack_variables,
-                     num_neq_slack_variables, num_slack_variables), times in sorted(times.items()):
-                    csvwriter.writerow([solver_id.name,
-                                        str(filtered_variables),
-                                        str(variables),
-                                        str(eq_constraints),
-                                        str(neq_constraints),
-                                        str(num_eq_slack_variables),
-                                        str(num_neq_slack_variables),
-                                        str(num_slack_variables),
-                                        str(int(god_map.qp_controller.max_derivative)),
-                                        str(times)])
+            # for solver_id, solver_class in available_solvers.items():
+            #     times = solver_class.get_solver_times()
+            #     for (filtered_variables, variables, eq_constraints, neq_constraints, num_eq_slack_variables,
+            #          num_neq_slack_variables, num_slack_variables), times in sorted(times.items()):
+            #         csvwriter.writerow([solver_id.name,
+            #                             str(filtered_variables),
+            #                             str(variables),
+            #                             str(eq_constraints),
+            #                             str(neq_constraints),
+            #                             str(num_eq_slack_variables),
+            #                             str(num_neq_slack_variables),
+            #                             str(num_slack_variables),
+            #                             str(int(god_map.qp_controller.max_derivative)),
+            #                             str(times)])
 
         get_middleware().loginfo(f'saved benchmark file in {file_name}')
 
@@ -375,7 +371,7 @@ class GiskardTester:
             diff = time() - time_spend_giskarding
             self.total_time_spend_giskarding += diff
             self.total_time_spend_moving += (len(god_map.trajectory.keys()) *
-                                             god_map.qp_controller.mpc_dt)
+                                             god_map.qp_controller.config.mpc_dt)
             get_middleware().logwarn(f'Goal processing took {diff}')
             result_exception = msg_converter.error_msg_to_exception(r.error)
             if expected_error_type is not None:
@@ -413,7 +409,7 @@ class GiskardTester:
         return trajectory2
 
     def are_joint_limits_violated(self, eps=1e-2):
-        active_free_variables: List[FreeVariable] = god_map.qp_controller.degrees_of_freedoms
+        active_free_variables: List[DegreeOfFreedom] = god_map.qp_controller.degrees_of_freedoms
         for free_variable in active_free_variables:
             if free_variable.has_position_limits():
                 lower_limit = free_variable.get_lower_limit(Derivatives.position)
@@ -431,7 +427,7 @@ class GiskardTester:
         trajectory_pos = self.get_result_trajectory_position()
         controlled_joints = god_map.world.controlled_joints
         for joint_name in controlled_joints:
-            if isinstance(god_map.world.joints[joint_name], OneDofJoint):
+            if isinstance(god_map.world.joints[joint_name], (PrismaticConnection, RevoluteConnection)):
                 if not god_map.world.is_joint_continuous(joint_name):
                     joint_limits = god_map.world.get_joint_position_limits(joint_name)
                     error_msg = f'{joint_name} has violated joint position limit'
@@ -522,7 +518,7 @@ class GiskardTester:
             assert name in self.api.world.get_group_names()
             response2 = self.api.world.get_group_info(name)
             if pose is not None:  # check if pose is consistent
-                p = self.transform_msg(god_map.world.root_link_name, pose)
+                p = self.transform_msg(god_map.world.root.name, pose)
                 o_p = god_map.world.groups[name].base_pose
                 compare_poses(p.pose, o_p)
                 compare_poses(o_p, response2.root_link_pose.pose)
@@ -534,7 +530,7 @@ class GiskardTester:
                 assert expected_parent_link == real_parent_link
             else:
                 if parent_link is None or parent_link.name == '':
-                    parent_link = god_map.world.root_link_name
+                    parent_link = god_map.world.root.name
                 else:
                     parent_link = msg_converter.link_name_msg_to_prefix_name(parent_link, god_map.world)
                 if parent_link in god_map.world.robots[0].link_names:
@@ -577,7 +573,7 @@ class GiskardTester:
             self.wait_heartbeats()
             assert response.error.type == GiskardError.SUCCESS
             info = self.api.world.get_group_info(group_name)
-            map_T_group = tf.transform_pose(god_map.world.root_link_name, new_pose)
+            map_T_group = tf.transform_pose(god_map.world.root.name, new_pose)
             compare_poses(info.root_link_pose.pose, map_T_group.pose)
         except Exception as e:
             assert type(e) == expected_error_type
@@ -766,6 +762,6 @@ class GiskardTester:
 
     def reset_base(self):
         p = PoseStamped()
-        p.header.frame_id = god_map.world.root_link_name
+        p.header.frame_id = god_map.world.root.name
         p.pose.orientation.w = 1.
         self.teleport_base(p)

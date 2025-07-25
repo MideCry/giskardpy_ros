@@ -28,7 +28,7 @@ class TFPublisher(GiskardBehavior):
 
     def __init__(self, name: str, mode: TfPublishingModes, tf_topic: str = 'tf', include_prefix: bool = True):
         super().__init__(name)
-        self.original_links = set(god_map.world.link_names_as_set)
+        self.original_links = set(body.name for body in god_map.world.bodies)
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)
         self.mode = mode
         self.robot_names = god_map.collision_scene.robot_names
@@ -74,7 +74,7 @@ class TFPublisher(GiskardBehavior):
                     if len(group.joints) > 0:
                         continue
                     get_fk = god_map.world.compute_fk
-                    fk = get_fk(god_map.world.root_link_name, group.root_link_name)
+                    fk = get_fk(god_map.world.root.name, group.root_link_name)
                     tf = self.make_transform(fk.header.frame_id, str(group.root_link_name), fk.pose)
                     tf_msg.transforms.append(tf)
                 self.tf_pub.publish(tf_msg)

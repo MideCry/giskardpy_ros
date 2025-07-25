@@ -128,7 +128,7 @@ class CarryMyBullshit(Goal):
         self.target_age_threshold = target_age_threshold
         self.target_age_exception_threshold = target_age_exception_threshold
         if root_link is None:
-            self.root = god_map.world.root_link_name
+            self.root = god_map.world.root.name
         else:
             self.root = god_map.world.search_for_link_name(root_link)
         self.camera_link = god_map.world.search_for_link_name(camera_link)
@@ -533,7 +533,7 @@ class CarryMyBullshit(Goal):
         m_line.ns = 'traj'
         m_line.id = 1
         m_line.type = m_line.LINE_STRIP
-        m_line.header.frame_id = str(god_map.world.root_link_name)
+        m_line.header.frame_id = str(god_map.world.root.name)
         m_line.scale.x = 0.05
         m_line.color.a = 1
         m_line.color.r = 1
@@ -717,7 +717,7 @@ class FollowNavPath(Goal):
 #             self.odom_joint_name = god_map.world.search_for_joint_name(odom_joint_name)
 #             self.odom_joint = god_map.world.get_joint(self.odom_joint_name)
 #         if root_link is None:
-#             self.root = god_map.world.root_link_name
+#             self.root = god_map.world.root.name
 #         else:
 #             self.root = god_map.world.search_for_link_name(root_link)
 #         self.camera_link = god_map.world.search_for_link_name(camera_link)
@@ -1057,7 +1057,7 @@ class FollowNavPath(Goal):
 #         m_line.ns = 'traj'
 #         m_line.id = 1
 #         m_line.type = m_line.LINE_STRIP
-#         m_line.header.frame_id = str(god_map.world.root_link_name)
+#         m_line.header.frame_id = str(god_map.world.root.name)
 #         m_line.scale.x = 0.05
 #         m_line.color.a = 1
 #         m_line.color.r = 1

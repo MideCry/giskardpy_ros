@@ -33,7 +33,7 @@ class DebugMarkerPublisher(GiskardBehavior):
     def __init__(self, name: str = 'debug marker', tf_topic: str = '/tf', map_frame: Optional[str] = None):
         super().__init__(name)
         if map_frame is None:
-            self.map_frame = str(god_map.world.root_link_name)
+            self.map_frame = str(god_map.world.root.name)
         else:
             self.map_frame = map_frame
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)

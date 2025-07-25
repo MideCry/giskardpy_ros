@@ -1,57 +1,31 @@
 from typing import Optional
 
-import numpy as np
-
+from giskardpy.god_map import god_map
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
-from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy_ros.configs.giskard import RobotInterfaceConfig
-from giskardpy.data_types.data_types import Derivatives, PrefixName
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-from giskardpy_ros.configs.other_robots.generic import GenericWorldConfig
-from giskardpy_ros.ros2 import ros2_interface
+from giskardpy.model.world_config import WorldWithOmniDriveRobot
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy_ros.configs.giskard import RobotInterfaceConfig
+from semantic_world.connections import OmniDrive, RevoluteConnection
+from semantic_world.prefixed_name import PrefixedName
+from semantic_world.robots import AbstractRobot
 
 
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
-    def __init__(self, localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum',
-                 urdf: Optional[str] = None):
-        super().__init__(urdf=urdf, localization_joint_name=localization_joint_name, odom_link_name=odom_link_name,
-                         drive_joint_name=drive_joint_name)
-        self.localization_joint_name = localization_joint_name
-        self.odom_link_name = odom_link_name
-        self.drive_joint_name = drive_joint_name
+    def __init__(self, odom_link_name: str = 'odom_combined', urdf: Optional[str] = None):
+        super().__init__(urdf=urdf, odom_link_name=odom_link_name)
+        self.odom_link_name = PrefixedName(odom_link_name)
         self.robot_description = urdf
 
     def setup(self, robot_name: Optional[str] = None):
         super().setup(robot_name)
-        self.set_joint_limits(limit_map={Derivatives.velocity: 1,
-                                         Derivatives.jerk: None},
-                              joint_name='head_pan_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 3.5,
-                                         Derivatives.jerk: None},
-                              joint_name='head_tilt_joint')
-
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
-                                         Derivatives.jerk: None},
-                              joint_name='r_shoulder_pan_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
-                                         Derivatives.jerk: None},
-                              joint_name='l_shoulder_pan_joint')
-
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
-                                         Derivatives.jerk: None},
-                              joint_name='r_shoulder_lift_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
-                                         Derivatives.jerk: None},
-                              joint_name='l_shoulder_lift_joint')
+        # PR2.get_view(self.world)
+        robot = AbstractRobot(root=self.world.get_body_by_name(self.odom_link_name), _world=self.world,
+                              name=PrefixedName('pr2'))
+        self.world.add_view(robot)
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
-    drive_joint_name: str
-
-    def __init__(self, drive_joint_name: str):
-        self.drive_joint_name = drive_joint_name
-
     def setup(self):
         self.register_controlled_joints([
             'torso_lift_joint',
@@ -71,7 +45,7 @@ class PR2StandaloneInterface(RobotInterfaceConfig):
             'l_elbow_flex_joint',
             'l_wrist_flex_joint',
             'l_wrist_roll_joint',
-            self.drive_joint_name,
+            self.world.search_for_connections_of_type(OmniDrive)[0].name,
         ])
 
 
@@ -168,3 +142,30 @@ class PR2CollisionAvoidance(CollisionAvoidanceConfig):
                                                     number_of_repeller=2,
                                                     soft_threshold=0.2,
                                                     hard_threshold=0.1)
+
+
+class PR2QPControllerConfig(QPControllerConfig):
+    def setup(self):
+        head_pan_joint: RevoluteConnection = god_map.world.get_connection_by_name('head_pan_joint')
+        head_tilt_joint: RevoluteConnection = god_map.world.get_connection_by_name('head_tilt_joint')
+        r_shoulder_pan_joint: RevoluteConnection = god_map.world.get_connection_by_name('r_shoulder_pan_joint')
+        l_shoulder_pan_joint: RevoluteConnection = god_map.world.get_connection_by_name('l_shoulder_pan_joint')
+        r_shoulder_lift_joint: RevoluteConnection = god_map.world.get_connection_by_name('r_shoulder_lift_joint')
+        l_shoulder_lift_joint: RevoluteConnection = god_map.world.get_connection_by_name('l_shoulder_lift_joint')
+
+        self.dof_lower_limits_overwrite[head_pan_joint.dof.name].velocity = -1.0
+        self.dof_upper_limits_overwrite[head_pan_joint.dof.name].velocity = 1.0
+
+        self.dof_lower_limits_overwrite[head_tilt_joint.dof.name].velocity = -3.5
+        self.dof_upper_limits_overwrite[head_tilt_joint.dof.name].velocity = 3.5
+
+        self.dof_lower_limits_overwrite[r_shoulder_pan_joint.dof.name].velocity = -0.15
+        self.dof_upper_limits_overwrite[r_shoulder_pan_joint.dof.name].velocity = 0.15
+        self.dof_lower_limits_overwrite[l_shoulder_pan_joint.dof.name].velocity = -0.15
+        self.dof_upper_limits_overwrite[l_shoulder_pan_joint.dof.name].velocity = 0.15
+
+        self.dof_lower_limits_overwrite[r_shoulder_lift_joint.dof.name].velocity = -0.2
+        self.dof_upper_limits_overwrite[r_shoulder_lift_joint.dof.name].velocity = 0.2
+        self.dof_lower_limits_overwrite[l_shoulder_lift_joint.dof.name].velocity = -0.2
+        self.dof_upper_limits_overwrite[l_shoulder_lift_joint.dof.name].velocity = 0.2
+        super().setup()
