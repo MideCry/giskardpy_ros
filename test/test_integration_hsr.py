@@ -26,7 +26,6 @@ from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
-from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
 from giskardpy_ros.tasks.vfh_task import VFHMoveDir
 from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 from giskardpy_ros.utils.VFH import VectorFieldHistogram
@@ -2031,24 +2030,3 @@ class TestArenaActions:
 
         kitchen_setup.motion_goals.allow_collision(env_name, gripper_group)
         kitchen_setup.execute(add_local_minimum_reached=False)
-
-    def test_hand_camera_visual_servoing(self, zero_pose: HSRTestWrapper):
-
-        maq = giskard_msgs.msg.LinkName('map', '')
-        base = giskard_msgs.msg.LinkName('hand_camera_frame', '')
-        zero_pose.motion_goals.add_motion_goal(class_name=HandleOffsetCorrectionRealtime.__name__,
-                                               root_link=maq,
-                                               tip_link=base,
-                                               threshold=50)
-
-        zero_pose.motion_goals.add_joint_position(goal_state={'head_pan_joint': 0.0,
-                                                              'head_tilt_joint': 0.0,
-                                                              'arm_flex_joint': 0.0,
-                                                              'arm_roll_joint': 0.0,
-                                                              'wrist_flex_joint': -np.pi / 2,
-                                                              'wrist_roll_joint': -np.pi / 2},
-                                                  threshold=0.05,
-                                                  name='park arms monitor',
-                                                  weight=WEIGHT_ABOVE_CA)
-
-        zero_pose.execute(add_local_minimum_reached=False)

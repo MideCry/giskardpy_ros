@@ -24,7 +24,7 @@ from giskardpy.motion_statechart.monitors.payload_monitors import Sleep
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task, WEIGHT_BELOW_CA
-from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
+from giskardpy_ros.monitors.handle_offset_monitor import HandleOffsetCorrection
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     pass
@@ -1072,6 +1072,8 @@ class GraspWithForceTorqueGoal(Goal):
             name = 'GraspWithForceTorqueGoal'
         super().__init__(name=name)
 
+        pre_grasp_name = 'pre grasp'
+
         bar_center = cas.Point3()
         bar_center.reference_frame = handle_name
 
@@ -1084,34 +1086,21 @@ class GraspWithForceTorqueGoal(Goal):
         jpl_hinge_lock.start_condition = self.start_condition
         self.add_task(jpl_hinge_lock)
 
-        pre_grasp = GraspBarOffset(name='pre grasp',
-                                   root_link=root_link,
-                                   tip_link=tip_link,
-                                   tip_grasp_axis=tip_grasp_axis,
-                                   bar_center=bar_center,
-                                   bar_axis=bar_axis,
-                                   bar_length=bar_length,
-                                   grasp_axis_offset=grasp_axis_offset)
-        pre_grasp.start_condition = self.start_condition
-        pre_grasp.end_condition = pre_grasp
-        self.add_goal(pre_grasp)
-
-        ap_pre_grasp = AlignPlanes(name='grasp align',
-                                   root_link=root_link,
-                                   tip_link=tip_link,
-                                   tip_normal=tip_align_axis,
-                                   goal_normal=handle_align_axis)
-        ap_pre_grasp.start_condition = self.start_condition
-        self.add_task(ap_pre_grasp)
+        door_joint = PrefixName(name='iai_kitchen:arena:door_hinge_joint', prefix='iai_kitchen')
+        init_vector = cas.Vector3(reference_frame=camera_link)
 
         if camera_link is not None and tip_push is not None:
-            handle_correction = HandleOffsetCorrectionRealtime(root_link=root_link,
-                                                               tip_link=camera_link,
-                                                               threshold=30,
-                                                               magic=500)
-            handle_correction.start_condition = pre_grasp
+            handle_correction = HandleOffsetCorrection(root_link=root_link,
+                                                       tip_link=camera_link,
+                                                       goal_vector=init_vector,
+                                                       door_move_joint=door_joint,
+                                                       threshold=30,
+                                                       magic=500)
+            handle_correction.start_condition = pre_grasp_name
             handle_correction.end_condition = handle_correction
-            self.add_task(handle_correction)
+            self.add_monitor(handle_correction)
+
+            end_condition_pre_grasp = handle_correction
 
             if handle_correction_offset is not None:
                 midpoint_offset = CartesianPosition(root_link=root_link,
@@ -1127,7 +1116,29 @@ class GraspWithForceTorqueGoal(Goal):
             else:
                 next_condition = handle_correction
         else:
-            next_condition = pre_grasp
+            next_condition = pre_grasp_name
+            end_condition_pre_grasp = pre_grasp_name
+
+        pre_grasp = GraspBarOffset(name=pre_grasp_name,
+                                   root_link=root_link,
+                                   tip_link=tip_link,
+                                   tip_grasp_axis=tip_grasp_axis,
+                                   bar_center=bar_center,
+                                   bar_axis=bar_axis,
+                                   bar_length=bar_length,
+                                   grasp_axis_offset=grasp_axis_offset,
+                                   handle_link=handle_name)
+        pre_grasp.start_condition = self.start_condition
+        pre_grasp.end_condition = end_condition_pre_grasp
+        self.add_goal(pre_grasp)
+
+        ap_pre_grasp = AlignPlanes(name='grasp align',
+                                   root_link=root_link,
+                                   tip_link=tip_link,
+                                   tip_normal=tip_align_axis,
+                                   goal_normal=handle_align_axis)
+        ap_pre_grasp.start_condition = self.start_condition
+        self.add_task(ap_pre_grasp)
 
         sleep_cancel = Sleep(seconds=timeout, name='ft sleep cancel')
         sleep_cancel.start_condition = next_condition
@@ -1160,7 +1171,8 @@ class GraspWithForceTorqueGoal(Goal):
                                       bar_length=bar_length,
                                       grasp_axis_offset=pre_grasp_axis_offset,
                                       reference_linear_velocity=self.reference_linear_velocity,
-                                      reference_angular_velocity=self.reference_angular_velocity)
+                                      reference_angular_velocity=self.reference_angular_velocity,
+                                      handle_link=handle_name)
             ft_grasp.start_condition = next_condition
             ft_grasp.end_condition = ft_monitor
             self.add_goal(ft_grasp)
@@ -1453,6 +1465,7 @@ class GraspBarOffset(Goal):
                  bar_axis: cas.Vector3,
                  bar_length: float,
                  grasp_axis_offset: cas.Vector3,
+                 handle_link: PrefixName,
                  threshold: float = 0.01,
                  reference_linear_velocity: float = 0.1,
                  reference_angular_velocity: float = 0.5,
@@ -1481,7 +1494,8 @@ class GraspBarOffset(Goal):
             name = f'{self.__class__.__name__}/{self.root}/{self.tip}'
         super().__init__(name=name)
 
-        bar_center = god_map.world.transform(self.root, bar_center)
+        handle_P_bar_center = god_map.world.transform(handle_link, bar_center)
+        root_P_bar_center = god_map.world.compose_fk_evaluated_expression(self.root, handle_link).dot(handle_P_bar_center)
         grasp_axis_offset = god_map.world.transform(self.root, grasp_axis_offset)
 
         tip_grasp_axis = god_map.world.transform(self.tip, tip_grasp_axis)
@@ -1501,7 +1515,6 @@ class GraspBarOffset(Goal):
 
         root_V_bar_axis = self.bar_axis
         tip_V_tip_grasp_axis = self.tip_grasp_axis
-        root_P_bar_center = self.bar_center
         root_V_bar_offset = self.grasp_axis_offset
 
         root_T_tip = god_map.world.compose_fk_expression(self.root, self.tip)

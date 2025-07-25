@@ -58,10 +58,10 @@ from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
 from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath, RealTimeConePointing
 from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundHinge, Reaching, Placing, OpenDoorGoal, Mixing, \
     JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
+from giskardpy_ros.monitors.handle_offset_monitor import HandleOffsetCorrection, OffsetCorrectionReset
 from giskardpy_ros.ros1 import msg_converter
 from giskardpy_ros.ros1 import tfwrapper as tf
 from giskardpy_ros.ros1.msg_converter import kwargs_to_json
-from giskardpy_ros.tasks.handle_offset_tasks import HandleOffsetCorrectionRealtime
 from giskardpy_ros.tree.control_modes import ControlModes
 from giskardpy_ros.utils.utils import make_world_body_box
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
@@ -1701,6 +1701,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                              tip_grasp_axis: Vector3Stamped,
                              root_link: Union[str, giskard_msgs.LinkName],
                              grasp_axis_offset: Vector3Stamped,
+                             handle_link: Union[str, giskard_msgs.LinkName],
                              reference_linear_velocity: Optional[float] = None,
                              reference_angular_velocity: Optional[float] = None,
                              weight: Optional[float] = None,
@@ -1742,6 +1743,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     bar_axis=bar_axis,
                                     bar_length=bar_length,
                                     grasp_axis_offset=grasp_axis_offset,
+                                    handle_link=handle_link,
                                     reference_linear_velocity=reference_linear_velocity,
                                     reference_angular_velocity=reference_angular_velocity,
                                     weight=weight,
@@ -1750,41 +1752,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
                                     **kwargs)
-
-    def add_handle_offset(self,
-                          root_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('map', ''),
-                          tip_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('hand_camera_frame', ''),
-                          threshold: float = 50,
-                          weight: Optional[float] = None,
-                          name: Optional[str] = None,
-                          start_condition: str = '',
-                          pause_condition: str = '',
-                          end_condition: str = ''):
-        """
-        Adds tip_link correction to handle using visual servoing with robokudo handle_offset pipeline
-
-        :param root_link: root link of the kinematic chain
-        :param tip_link: tip link of the kinematic chain
-        :param threshold: threshold in pixel that determines when the handle is correctly orientated
-        :param weight:
-        :param name:
-        :param start_condition: expression that starts goal
-        :param pause_condition: expression that pauses goal
-        :param end_condition: expression that ends goal
-        """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        self.add_motion_goal(class_name=HandleOffsetCorrectionRealtime.__name__,
-                             root_link=root_link,
-                             tip_link=tip_link,
-                             threshold=threshold,
-                             name=name,
-                             weight=weight,
-                             start_condition=start_condition,
-                             pause_condition=pause_condition,
-                             end_condition=end_condition)
 
     def add_grasp_with_ft_sensor(self,
                                  root_link: Union[str, giskard_msgs.LinkName],
@@ -3040,6 +3007,73 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
                                 name=name,
                                 start_condition=start_condition,
                                 end_condition=name)
+
+    def add_handle_offset(self,
+                          root_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('map', ''),
+                          tip_link: Union[str, giskard_msgs.LinkName] = giskard_msgs.LinkName('hand_camera_frame', ''),
+                          threshold: float = 50,
+                          weight: Optional[float] = None,
+                          name: Optional[str] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
+        """
+        Adds tip_link correction to handle using visual servoing with robokudo handle_offset pipeline
+
+        :param root_link: root link of the kinematic chain
+        :param tip_link: tip link of the kinematic chain
+        :param threshold: threshold in pixel that determines when the handle is correctly orientated
+        :param weight:
+        :param name:
+        :param start_condition: expression that starts goal
+        :param pause_condition: expression that pauses goal
+        :param end_condition: expression that ends goal
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        self.add_monitor(class_name=HandleOffsetCorrection.__name__,
+                         root_link=root_link,
+                         tip_link=tip_link,
+                         threshold=threshold,
+                         name=name,
+                         weight=weight,
+                         start_condition=start_condition,
+                         pause_condition=pause_condition,
+                         end_condition=end_condition)
+
+    def add_handle_offset_reset(self,
+                                reset_joint: Union[str, giskard_msgs.LinkName],
+                                parent_T_child: PoseStamped,
+                                child_frame: Union[str, giskard_msgs.LinkName],
+                                name: Optional[str] = None,
+                                start_condition: str = '',
+                                pause_condition: str = '',
+                                end_condition: str = ''):
+        """
+        Resets given joints transform to parent_T_child, used to reset joint after handle_offset_correction
+
+        :param reset_joint: Joint to reset
+        :param parent_T_child: parent_T_child TransMatrix to reset joint to
+        :param child_frame: child_frame used in parent_T_child
+        :param name:
+        :param start_condition: expression that starts goal
+        :param pause_condition: expression that pauses goal
+        :param end_condition: expression that ends goal
+        """
+        if isinstance(reset_joint, str):
+            reset_joint = giskard_msgs.LinkName(name=reset_joint)
+        if isinstance(child_frame, str):
+            child_frame = giskard_msgs.LinkName(name=child_frame)
+        self.add_monitor(class_name=OffsetCorrectionReset.__name__,
+                         reset_joint=reset_joint,
+                         parent_T_child=parent_T_child,
+                         child_frame=child_frame,
+                         name=name,
+                         start_condition=start_condition,
+                         pause_condition=pause_condition,
+                         end_condition=end_condition)
 
 
 class GiskardWrapper:

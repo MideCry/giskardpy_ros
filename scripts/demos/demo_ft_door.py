@@ -11,9 +11,49 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 
 
+def reset():
+    handle_joint1 = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
+    hinge_joint1 = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
+    handle_joint2 = "iai_kitchen/living_room:arena:door_handle_joint"
+    hinge_joint2 = "iai_kitchen/living_room:arena:door_origin_revolute_joint"
+
+    hinge_link1 = 'iai_kitchen/iai_kitchen:arena:door_hinge_joint'
+    child_frame1 = 'iai_kitchen/iai_kitchen:arena:door_hinge'
+    hinge_link2 = 'iai_kitchen/living_room:arena:door_hinge_joint'
+    child_frame2 = 'iai_kitchen/living_room:arena:door_hinge'
+    parent_T_hinge1 = PoseStamped()
+    parent_T_hinge1.header.frame_id = 'iai_kitchen/urdf_offset'
+    parent_T_hinge1.pose.position.x = 0.84
+    parent_T_hinge1.pose.position.y = -1.41
+    parent_T_hinge1.pose.position.z = 1.04
+    parent_T_hinge1.pose.orientation.w = 1
+    parent_T_hinge2 = PoseStamped()
+    parent_T_hinge2.header.frame_id = 'iai_kitchen/urdf_offset'
+    parent_T_hinge2.pose.position.x = 0.44
+    parent_T_hinge2.pose.position.y = 2.37
+    parent_T_hinge2.pose.position.z = 1.04
+    parent_T_hinge2.pose.orientation.w = 1
+
+    joint_reset = gis.monitors.add_joint_position(goal_state={handle_joint1: 0,
+                                                              hinge_joint1: 0,
+                                                              handle_joint2: 0,
+                                                              hinge_joint2: 0})
+    gis.motion_goals.add_joint_position(goal_state={handle_joint1: 0,
+                                                    hinge_joint1: 0,
+                                                    handle_joint2: 0,
+                                                    hinge_joint2: 0})
+
+    gis.monitors.add_handle_offset_reset(reset_joint=hinge_link1, parent_T_child=parent_T_hinge1,
+                                         child_frame=child_frame1, name='hinge1')
+    gis.monitors.add_handle_offset_reset(reset_joint=hinge_link2, parent_T_child=parent_T_hinge2,
+                                         child_frame=child_frame2, name='hinge2')
+
+    gis.monitors.add_end_motion(start_condition=f'hinge1 and hinge2 and {joint_reset}')
+    gis.motion_goals.allow_all_collisions()
+    gis.execute()
+
+
 def setup_door1(init_pose_pub: Publisher):
-    handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
-    hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
     base_pose = PoseStamped()
     base_pose.header.frame_id = 'map'
     base_pose.pose.position.x = 1.8
@@ -21,13 +61,9 @@ def setup_door1(init_pose_pub: Publisher):
     base_pose.pose.orientation.z = -1
 
     odom = gis.monitors.add_local_minimum_reached()
-    joint_reset = gis.monitors.add_joint_position(goal_state={handle_joint: 0,
-                                                              hinge_joint: 0})
-    gis.motion_goals.add_joint_position(goal_state={handle_joint: 0,
-                                                    hinge_joint: 0})
     gis.motion_goals.add_cartesian_pose(root_link='map', tip_link='base_footprint', goal_pose=base_pose)
 
-    gis.monitors.add_end_motion(start_condition=f'{joint_reset} and {odom}')
+    gis.monitors.add_end_motion(start_condition=f'{odom}')
     gis.motion_goals.allow_all_collisions()
     gis.execute()
 
@@ -89,11 +125,12 @@ def setup_door1(init_pose_pub: Publisher):
 
     gis.monitors.add_end_motion(start_condition=rot_start_monitor)
     gis.execute()
+
+
 def setup_door2(init_pose_pub: Publisher):
     # handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
     # hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
-    handle_joint = "iai_kitchen/living_room:arena:door_handle_joint"
-    hinge_joint = "iai_kitchen/living_room:arena:door_origin_revolute_joint"
+
     base_pose = PoseStamped()
     base_pose.header.frame_id = 'map'
     base_pose.pose.position.x = 1.8
@@ -103,13 +140,9 @@ def setup_door2(init_pose_pub: Publisher):
     base_pose.pose.orientation.z = -1
 
     odom = gis.monitors.add_local_minimum_reached()
-    joint_reset = gis.monitors.add_joint_position(goal_state={handle_joint: 0,
-                                                              hinge_joint: 0})
-    gis.motion_goals.add_joint_position(goal_state={handle_joint: 0,
-                                                    hinge_joint: 0})
     gis.motion_goals.add_cartesian_pose(root_link='map', tip_link='base_footprint', goal_pose=base_pose)
 
-    gis.monitors.add_end_motion(start_condition=f'{joint_reset} and {odom}')
+    gis.monitors.add_end_motion(start_condition=f'{odom}')
     gis.motion_goals.allow_all_collisions()
     gis.execute()
 
@@ -487,6 +520,8 @@ init_pub = rospy.Publisher('/initialpose', data_class=PoseWithCovarianceStamped,
 
 gis = GiskardWrapper()
 test = 3
+
+reset()
 
 setup_door1(init_pose_pub=init_pub)
 
