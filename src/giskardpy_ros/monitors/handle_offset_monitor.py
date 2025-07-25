@@ -1,14 +1,14 @@
 from copy import deepcopy
 from typing import Optional
 
-from geometry_msgs.msg import Vector3Stamped
-from rospy import Subscriber
-
 import giskardpy.casadi_wrapper as cas
-from giskardpy.data_types.data_types import ColorRGBA, PrefixName, ObservationState
+from geometry_msgs.msg import Vector3Stamped
+from giskardpy.data_types.data_types import PrefixName, ObservationState
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import Joint6DOF
 from giskardpy.motion_statechart.monitors.monitors import PayloadMonitor
+from rospy import Subscriber
+
 from giskardpy_ros.ros1 import msg_converter
 
 
@@ -36,8 +36,7 @@ class HandleOffsetCorrection(PayloadMonitor):
         self.sub_offset = Subscriber(name='/robokudo/handle_offset', data_class=Vector3Stamped, callback=self.cb)
 
     def __call__(self, *args, **kwargs):
-        root_V_goal_point = self.root_V_goal_point
-        root_V_goal_point_not_normed = deepcopy(root_V_goal_point)
+        root_V_goal_point = deepcopy(self.root_V_goal_point)
 
         root_V_goal_point.scale(1)
         root_V_goal_point.reference_frame = self.root
@@ -57,8 +56,10 @@ class HandleOffsetCorrection(PayloadMonitor):
         parent_T_child = cas.TransMatrix(parent_T_child, reference_frame=j.parent_link_name)
         god_map.world.joints[self.door_move_joint].update_transform(parent_T_child)
 
+        norm = self.root_V_goal_point.norm().to_np()
+
         self.state = ObservationState.true \
-            if root_V_goal_point_not_normed.norm() <= self.threshold \
+            if norm <= self.threshold \
             else ObservationState.false
 
     def cb(self, data):
@@ -85,7 +86,8 @@ class OffsetCorrectionReset(PayloadMonitor):
         self.parent_T_child = parent_T_child
 
     def __call__(self, *args, **kwargs):
-        moveable_door_joint: Joint6DOF = god_map.world.joints[god_map.world.search_for_joint_name(self.reset_joint.short_name)]
+        moveable_door_joint: Joint6DOF = god_map.world.joints[
+            god_map.world.search_for_joint_name(self.reset_joint.short_name)]
         moveable_door_joint.update_transform(self.parent_T_child)
 
         self.state = ObservationState.true
