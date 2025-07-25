@@ -175,7 +175,7 @@ class PR2Tester(GiskardTester):
                                                                       publish_tf=True),
                               # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
                               qp_controller_config=PR2QPControllerConfig(mpc_dt=0.05,
-                                                                         # control_dt=0.05,
+                                                                         control_dt=None,
                                                                          retries_with_relaxed_constraints=10,
                                                                          qp_formulation=QPFormulation()
                                                                          # qp_solver=SupportedQPSolver.gurobi,
