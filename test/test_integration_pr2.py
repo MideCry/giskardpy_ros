@@ -2459,7 +2459,7 @@ class TestCartGoals:
         p.pose.position.x = -0.2
         p.pose.orientation.w = 1.0
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.r_tip, root_link='map')
+        zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.r_tip, root_link='base_footprint')
         zero_pose.execute()
 
     def test_cart_goal_1eef_and_base(self, zero_pose: PR2Tester):

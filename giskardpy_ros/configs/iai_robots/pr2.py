@@ -20,9 +20,9 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
     def setup(self, robot_name: Optional[str] = None):
         super().setup(robot_name)
         # PR2.get_view(self.world)
-        robot = AbstractRobot(root=self.world.get_body_by_name(self.odom_link_name), _world=self.world,
-                              name=PrefixedName('pr2'))
-        self.world.add_view(robot)
+        # robot = AbstractRobot(root=self.world.get_body_by_name(self.odom_link_name), _world=self.world,
+        #                       name=PrefixedName('pr2'))
+        # self.world.add_view(robot)
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):

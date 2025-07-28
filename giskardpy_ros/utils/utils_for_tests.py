@@ -36,6 +36,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from semantic_world.connections import OmniDrive, PrismaticConnection, RevoluteConnection
 from semantic_world.degree_of_freedom import DegreeOfFreedom
+from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
 
 
@@ -172,13 +173,14 @@ class GiskardTester:
             else:
                 raise LookupException('just to trigger except block')
         except (LookupException, ExtrapolationException) as e:
-            target_frame = god_map.world.search_for_link_name(target_frame)
+            target_frame = god_map.world.get_body_by_name(target_frame).name
             try:
-                result_msg.header.frame_id = str(god_map.world.search_for_link_name(result_msg.header.frame_id))
+                result_msg.header.frame_id = str(god_map.world.get_body_by_name(result_msg.header.frame_id).name.name)
             except UnknownGroupException:
                 pass
             giskard_obj = msg_converter.ros_msg_to_giskard_obj(result_msg, god_map.world)
-            transformed_giskard_obj = god_map.world.transform(target_frame, giskard_obj)
+            target_body = god_map.world.get_body_by_name(target_frame)
+            transformed_giskard_obj = god_map.world.transform(target_body, giskard_obj)
             return msg_converter.to_ros_message(transformed_giskard_obj)
 
     def wait_heartbeats(self, number=5):
@@ -515,7 +517,7 @@ class GiskardTester:
         if isinstance(parent_link, str):
             parent_link = giskard_msgs.LinkName(name=parent_link)
         if expected_error_type is None:
-            assert name in self.api.world.get_group_names()
+            assert PrefixedName(name) in self.api.world.get_group_names()
             response2 = self.api.world.get_group_info(name)
             if pose is not None:  # check if pose is consistent
                 p = self.transform_msg(god_map.world.root.name, pose)

@@ -1,20 +1,16 @@
 import traceback
 from copy import deepcopy
 from threading import Thread
-
+import semantic_world.spatial_types.spatial_types as cas
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.srv import GetGroupNames, GetGroupInfo, DyeGroup, GetGroupInfo_Response, GetGroupInfo_Request, \
     GetGroupNames_Request, GetGroupNames_Response, DyeGroup_Response, DyeGroup_Request
-from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray
 
-from giskardpy.data_types.data_types import JointStates, PrefixName
 from giskardpy.data_types.exceptions import UnknownGroupException, \
     TransformException, DuplicateNameException, InvalidWorldOperationException
 from giskardpy.god_map import god_map
-from giskardpy.model.joints import Joint6DOF
-from giskardpy.model.world import WorldBranch
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
@@ -25,7 +21,10 @@ from giskardpy_ros.ros2.tfwrapper import transform_pose
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from line_profiler import profile
 
+from semantic_world.connections import Connection6DoF
+from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
+from semantic_world.world_entity import RootedView
 
 
 class ProcessWorldUpdate(GiskardBehavior):
@@ -108,15 +107,18 @@ class ProcessWorldUpdate(GiskardBehavior):
     def get_group_info_cb(self, req: GetGroupInfo_Request, res: GetGroupInfo_Response) -> GetGroupInfo_Response:
         res.error_codes = GetGroupInfo_Response.SUCCESS
         try:
-            group = god_map.world.groups[req.group_name]  # type: WorldBranch
-            res.controlled_joints = [str(j.short_name) for j in group.controlled_joints]
-            res.links = list(sorted(str(x.short_name) for x in group.link_names_as_set))
-            res.child_groups = list(sorted(str(x) for x in group.groups.keys()))
-            res.root_link_pose = msg_converter.trans_matrix_to_pose_stamped(group.base_pose)
-            for v in group.free_variables:
-                res.joint_state.name.append(str(v.name))
-                res.joint_state.position.append(god_map.world.state[v.name].position)
-                res.joint_state.velocity.append(god_map.world.state[v.name].velocity)
+            group = god_map.world.get_view_by_name(req.group_name)  # type: RootedView
+            if isinstance(group, AbstractRobot):
+                res.controlled_joints = [str(j.name) for j in group.controlled_connections.connections]
+            # res.links = list(sorted(str(x.name) for x in group.link_names_as_set)) todo
+            # res.child_groups = list(sorted(str(x) for x in group.groups.keys())) todo
+            res.root_link_pose = msg_converter.trans_matrix_to_pose_stamped(
+                cas.TransformationMatrix(data=group.root.global_pose,
+                                         reference_frame=god_map.world.root))
+            # for v in group.free_variables: todo
+            #     res.joint_state.name.append(str(v.name))
+            #     res.joint_state.position.append(god_map.world.state[v.name].position)
+            #     res.joint_state.velocity.append(god_map.world.state[v.name].velocity)
         except KeyError as e:
             get_middleware().logerr(f'no object with the name {req.group_name} was found')
             res.error_codes = GetGroupInfo_Response.GROUP_NOT_FOUND_ERROR
@@ -124,10 +126,11 @@ class ProcessWorldUpdate(GiskardBehavior):
         return res
 
     def add_object(self, req: World_Goal) -> None:
-        group_name = req.group_name
-        if group_name in god_map.world.groups:
-            raise DuplicateNameException(f'Group with name \'{req.group_name}\' already exists.')
-        parent_link = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
+        group_name = PrefixedName(req.group_name)
+        if req.parent_link.name != '' and req.parent_link.group_name != '':
+            parent_link = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
+        else:
+            parent_link = god_map.world.root
         world_body = req.body
         pose = req.pose
 
@@ -142,7 +145,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         with god_map.world.modify_world() as world:
             pose = msg_converter.pose_stamped_to_trans_matrix(pose, world)
             parent_link_T_group_root_link = world.transform(parent_link, pose)
-            link_name = PrefixName(group_name, group_name)
+            link_name = PrefixedName(req.group_name, req.group_name)
             if world_body.type == world_body.URDF_BODY:
                 world.add_urdf(urdf=world_body.urdf,
                                parent_link_name=parent_link,
@@ -151,14 +154,15 @@ class ProcessWorldUpdate(GiskardBehavior):
             else:
                 link = msg_converter.world_body_to_link(link_name=link_name,
                                                         msg=world_body,
-                                                        color=god_map.world.default_link_color)
-                joint = Joint6DOF(name=PrefixName(group_name, god_map.world.connection_prefix),
-                                  parent_link_name=parent_link,
-                                  child_link_name=link.name)
-                joint.update_transform(parent_link_T_group_root_link)
-                world.add_link(link)
-                world.add_joint(joint)
-                world.register_group(group_name, link.name)
+                                                        color=GiskardBlackboard().giskard.world_config.default_color)
+                joint = Connection6DoF(parent=parent_link,
+                                       child=link,
+                                       _world=god_map.world)
+                joint.origin = parent_link_T_group_root_link.to_np()
+                world.add_body(link)
+                world.add_connection(joint)
+                view = RootedView(root=link, name=group_name, _world=god_map.world)
+                world.add_view(view)
         # SUB-CASE: If it is an articulated object, open up a joint state subscriber
         get_middleware().loginfo(f'Attached object \'{group_name}\' at \'{parent_link}\'.')
         if world_body.joint_state_topic:
