@@ -1,26 +1,15 @@
 from __future__ import division
-import hashlib
-
-# I only do this, because otherwise test/test_integration_pr2.py::TestWorldManipulation::test_unsupported_options
-# fails on github actions
-import urdf_parser_py.urdf as up
-
-import errno
-import inspect
-import json
-import os
-import pkgutil
-import sys
-from contextlib import contextmanager
-from functools import cached_property
-from typing import Type, Optional, Dict, Any
 
 import xacro
+from ros2launch.api import get_share_file_path_from_package, launch_a_launch_file
 from shape_msgs.msg import SolidPrimitive
 
 from giskard_msgs.msg import WorldBody
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+
+
+# I only do this, because otherwise test/test_integration_pr2.py::TestWorldManipulation::test_unsupported_options
+# fails on github actions
 
 
 def make_world_body_box(x_length: float = 1, y_length: float = 1, z_length: float = 1) -> WorldBody:
@@ -58,11 +47,7 @@ def make_urdf_world_body(name, urdf):
     return wb
 
 
-def load_xacro(path: str, additional_mappings: Optional[dict[str, str]] = None) -> str:
-    if additional_mappings is None:
-        mappings = {'radius': '0.9'}
-    else:
-        mappings = {'radius': '0.9'} | additional_mappings
+def load_xacro(path: str) -> str:
     path = get_middleware().resolve_iri(path)
-    doc = xacro.process_file(path, mappings=mappings)
+    doc = xacro.process_file(path, mappings={'radius': '0.9'})
     return doc.toprettyxml(indent='  ')

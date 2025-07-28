@@ -1,8 +1,10 @@
+import threading
 from copy import deepcopy
 
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, PointStamped, Vector3Stamped
+from ros2launch.api import launch_a_launch_file, get_share_file_path_from_package
 
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
@@ -13,13 +15,12 @@ from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rot
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface, TiagoCollisionAvoidanceConfig
-from giskardpy_ros.utils.utils import load_xacro
+from giskardpy_ros.ros2.ros2_interface import get_robot_description, load_urdf
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 
 @pytest.fixture(scope='module')
 def giskard(request, ros):
-    # launch_launchfile('package://iai_tiago_description/launch/upload.launch')
     c = TiagoTester()
     request.addfinalizer(c.tear_down)
     return c
@@ -94,16 +95,10 @@ class TiagoTester(GiskardTester):
     }
 
     def __init__(self, giskard=None):
+        urdf_path = get_share_file_path_from_package(package_name='iai_tiago_description',
+                                                     file_name='tiago_dual_pal_gripper.urdf')
         if giskard is None:
-            robot_desc = load_xacro('package://tiago_dual_description/robots/tiago_dual.urdf.xacro',
-                                    additional_mappings={
-                                        'ft_sensor_left': 'no-ft-sensor',
-                                        'ft_sensor_right': 'no-ft-sensor',
-                                        'wrist_model_left': 'wrist-2017',
-                                        'wrist_model_right': 'wrist-2017',
-                                        'camera_model': 'asus-xtion',
-                                    })
-            giskard = Giskard(world_config=WorldWithDiffDriveRobot(urdf=robot_desc),
+            giskard = Giskard(world_config=WorldWithDiffDriveRobot(urdf=load_urdf(urdf_path)),
                               collision_avoidance_config=TiagoCollisionAvoidanceConfig(),
                               robot_interface_config=TiagoStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True),
@@ -443,7 +438,7 @@ class TestCollisionAvoidance:
         zero_pose.execute()
 
     def test_load_negative_scale(self, zero_pose: TiagoTester):
-        mesh_path = 'package://tiago_description/meshes/arm/arm_3_collision.dae'
+        mesh_path = 'package://iai_tiago_description/meshes/arm/arm_3_collision.dae'
         box_pose = PoseStamped()
         box_pose.header.frame_id = 'base_link'
         box_pose.pose.position.x = 0.6
