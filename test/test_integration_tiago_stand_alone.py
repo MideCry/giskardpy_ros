@@ -4,7 +4,6 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, PointStamped, Vector3Stamped
-from ros2launch.api import launch_a_launch_file, get_share_file_path_from_package
 
 from giskardpy.data_types.data_types import PrefixName
 from giskardpy.god_map import god_map
@@ -95,10 +94,9 @@ class TiagoTester(GiskardTester):
     }
 
     def __init__(self, giskard=None):
-        urdf_path = get_share_file_path_from_package(package_name='iai_tiago_description',
-                                                     file_name='tiago_dual_pal_gripper.urdf')
+        urdf = load_urdf('package://iai_tiago_description/urdf/tiago_dual_pal_gripper.urdf')
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithDiffDriveRobot(urdf=load_urdf(urdf_path)),
+            giskard = Giskard(world_config=WorldWithDiffDriveRobot(urdf=urdf),
                               collision_avoidance_config=TiagoCollisionAvoidanceConfig(),
                               robot_interface_config=TiagoStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True),
