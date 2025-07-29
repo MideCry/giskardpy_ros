@@ -89,14 +89,14 @@ jobs:
       test6: test_integration_pr2.py::TestActionServerEvents
       is_trigger: ${{ inputs.is_trigger || false }}
       pr_id: ${{ inputs.pr_id || null }}
-#  tiago:
-#    needs: docker
-#    uses: ./.github/workflows/reusable_robot_ci.yml
-#    with:
-#      robot: tiago
-#      test1: test_integration_tiago_stand_alone.py::TestConstraints
-#      test2: test_integration_tiago_stand_alone.py::TestJointGoals
-#      test3: test_integration_tiago_stand_alone.py::TestCollisionAvoidance
-#      test4: test_integration_tiago_stand_alone.py::TestCartGoals
-#      is_trigger: ${{ inputs.is_trigger || false }}
-#      pr_id: ${{ inputs.pr_id || null }}
+  tiago:
+    needs: docker
+    uses: ./.github/workflows/reusable_robot_ci.yml
+    with:
+      robot: tiago
+      test1: test_integration_tiago_stand_alone.py::TestConstraints
+      test2: test_integration_tiago_stand_alone.py::TestJointGoals
+      test3: test_integration_tiago_stand_alone.py::TestCollisionAvoidance
+      test4: test_integration_tiago_stand_alone.py::TestCartGoals
+      is_trigger: ${{ inputs.is_trigger || false }}
+      pr_id: ${{ inputs.pr_id || null }}
