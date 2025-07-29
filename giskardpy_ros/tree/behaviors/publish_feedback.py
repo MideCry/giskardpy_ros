@@ -21,32 +21,32 @@ def giskard_state_to_execution_state() -> ExecutionState:
     tasks = god_map.motion_statechart_manager.task_state.nodes
     monitors = god_map.motion_statechart_manager.monitor_state.nodes
     goals = god_map.motion_statechart_manager.goal_state.nodes
-    task_filter = np.array([task.plot for task in tasks])
-    monitor_filter = np.array([monitor.plot for monitor in monitors])
-    goal_filter = np.array([goal.plot for goal in goals])
+    task_filter = np.array([task._plot for task in tasks])
+    monitor_filter = np.array([monitor._plot for monitor in monitors])
+    goal_filter = np.array([goal._plot for goal in goals])
 
     msg = ExecutionState()
     msg.header.stamp = rospy.node.get_clock().now().to_msg()
     msg.goal_id = GiskardBlackboard().move_action_server.goal_id
 
-    msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t.plot]
-    msg.task_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in tasks if node.plot]
+    msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t._plot]
+    msg.task_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in tasks if node._plot]
     try:
         msg.task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0][task_filter].tolist()
         msg.task_life_cycle_state = god_map.motion_statechart_manager.task_state_history[-1][1][1][task_filter].tolist()
     except IndexError as e:
         pass
 
-    msg.monitors = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m.plot]
-    msg.monitor_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in monitors if node.plot]
+    msg.monitors = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m._plot]
+    msg.monitor_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in monitors if node._plot]
     try:
         msg.monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][0][monitor_filter].tolist()
         msg.monitor_life_cycle_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][1][monitor_filter].tolist()
     except IndexError as e:
         pass
 
-    msg.goals = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m.plot]
-    msg.goal_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in goals if node.plot]
+    msg.goals = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m._plot]
+    msg.goal_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in goals if node._plot]
     try:
         msg.goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0][goal_filter].tolist()
         msg.goal_life_cycle_state = god_map.motion_statechart_manager.goal_state_history[-1][1][1][goal_filter].tolist()
