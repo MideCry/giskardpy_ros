@@ -44,7 +44,7 @@ RUN echo "source /root/venvs/giskardpy/bin/activate" >> ~/.bashrc
 # Download python-requirements
 # and install in giskardpy venv
 RUN curl -fsSL $DOWNLOAD_URL -o requirements.txt && \
-    sed -i '/giskardpy/d' requirements.txt # remove giskardpy dependency, because it can't be fulfilled here \
+    sed -i '/giskardpy/d' requirements.txt # remove giskardpy dependency, because it can't be fulfilled here
 
 RUN workon giskardpy && \
     sudo apt-get install libeigen3-dev && \
