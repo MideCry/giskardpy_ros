@@ -58,7 +58,7 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def terminate(self, new_status: Status) -> None:
         try:
-            get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
+            try:get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
         except Exception as e:
             pass # sometimes the sleeper is not defined yet
         self.set_status(Status.FAILURE)

@@ -172,14 +172,14 @@ jobs:
         with:
           path: 'giskard_ws/src/hsr_description'
           repository: code-iai/hsr_description
-          ref: master
-      - if: ${{ inputs.robot == 'hsr' }}
-        name: Checkout hsr_meshes
-        uses: actions/checkout@v3
-        with:
-          path: 'giskard_ws/src/hsr_meshes'
-          repository: ToyotaResearchInstitute/hsr_meshes
-          ref: master
+          ref: ros2-jazzy
+      # - if: ${{ inputs.robot == 'hsr' }}
+      #   name: Checkout hsr_meshes
+      #   uses: actions/checkout@v3
+      #   with:
+      #     path: 'giskard_ws/src/hsr_meshes'
+      #     repository: ToyotaResearchInstitute/hsr_meshes
+      #     ref: master
       - if: ${{ inputs.robot == 'donbot' }}
         name: Checkout iai_robots
         uses: actions/checkout@v3
@@ -207,14 +207,13 @@ jobs:
 #          cd giskard_ws
 #          touch src/iai_pr2/iai_pr2_sim/CATKIN_IGNORE
 #          touch src/iai_pr2/iai_pr2_donbot/CATKIN_IGNORE
-      - if: ${{ inputs.robot == 'tiago' }} # tiago has to be pulled now because it has fucked up package.xml
-        name: Checkout iai_tiago
+      - if: ${{ inputs.robot == 'tiago' }}
+        name: Checkout iai_tiago_description
         uses: actions/checkout@v3
         with:
-          path: 'giskard_ws/src/iai_tiago'
-          repository: code-iai/iai_tiago
-          ref: main
-          submodules: recursive
+          path: 'giskard_ws/src/iai_tiago_description'
+          repository: code-iai/iai_tiago_description
+          ref: ros2-main
       # build workspace ------------------------------------------------------------------------------------------------
       - name: Create workspace II
         run: |

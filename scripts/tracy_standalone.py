@@ -1,0 +1,33 @@
+from giskardpy_ros.ros2 import rospy
+from rclpy import Parameter
+from rclpy.exceptions import ParameterUninitializedException
+
+from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig, LoadSelfCollisionMatrixConfig
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
+from giskardpy_ros.configs.giskard import Giskard
+from giskardpy_ros.configs.other_robots.generic import GenericWorldConfig, GenericRobotInterface
+import os
+from ament_index_python.packages import get_package_share_directory
+
+def main():
+    rospy.init_node('giskard')
+    try:
+        rospy.node.declare_parameters(namespace='',
+                                      parameters=[('robot_description', Parameter.Type.STRING)])
+        robot_description = rospy.node.get_parameter_or('robot_description').value
+    except ParameterUninitializedException as e:
+        robot_description = None
+    giskard = Giskard(world_config=GenericWorldConfig(robot_description=robot_description),
+                      collision_avoidance_config=LoadSelfCollisionMatrixConfig(
+                          os.path.join(get_package_share_directory('giskardpy_ros'), 'self_collision_matrices',
+                                       'iai', 'tracy.srdf')),
+                          robot_interface_config=GenericRobotInterface(),
+                          behavior_tree_config=StandAloneBTConfig(publish_free_variables=False,
+                                                                  publish_tf=True,
+                                                                  debug_mode=True, publish_js=True),
+                          qp_controller_config=QPControllerConfig(mpc_dt=0.05))
+    giskard.live()
+
+    if __name__ == '__main__':
+        main()

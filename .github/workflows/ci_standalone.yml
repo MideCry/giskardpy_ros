@@ -42,16 +42,16 @@ jobs:
       contents: read
       packages: write
     uses: ./.github/workflows/publish_dockerfiles.yml
-#  hsr:
-#    needs: docker
-#    uses: ./.github/workflows/reusable_robot_ci.yml
-#    with:
-#      robot: hsr
-#      test1: test_integration_hsr.py::TestJointGoals
-#      test2: test_integration_hsr.py::TestCollisionAvoidanceGoals
-#      test3: test_integration_hsr.py::TestConstraints
-#      is_trigger: ${{ inputs.is_trigger || false }} # Default values don't seem to work correctly, using this instead
-#      pr_id: ${{ inputs.pr_id || null }}
+  hsr:
+    needs: docker
+    uses: ./.github/workflows/reusable_robot_ci.yml
+    with:
+      robot: hsr
+      test1: test_integration_hsr.py::TestJointGoals
+      test2: test_integration_hsr.py::TestCollisionAvoidanceGoals
+      test3: test_integration_hsr.py::TestConstraints
+      is_trigger: ${{ inputs.is_trigger || false }} # Default values don't seem to work correctly, using this instead
+      pr_id: ${{ inputs.pr_id || null }}
 #  donbot:
 #    needs: docker
 #    uses: ./.github/workflows/reusable_robot_ci.yml
@@ -89,14 +89,14 @@ jobs:
       test6: test_integration_pr2.py::TestActionServerEvents
       is_trigger: ${{ inputs.is_trigger || false }}
       pr_id: ${{ inputs.pr_id || null }}
-#  tiago:
-#    needs: docker
-#    uses: ./.github/workflows/reusable_robot_ci.yml
-#    with:
-#      robot: tiago
-#      test1: test_integration_tiago_stand_alone.py::TestConstraints
-#      test2: test_integration_tiago_stand_alone.py::TestJointGoals
-#      test3: test_integration_tiago_stand_alone.py::TestCollisionAvoidance
-#      test4: test_integration_tiago_stand_alone.py::TestCartGoals
-#      is_trigger: ${{ inputs.is_trigger || false }}
-#      pr_id: ${{ inputs.pr_id || null }}
+  tiago:
+    needs: docker
+    uses: ./.github/workflows/reusable_robot_ci.yml
+    with:
+      robot: tiago
+      test1: test_integration_tiago_stand_alone.py::TestConstraints
+      test2: test_integration_tiago_stand_alone.py::TestJointGoals
+      test3: test_integration_tiago_stand_alone.py::TestCollisionAvoidance
+      test4: test_integration_tiago_stand_alone.py::TestCartGoals
+      is_trigger: ${{ inputs.is_trigger || false }}
+      pr_id: ${{ inputs.pr_id || null }}
