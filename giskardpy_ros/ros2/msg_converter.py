@@ -505,9 +505,9 @@ def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: Color) -> Shape:
 
 
 def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: World) -> cas.TransformationMatrix:
-    p = cas.Point3.from_xyz(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
-    R = cas.Quaternion.from_xyzw(msg.pose.orientation.x, msg.pose.orientation.y,
-                                 msg.pose.orientation.z, msg.pose.orientation.w).to_rotation_matrix()
+    p = cas.Point3(x=msg.pose.position.x, y=msg.pose.position.y, z=msg.pose.position.z)
+    R = cas.Quaternion(x=msg.pose.orientation.x, y=msg.pose.orientation.y,
+                       z=msg.pose.orientation.z, w=msg.pose.orientation.w).to_rotation_matrix()
     result = cas.TransformationMatrix.from_point_rotation_matrix(
         point=p,
         rotation_matrix=R,
@@ -516,8 +516,8 @@ def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: World) -
 
 
 def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
-    p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
-    R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
+    p = cas.Point3(msg.position.x, msg.position.y, msg.position.z)
+    R = cas.Quaternion(msg.orientation.x, msg.orientation.y,
                                  msg.orientation.z, msg.orientation.w).to_rotation_matrix()
     result = cas.TransformationMatrix.from_point_rotation_matrix(point=p,
                                                                  rotation_matrix=R,
@@ -526,17 +526,17 @@ def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
 
 
 def point_stamped_to_point3(msg: geometry_msgs.PointStamped, world: World) -> cas.Point3:
-    return cas.Point3.from_xyz(msg.point.x, msg.point.y, msg.point.z,
+    return cas.Point3(msg.point.x, msg.point.y, msg.point.z,
                                reference_frame=world.get_body_by_name(msg.header.frame_id))
 
 
 def vector_stamped_to_vector3(msg: geometry_msgs.Vector3Stamped, world: World) -> cas.Vector3:
-    return cas.Vector3.from_xyz(msg.vector.x, msg.vector.y, msg.vector.z,
+    return cas.Vector3(msg.vector.x, msg.vector.y, msg.vector.z,
                                 reference_frame=world.get_body_by_name(msg.header.frame_id))
 
 
 def quaternion_stamped_to_quaternion(msg: geometry_msgs.QuaternionStamped, world: World) -> cas.RotationMatrix:
-    return cas.Quaternion((msg.quaternion.x, msg.quaternion.y, msg.quaternion.z, msg.quaternion.w),
+    return cas.Quaternion(msg.quaternion.x, msg.quaternion.y, msg.quaternion.z, msg.quaternion.w,
                           reference_frame=world.get_body_by_name(msg.header.frame_id)).to_rotation_matrix()
 
 
