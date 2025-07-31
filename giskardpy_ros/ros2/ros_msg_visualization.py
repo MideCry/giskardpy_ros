@@ -9,7 +9,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 
 import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy.model.trajectory import Trajectory
@@ -196,11 +196,11 @@ class ROSMsgVisualization:
         self.publisher.publish(marker_array)
 
     def publish_debug_trajectory(self,
-                                 debug_expressions: Dict[PrefixName, Union[cas.TransformationMatrix,
+                                 debug_expressions: Dict[PrefixedName, Union[cas.TransformationMatrix,
                                  cas.Point3,
                                  cas.Vector3,
                                  cas.Quaternion]],
-                                 raw_debug_trajectory: List[Dict[PrefixName, np.ndarray]],
+                                 raw_debug_trajectory: List[Dict[PrefixedName, np.ndarray]],
                                  joint_space_traj: Trajectory,
                                  every_x: int = 10,
                                  start_alpha: float = 0.15, stop_alpha: float = 1.0,
@@ -264,12 +264,12 @@ class ROSMsgVisualization:
         self.marker_ids = {}
 
     def debug_state_to_vectors_markers(self,
-                                       debug_expressions: Dict[PrefixName, Union[cas.TransformationMatrix,
+                                       debug_expressions: Dict[PrefixedName, Union[cas.TransformationMatrix,
                                        cas.Point3,
                                        cas.Vector3,
                                        cas.Quaternion,
                                        cas.RotationMatrix]],
-                                       debug_values: Dict[PrefixName, np.ndarray],
+                                       debug_values: Dict[PrefixedName, np.ndarray],
                                        width: float = 0.05,
                                        marker_id_offset: int = 0) -> List[Marker]:
         ms = []

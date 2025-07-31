@@ -13,13 +13,14 @@ from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import MarkerArray, Marker
 
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GoalInitalizationException, ExecutionException
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.joints import OmniDrive
 from giskardpy.motion_statechart.monitors.monitors import Monitor, EndMotion
+from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, WEIGHT_COLLISION_AVOIDANCE, Task
 from giskardpy.motion_statechart.tasks.pointing import Pointing
@@ -33,8 +34,8 @@ from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
 class RealTimePointing(Pointing):
 
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  pointing_axis: cas.Vector3,
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_BELOW_CA):

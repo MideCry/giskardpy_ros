@@ -1,6 +1,6 @@
 import numpy as np
 
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.joints import JustinTorso, RevoluteJoint
 from giskardpy.model.world_config import WorldConfig
@@ -8,9 +8,9 @@ from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfac
 
 
 class WorldWithJustinConfig(WorldConfig):
-    map_name: PrefixName
-    localization_joint_name: PrefixName
-    odom_link_name: PrefixName
+    map_name: PrefixedName
+    localization_joint_name: PrefixedName
+    odom_link_name: PrefixedName
     drive_joint_name: str
 
     def __init__(self,
@@ -20,9 +20,9 @@ class WorldWithJustinConfig(WorldConfig):
                  drive_joint_name: str = 'brumbrum',
                  description_name: str = 'robot_description'):
         super().__init__()
-        self.map_name = PrefixName(map_name)
-        self.localization_joint_name = PrefixName(localization_joint_name)
-        self.odom_link_name = PrefixName(odom_link_name)
+        self.map_name = PrefixedName(map_name)
+        self.localization_joint_name = PrefixedName(localization_joint_name)
+        self.odom_link_name = PrefixedName(odom_link_name)
         self.drive_joint_name = drive_joint_name
         self.urdf = rospy.get_param('robot_description')
 

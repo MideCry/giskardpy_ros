@@ -3,7 +3,7 @@ from typing import Optional
 from nav_msgs.msg import Odometry
 from py_trees.common import Status
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
@@ -15,7 +15,7 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
 class SyncOdometry(GiskardBehavior):
 
 
-    def __init__(self, odometry_topic: str, joint_name: Optional[PrefixName] = None, name_suffix: str = ''):
+    def __init__(self, odometry_topic: str, joint_name: Optional[PrefixedName] = None, name_suffix: str = ''):
         self.odometry_topic = odometry_topic
         if not self.odometry_topic.startswith('/'):
             self.odometry_topic = '/' + self.odometry_topic

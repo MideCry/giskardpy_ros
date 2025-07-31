@@ -4,7 +4,7 @@ import numpy as np
 from nav_msgs.msg import Odometry
 
 import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.data_types.exceptions import UnknownLinkException
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
@@ -43,7 +43,7 @@ class GenericWorldConfig(WorldConfig):
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})
         global_tf_frame = self.get_tf_root_that_is_not_in_world()
-        self.map_name = PrefixName(global_tf_frame)
+        self.map_name = PrefixedName(global_tf_frame)
         self.urdf = self.robot_description or ros2_interface.get_robot_description()
         self.add_robot_urdf(self.urdf, self.robot_name)
 
@@ -55,7 +55,7 @@ class GenericWorldConfig(WorldConfig):
             try:
                 world_link_name = self.world.search_for_link_name(tf_frame)
             except UnknownLinkException as e:
-                world_link_name = PrefixName(tf_frame)
+                world_link_name = PrefixedName(tf_frame)
                 self.add_empty_link(world_link_name)
             chain[i] = world_link_name
         odom_frames = self.has_odom()

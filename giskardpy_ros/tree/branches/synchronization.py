@@ -3,7 +3,7 @@ from typing import List, Optional
 from py_trees.common import Status
 from py_trees.composites import Sequence
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy_ros.tree.behaviors.collision_scene_updater import CollisionSceneUpdater
 from giskardpy_ros.tree.behaviors.notify_state_change import NotifyStateChange
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
@@ -36,7 +36,7 @@ class Synchronization(Sequence):
                 result += 1
         return result
 
-    def sync_6dof_joint_with_tf_frame(self, joint_name: PrefixName, tf_parent_frame: str, tf_child_frame: str):
+    def sync_6dof_joint_with_tf_frame(self, joint_name: PrefixedName, tf_parent_frame: str, tf_child_frame: str):
         if self.sync_tf_frames is None:
             self.sync_tf_frames = SyncTfFrames('sync tf frames1')
             self.insert_child(self.sync_tf_frames, index=0)
@@ -53,7 +53,7 @@ class Synchronization(Sequence):
         behavior = SyncJointStatePosition(group_name=group_name, joint_state_topic=topic_name)
         self.insert_child(child=behavior, index=0)
 
-    def sync_odometry_topic(self, topic_name: str, joint_name: Optional[PrefixName] = None):
+    def sync_odometry_topic(self, topic_name: str, joint_name: Optional[PrefixedName] = None):
         behavior = SyncOdometry(topic_name, joint_name)
         self.insert_child(child=behavior, index=0)
 

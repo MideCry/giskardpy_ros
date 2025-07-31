@@ -20,7 +20,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.rospy import ROS2Wrapper
 from std_msgs.msg import ColorRGBA
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.collision_avoidance_config import BPBCollisionAvoidanceConfig
 from giskardpy.model.world_config import EmptyWorld
@@ -86,8 +86,8 @@ class ReasonCheckBox(QCheckBox):
 
 
 class Table(QTableWidget):
-    _reasons: Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]
-    _disabled_links: Set[PrefixName]
+    _reasons: Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]
+    _disabled_links: Set[PrefixedName]
 
     def __init__(self):
         super().__init__()
@@ -95,7 +95,7 @@ class Table(QTableWidget):
         self._disabled_links = set()
         self.ros_visualizer = ROSMsgVisualization(mode=VisualizationMode.CollisionsDecomposed)
 
-    def update_disabled_links(self, link_names: Set[PrefixName]):
+    def update_disabled_links(self, link_names: Set[PrefixedName]):
         self._disabled_links = link_names
         self.update_table()
 
@@ -110,7 +110,7 @@ class Table(QTableWidget):
     def get_widget(self, row, column):
         return self.cellWidget(row, column).layout().itemAt(0).widget()
 
-    def prefix_reasons_to_str_reasons(self, reasons: Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]) \
+    def prefix_reasons_to_str_reasons(self, reasons: Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]) \
             -> Dict[Tuple[str, str], DisableCollisionReason]:
         return {(x[0].short_name, x[1].short_name): reason for x, reason in reasons.items()}
 
@@ -119,14 +119,14 @@ class Table(QTableWidget):
         return self.prefix_reasons_to_str_reasons(self._reasons)
 
     @property
-    def reasons(self) -> Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]:
+    def reasons(self) -> Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]:
         return self._reasons
 
     def table_id_to_link_name(self, index: int) -> str:
         return self.link_names[index]
 
-    def sort_links(self, link1: Union[str, PrefixName], link2: Union[str, PrefixName]) \
-            -> Tuple[Union[str, PrefixName], Union[str, PrefixName]]:
+    def sort_links(self, link1: Union[str, PrefixedName], link2: Union[str, PrefixedName]) \
+            -> Tuple[Union[str, PrefixedName], Union[str, PrefixedName]]:
         return tuple(sorted((link1, link2)))
 
     def update_reason(self, link1: str, link2: str, new_reason: Optional[DisableCollisionReason]):
@@ -195,7 +195,7 @@ class Table(QTableWidget):
             sorted(x.short_name for x in god_map.world.link_names_with_collisions if x not in self._disabled_links))
 
     @property
-    def disabled_link_prefix_names(self) -> List[PrefixName]:
+    def disabled_link_prefix_names(self) -> List[PrefixedName]:
         return list(self._disabled_links)
 
     def add_table_item(self, row, column):
@@ -214,7 +214,7 @@ class Table(QTableWidget):
         widget.setLayout(layout)
         self.setCellWidget(row, column, widget)
 
-    def update_table(self, reasons: Optional[Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]] = None):
+    def update_table(self, reasons: Optional[Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]] = None):
         if reasons is not None:
             self._reasons = {self.sort_links(*k): v for k, v in reasons.items()}
         self.clear()

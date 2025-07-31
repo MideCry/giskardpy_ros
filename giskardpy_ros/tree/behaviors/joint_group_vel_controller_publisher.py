@@ -5,7 +5,7 @@ from line_profiler import profile
 from py_trees.common import Status
 from std_msgs.msg import Float64MultiArray
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
@@ -17,7 +17,7 @@ from line_profiler import profile
 
 class JointGroupVelController(GiskardBehavior):
 
-    def __init__(self, cmd_topic: str, joints: List[PrefixName]):
+    def __init__(self, cmd_topic: str, joints: List[PrefixedName]):
         super().__init__()
         self.cmd_topic = cmd_topic
         # self.cmd_topic = self.search_for_subscriber_with_type(Float64MultiArray)

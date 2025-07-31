@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy_ros.tree.behaviors.joint_group_vel_controller_publisher import JointGroupVelController
 from giskardpy_ros.tree.behaviors.joint_vel_controller_publisher import JointVelController
 from giskardpy_ros.tree.behaviors.send_cmd_vel import SendCmdVelTwist
@@ -14,8 +14,8 @@ class SendControls(RunningSelector):
     def add_joint_velocity_controllers(self, namespaces: List[str]):
         self.add_child(JointVelController(namespaces=namespaces))
 
-    def add_joint_velocity_group_controllers(self, cmd_topic: str, joints: List[PrefixName]):
+    def add_joint_velocity_group_controllers(self, cmd_topic: str, joints: List[PrefixedName]):
         self.add_child(JointGroupVelController(cmd_topic=cmd_topic, joints=joints))
 
-    def add_send_cmd_velocity(self, topic_name: str, joint_name: Optional[PrefixName] = None):
+    def add_send_cmd_velocity(self, topic_name: str, joint_name: Optional[PrefixedName] = None):
         self.add_child(SendCmdVelTwist(topic_name=topic_name, joint_name=joint_name))

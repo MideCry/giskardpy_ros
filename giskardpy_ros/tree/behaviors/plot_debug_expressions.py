@@ -3,7 +3,7 @@ from threading import Lock
 import numpy as np
 from line_profiler import profile
 
-from giskardpy.data_types.data_types import JointStates, PrefixName
+from giskardpy.data_types.data_types import JointStates, PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
@@ -34,13 +34,13 @@ class PlotDebugExpressions(PlotTrajectory):
                 if isinstance(js_[0], np.ndarray):
                     if len(js_.position.shape) == 1:
                         for x in range(js_.position.shape[0]):
-                            tmp_name = PrefixName(f'{name}|{x}')
+                            tmp_name = PrefixedName(f'{name}|{x}')
                             new_js[tmp_name].position = js_.position[x]
                             new_js[tmp_name].velocity = js_.velocity[x]
                     else:
                         for x in range(js_.position.shape[0]):
                             for y in range(js_.position.shape[1]):
-                                tmp_name = PrefixName(f'{name}|{x}_{y}')
+                                tmp_name = PrefixedName(f'{name}|{x}_{y}')
                                 new_js[tmp_name].position = js_.position[x, y]
                                 new_js[tmp_name].velocity = js_.velocity[x, y]
                 else:

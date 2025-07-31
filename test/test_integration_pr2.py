@@ -17,7 +17,7 @@ from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import ColorRGBA
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
     DuplicateNameException, CorruptMeshException, UnknownGroupException, UnknownLinkException, \
     InvalidWorldOperationException, CorruptShapeException, TransformException, CorruptURDFException, \
@@ -1529,11 +1529,11 @@ class TestConstraints:
         kitchen_setup.execute()
         # np.testing.assert_almost_equal(
         #     god_map.trajectory.get_last()[
-        #         PrefixName(joint_name1, group_name)].position,
+        #         PrefixedName(joint_name1, group_name)].position,
         #     joint_goal, decimal=2)
         # np.testing.assert_almost_equal(
         #     god_map.trajectory.get_last()[
-        #         PrefixName(joint_name2, group_name)].position,
+        #         PrefixedName(joint_name2, group_name)].position,
         #     joint_goal, decimal=2)
 
     def test_CartesianOrientation(self, zero_pose: PR2Tester):
@@ -1802,7 +1802,7 @@ class TestConstraints:
         bar_center.header.frame_id = handle_frame_id
 
         tip_grasp_axis = Vector3Stamped()
-        tip_grasp_axis.header.frame_id = str(PrefixName(kitchen_setup.l_tip, 'pr2'))
+        tip_grasp_axis.header.frame_id = str(PrefixedName(kitchen_setup.l_tip, 'pr2'))
         tip_grasp_axis.vector.z = 1.
 
         kitchen_setup.api.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
@@ -1812,7 +1812,7 @@ class TestConstraints:
                                                      bar_axis=bar_axis,
                                                      bar_length=0.4)
         x_gripper = Vector3Stamped()
-        x_gripper.header.frame_id = str(PrefixName(kitchen_setup.l_tip, 'pr2'))
+        x_gripper.header.frame_id = str(PrefixedName(kitchen_setup.l_tip, 'pr2'))
         x_gripper.vector.x = 1.
 
         x_goal = Vector3Stamped()
@@ -1974,10 +1974,10 @@ class TestConstraints:
 
     def test_align_planes1(self, zero_pose: PR2Tester):
         x_gripper = Vector3Stamped()
-        x_gripper.header.frame_id = str(PrefixName(zero_pose.r_tip, zero_pose.api.robot_name))
+        x_gripper.header.frame_id = str(PrefixedName(zero_pose.r_tip, zero_pose.api.robot_name))
         x_gripper.vector.x = 1.
         y_gripper = Vector3Stamped()
-        y_gripper.header.frame_id = str(PrefixName(zero_pose.r_tip, zero_pose.api.robot_name))
+        y_gripper.header.frame_id = str(PrefixedName(zero_pose.r_tip, zero_pose.api.robot_name))
         y_gripper.vector.y = 1.
 
         x_goal = Vector3Stamped()
@@ -2210,7 +2210,7 @@ class TestConstraints:
         bar_center.header.frame_id = handle_name
 
         tip_grasp_axis = Vector3Stamped()
-        tip_grasp_axis.header.frame_id = str(PrefixName(kitchen_setup.r_tip, kitchen_setup.api.world.robot_name))
+        tip_grasp_axis.header.frame_id = str(PrefixedName(kitchen_setup.r_tip, kitchen_setup.api.world.robot_name))
         tip_grasp_axis.vector.z = 1.
 
         kitchen_setup.api.motion_goals.add_grasp_bar(root_link=kitchen_setup.default_root,
@@ -2479,7 +2479,7 @@ class TestCartGoals:
                                                       root_link='base_footprint')
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map')
         zero_pose.execute()
-        assert god_map.world.compute_fk_np(PrefixName('map'), PrefixName('r_gripper_tool_frame', 'pr2'))[0, 3] < 0.9
+        assert god_map.world.compute_fk_np(PrefixedName('map'), PrefixedName('r_gripper_tool_frame', 'pr2'))[0, 3] < 0.9
 
     def test_cart_goal_1eef_base_follow_forward(self, better_pose: PR2Tester):
         x = 0.7

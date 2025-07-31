@@ -3,7 +3,7 @@ import numpy as np
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig, StandAloneRobotInterfaceConfig
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 
 
 class WorldWithBoxyBaseConfig(WorldConfig):
@@ -19,7 +19,7 @@ class WorldWithBoxyBaseConfig(WorldConfig):
         self.set_default_limits({Derivatives.velocity: 0.5,
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})
-        self.add_empty_link(PrefixName(self.map_name))
+        self.add_empty_link(PrefixedName(self.map_name))
         self.add_robot_urdf(urdf=rospy.get_param('robot_description'))
         root_link_name = self.get_root_link_of_group(self.robot_group_name)
         self.add_6dof_joint(parent_link=self.map_name, child_link=root_link_name,

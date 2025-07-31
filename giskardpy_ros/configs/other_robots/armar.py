@@ -3,7 +3,7 @@ import numpy as np
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName, Derivatives
 
 
 class WorldWithArmarConfig(WorldConfig):
@@ -37,9 +37,9 @@ class WorldWithArmarConfig(WorldConfig):
         self.add_omni_drive_joint(parent_link_name=self.odom_link_name,
                                   child_link_name=root_link_name,
                                   name=self.drive_joint_name,
-                                  x_name=PrefixName('odom_x', self.robot_group_name),
-                                  y_name=PrefixName('odom_y', self.robot_group_name),
-                                  yaw_vel_name=PrefixName('odom_t', self.robot_group_name),
+                                  x_name=PrefixedName('odom_x', self.robot_group_name),
+                                  y_name=PrefixedName('odom_y', self.robot_group_name),
+                                  yaw_vel_name=PrefixedName('odom_t', self.robot_group_name),
                                   translation_limits={
                                       Derivatives.velocity: 0.2,
                                       Derivatives.acceleration: 1,

@@ -22,7 +22,7 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
@@ -38,6 +38,7 @@ from semantic_world.connections import OmniDrive, PrismaticConnection, RevoluteC
 from semantic_world.degree_of_freedom import DegreeOfFreedom
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
+from semantic_world.spatial_types.derivatives import Derivatives
 
 
 def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose], desired_pose: Union[cas.TransformationMatrix, Pose],
@@ -256,10 +257,10 @@ class GiskardTester:
         joint_names_with_prefix = set(j.long_name for j in current_js)
         joint_state_names = list()
         for j_n in joint_state.keys():
-            if type(j_n) == PrefixName or '/' in j_n:
+            if type(j_n) == PrefixedName or '/' in j_n:
                 joint_state_names.append(j_n)
             else:
-                joint_state_names.append(str(PrefixName(j_n, object_name)))
+                joint_state_names.append(str(PrefixedName(j_n, object_name)))
         assert set(joint_state_names).difference(joint_names_with_prefix) == set()
         for joint_name, state in current_js.items():
             if joint_name.short_name in joint_state:
@@ -270,8 +271,8 @@ class GiskardTester:
                 continue
             np.testing.assert_almost_equal(current_js[joint_name].position, joint_state[jn], 2)
 
-    def compare_joint_state(self, current_js: Dict[Union[str, PrefixName], float],
-                            goal_js: Dict[Union[str, PrefixName], float],
+    def compare_joint_state(self, current_js: Dict[Union[str, PrefixedName], float],
+                            goal_js: Dict[Union[str, PrefixedName], float],
                             decimal: int = 2):
         for joint_name in goal_js:
             goal = goal_js[joint_name]

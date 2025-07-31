@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, PointStamped, Vector3Stamped
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
@@ -683,8 +683,8 @@ class TestJointGoals:
             # 'arm_left_5_joint': -3
         }
         zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        god_map.world.state[PrefixName('arm_right_5_joint', 'tiago_dual')].velocity = 1
-        # zero_pose.world.state[PrefixName('arm_left_5_joint', 'tiago_dual')].velocity = -1
+        god_map.world.state[PrefixedName('arm_right_5_joint', 'tiago_dual')].velocity = 1
+        # zero_pose.world.state[PrefixedName('arm_left_5_joint', 'tiago_dual')].velocity = -1
         zero_pose.execute()
         zero_pose.are_joint_limits_violated()
 
@@ -695,7 +695,7 @@ class TestJointGoals:
         }
         zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
         zero_pose.api.motion_goals.add_joint_position(js)
-        god_map.world.state[PrefixName('arm_right_5_joint', 'tiago_dual')].velocity = 1
+        god_map.world.state[PrefixedName('arm_right_5_joint', 'tiago_dual')].velocity = 1
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute()
         zero_pose.are_joint_limits_violated()

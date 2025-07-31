@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import ExecutionException, FollowJointTrajectory_INVALID_JOINTS, \
     FollowJointTrajectory_INVALID_GOAL, FollowJointTrajectory_OLD_HEADER_TIMESTAMP, \
     FollowJointTrajectory_PATH_TOLERANCE_VIOLATED, FollowJointTrajectory_GOAL_TOLERANCE_VIOLATED, \
@@ -8,6 +8,7 @@ from giskardpy.data_types.exceptions import ExecutionException, FollowJointTraje
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import OneDofJoint, OmniDrive
 from giskardpy_ros.ros2 import rospy
+from semantic_world.spatial_types.derivatives import Derivatives
 
 try:
     import pr2_controllers_msgs.msg
@@ -62,7 +63,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
 
         ActionClient.__init__(self, str(self), action_type, None, self.action_namespace)
 
-        controlled_joint_names = [PrefixName(j, self.group_name) for j in params['joints']]
+        controlled_joint_names = [PrefixedName(j, self.group_name) for j in params['joints']]
         if len(controlled_joint_names) == 0:
             raise ValueError(f'\'{self.action_namespace}\' has no joints')
 

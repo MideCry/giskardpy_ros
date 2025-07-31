@@ -2,13 +2,14 @@ from typing import Dict
 
 from py_trees.composites import Sequence
 
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.send_trajectory import SendFollowJointTrajectory
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.control_loop import ControlLoop
 from giskardpy_ros.tree.branches.prepare_control_loop import PrepareBaseTrajControlLoop
 from giskardpy_ros.tree.composites.better_parallel import Parallel, ParallelPolicy
+from semantic_world.spatial_types.derivatives import Derivatives
 
 
 class ExecuteTraj(Sequence):
@@ -29,7 +30,7 @@ class ExecuteTraj(Sequence):
         self.move_robots.add_child(behavior)
 
     def add_base_traj_action_server(self, cmd_vel_topic: str, track_only_velocity: bool = False,
-                                    joint_name: PrefixName = None):
+                                    joint_name: PrefixedName = None):
         if not hasattr(self, 'prepare_base_control'):
             self.prepare_base_control = PrepareBaseTrajControlLoop()
             self.insert_child(self.prepare_base_control, 0)

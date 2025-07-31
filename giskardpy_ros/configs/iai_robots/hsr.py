@@ -5,7 +5,8 @@ import numpy as np
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig, RobotInterfaceConfig
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
+from semantic_world.spatial_types.derivatives import Derivatives
 
 
 class WorldWithHSRConfig(WorldConfig):
@@ -34,10 +35,10 @@ class WorldWithHSRConfig(WorldConfig):
         self.set_default_limits({Derivatives.velocity: 1,
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})
-        self.add_empty_link(PrefixName(self.map_name))
+        self.add_empty_link(PrefixedName(self.map_name))
         self.add_6dof_joint(parent_link=self.map_name, child_link=self.odom_link_name,
                             joint_name=self.localization_joint_name)
-        self.add_empty_link(PrefixName(self.odom_link_name))
+        self.add_empty_link(PrefixedName(self.odom_link_name))
         if self.robot_description is None:
             self.add_robot_urdf(urdf=rospy.get_param(self.robot_description_name))
         else:
@@ -46,9 +47,9 @@ class WorldWithHSRConfig(WorldConfig):
         self.add_omni_drive_joint(parent_link_name=self.odom_link_name,
                                   child_link_name=root_link_name,
                                   name=self.drive_joint_name,
-                                  x_name=PrefixName('odom_x', self.robot_group_name),
-                                  y_name=PrefixName('odom_y', self.robot_group_name),
-                                  yaw_vel_name=PrefixName('odom_t', self.robot_group_name),
+                                  x_name=PrefixedName('odom_x', self.robot_group_name),
+                                  y_name=PrefixedName('odom_y', self.robot_group_name),
+                                  yaw_vel_name=PrefixedName('odom_t', self.robot_group_name),
                                   translation_limits={
                                       Derivatives.velocity: 0.2,
                                       Derivatives.acceleration: np.inf,

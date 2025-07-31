@@ -4,7 +4,7 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
@@ -16,7 +16,7 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
 class SendCmdVelTwist(GiskardBehavior):
     supported_state_types = [Twist]
 
-    def __init__(self, topic_name: str, joint_name: Optional[PrefixName] = None):
+    def __init__(self, topic_name: str, joint_name: Optional[PrefixedName] = None):
         super().__init__()
         self.threshold = np.array([0.0, 0.0, 0.0])
         self.cmd_topic = topic_name

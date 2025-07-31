@@ -5,12 +5,13 @@ from sensor_msgs.msg import JointState
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.data_types import JointStates
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from semantic_world.spatial_types.derivatives import Derivatives
 
 
 class SyncJointState(GiskardBehavior):
@@ -81,7 +82,7 @@ class SyncJointStatePosition(GiskardBehavior):
     @record_time
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
-            joint_name = PrefixName(joint_name, self.group_name)
-            god_map.world.state[joint_name][Derivatives.position] = position
+            joint_name = PrefixedName(joint_name, self.group_name)
+            god_map.world.state[joint_name][Derivativesw.position] = position
 
         return Status.SUCCESS

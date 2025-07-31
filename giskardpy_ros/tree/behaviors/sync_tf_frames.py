@@ -5,7 +5,7 @@ from py_trees.common import Status
 
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import Joint6DOF
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy_ros.ros2 import msg_converter
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.ros2.tfwrapper import lookup_pose
@@ -15,16 +15,16 @@ from line_profiler import profile
 
 
 class SyncTfFrames(GiskardBehavior):
-    joint_map: Dict[PrefixName, Tuple[str, str]]
+    joint_map: Dict[PrefixedName, Tuple[str, str]]
 
-    def __init__(self, name, joint_map: Optional[Dict[PrefixName, Tuple[str, str]]] = None):
+    def __init__(self, name, joint_map: Optional[Dict[PrefixedName, Tuple[str, str]]] = None):
         super().__init__(name)
         if joint_map is None:
             self.joint_map = {}
         else:
             self.joint_map = joint_map
 
-    def sync_6dof_joint_with_tf_frame(self, joint_name: PrefixName, tf_parent_frame: str, tf_child_frame: str):
+    def sync_6dof_joint_with_tf_frame(self, joint_name: PrefixedName, tf_parent_frame: str, tf_child_frame: str):
         if joint_name in self.joint_map:
             raise AttributeError(f'Joint \'{joint_name}\' is already being tracking with a tf frame: '
                                  f'\'{self.joint_map[joint_name][0]}\'<-\'{self.joint_map[joint_name][1]}\'')
