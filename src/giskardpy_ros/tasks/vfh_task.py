@@ -14,7 +14,8 @@ class VFHMoveDir(Task):
     def __init__(self,
                  root_link: PrefixName,
                  tip_link: PrefixName,
-                 root_V_goal_angle: cas.Vector3,
+                 laser_link: PrefixName,
+                 laser_V_goal_angle: cas.Vector3,
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_COLLISION_AVOIDANCE,
                  name: Optional[str] = None):
@@ -26,12 +27,11 @@ class VFHMoveDir(Task):
         if name is None:
             name = f'{self.__class__.__name__}/{self.root}/{self.tip_link}'
         super().__init__(name=name)
-        # root_T_tip = god_map.world.compose_fk_evaluated_expression(self.root, self.tip_link)
-        self.root_V_goal_angle = 0
-        root_V_goal_angle.vis_frame = tip_link
+        laser_V_goal_angle.vis_frame = tip_link
 
-        root_V_goal_angle.reference_frame = self.root
         root_T_tip = god_map.world.compose_fk_expression(self.root, self.tip_link)
+        root_T_laser = god_map.world.compose_fk_expression(self.root, laser_link)
+        root_V_goal_angle = root_T_laser.dot(laser_V_goal_angle)
         root_P_tip = root_T_tip.to_position()
         root_P_goal_point = root_P_tip + root_V_goal_angle
 
@@ -42,7 +42,6 @@ class VFHMoveDir(Task):
                                                               expression=root_V_goal_angle,
                                                               color=ColorRGBA(0.0, 1.0, 1.0, 1.0))
 
-        # maybe equality constraint instead?
         self.add_point_goal_constraints(frame_P_current=root_P_tip, frame_P_goal=root_P_goal_point,
                                         reference_velocity=self.max_velocity, weight=self.weight)
 

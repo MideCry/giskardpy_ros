@@ -217,7 +217,7 @@ class IMServer(object):
             self.radius = 0.2
             self.transformed_target = None
             self.frame_id = 'base_range_sensor_link'
-            self.timer = Timer(rospy.Duration(1.5), self.timer_cb)
+            self.timer = Timer(rospy.Duration(0.01), self.timer_cb)
 
         def timer_cb(self, timer_event: TimerEvent):
             # if self.transformed_target is None:
@@ -347,7 +347,7 @@ class LaserScanMerger:
         for topic in self.input_topic:
             rospy.Subscriber(topic, LaserScan, self.make_callback(topic))
 
-        self.timer = rospy.Timer(rospy.Duration(0.1), self.publish_merged_scan)
+        self.timer = rospy.Timer(rospy.Duration(0.01), self.publish_merged_scan)
 
     def make_callback(self, topic):
         def callback(msg):

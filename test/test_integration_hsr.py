@@ -12,7 +12,7 @@ from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
 import giskard_msgs
 import giskardpy_ros.ros1.tfwrapper as tf
-from data_types.exceptions import PreemptedException
+from giskardpy.data_types.exceptions import PreemptedException
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException, ObjectForceTorqueThresholdException
 from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes, ObjectTypes
@@ -56,7 +56,8 @@ class HSRTestWrapper(GiskardTestWrapper):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,
                                                                       publish_js=False),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      control_dt=0.05))
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)

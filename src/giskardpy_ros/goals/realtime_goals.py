@@ -1,4 +1,7 @@
 from __future__ import division
+
+from time import sleep
+
 import numpy as np
 from typing import Optional, List, Dict
 
@@ -85,7 +88,7 @@ class RealTimeConePointing(PointingCone):
 
 
 class CarryMyBullshit(Goal):
-    trajectory: np.ndarray = np.array([])
+    trajectory: np.ndarray = np.array([0, 0])
     traj_data: List[np.ndarray] = None
     thresholds: np.ndarray = None
     thresholds_pc: np.ndarray = None
@@ -106,7 +109,7 @@ class CarryMyBullshit(Goal):
                  odom_joint_name: str = 'brumbrum',
                  root_link: Optional[str] = None,
                  camera_link: str = 'head_rgbd_sensor_link',
-                 distance_to_target_stop_threshold: float = 1,
+                 distance_to_target_stop_threshold: float = 0.80,
                  cone_theta: float = 0.1,
                  laser_scan_age_threshold: float = 2,
                  laser_distance_threshold: float = 0.5,
@@ -118,7 +121,7 @@ class CarryMyBullshit(Goal):
                  max_rotation_velocity: float = 0.5,
                  max_rotation_velocity_head: float = 1.4,  # how to make that faster??
                  max_translation_velocity: float = 0.38,
-                 traj_tracking_radius: float = 0.4,
+                 traj_tracking_radius: float = 0.7,
                  height_for_camera_target: float = 1,
                  laser_frame_id: str = 'base_range_sensor_link',
                  target_age_threshold: float = 2,
@@ -133,7 +136,7 @@ class CarryMyBullshit(Goal):
                                         max_range=5.0,
                                         grid_size=0.1,
                                         sector_angle=5,
-                                        obstacle_threshold=8,
+                                        obstacle_threshold=5,
                                         s_max=12,
                                         input_topic="/hsrb/base_scan")
         root_V_goal_angle = None
@@ -156,7 +159,7 @@ class CarryMyBullshit(Goal):
         self.closest_laser_left_pc = self.laser_distance_threshold_width
         self.closest_laser_right_pc = -self.laser_distance_threshold_width
         self.closest_laser_reading_pc = 0
-        self.laser_frame = laser_frame_id
+        self.laser_frame = god_map.world.search_for_link_name(laser_frame_id)
         self.last_scan = LaserScan()
         self.last_scan.header.stamp = rospy.get_rostime()
         self.last_scan_pc = LaserScan()
@@ -265,21 +268,23 @@ class CarryMyBullshit(Goal):
         # tangent_x = god_map.to_expr(self._get_identifier() + ['get_current_target', tuple(), 'tangent_x'])
         # tangent_y = god_map.to_expr(self._get_identifier() + ['get_current_target', tuple(), 'tangent_y'])
         clear_memo(self.get_current_target)
-        root_P_goal_point = symbol_manager.get_expr(self.ref_str +
-                                                    '.current_target',
-                                                    input_type_hint=np.ndarray,
-                                                    output_type_hint=cas.Point3)
+        laser_P_goal_point = symbol_manager.get_expr(self.ref_str +
+                                                     '.current_target',
+                                                     input_type_hint=np.ndarray,
+                                                     output_type_hint=cas.Point3)
+        root_P_goal_point = god_map.world.compose_fk_expression(self.root, self.laser_frame).dot(laser_P_goal_point)
         root_P_closest_point = symbol_manager.get_expr(self.ref_str +
                                                        '.closest_point',
                                                        input_type_hint=np.ndarray,
                                                        output_type_hint=cas.Point3)
-        if self.vfh.direction_vector is not None:
-            root_V_goal_angle = symbol_manager.get_expr(self.ref_str + '.vfh.direction_vector', input_type_hint=np.ndarray, output_type_hint=cas.Vector3)
-            # root_V_goal_angle = msg_converter.vector_stamped_to_vector3(self.vfh.direction_vector, god_map.world)
+        while self.vfh.direction_vector is None:
+            sleep(0.5)
+        root_V_goal_angle = symbol_manager.get_expr(self.ref_str + '.vfh.direction_vector',
+                                                    input_type_hint=np.ndarray, output_type_hint=cas.Vector3)
         # tangent = root_P_goal_point - root_P_closest_point
         # root_V_tangent = cas.Vector3([tangent.x, tangent.y, 0])
         tip_V_pointing_axis = self.tip_V_pointing_axis
-        print(root_V_goal_angle)
+        # print(root_V_goal_angle)
         if self.drive_back:
             map_P_human = root_P_goal_point
         else:
@@ -351,7 +356,7 @@ class CarryMyBullshit(Goal):
         look_at_target = Task(name='look at target')
         self.add_task(look_at_target)
         if not self.drive_back:
-            look_at_target.pause_condition = target_lost.name
+            look_at_target.pause_condition = target_lost
         # god_map.debug_expression_manager.add_debug_expression('human', map_P_human)
         # god_map.debug_expression_manager.add_debug_expression('root_P_camera', root_P_camera)
         look_at_target.add_vector_goal_constraints(frame_V_current=root_V_camera_axis,
@@ -359,6 +364,13 @@ class CarryMyBullshit(Goal):
                                                    reference_velocity=self.max_rotation_velocity_head,
                                                    weight=self.weight,
                                                    name='move camera')
+
+        if not self.drive_back:
+            arrived_at_target = Monitor(name='arrived at target')
+            self.add_monitor(arrived_at_target)
+            arrived_at_target.observation_expression = cas.less_equal(distance_to_human, self.min_distance_to_target)
+
+
         # TODO: if everything VFH related works, test deleting this
         # %% follow next point --tbr
         # follow_next_point = Task(name='follow next')
@@ -386,7 +398,7 @@ class CarryMyBullshit(Goal):
         #                                              reference_velocity=self.max_translation_velocity,
         #                                              weight=self.weight,
         #                                              name='min dist to next')
-        # god_map.debug_expression_manager.add_debug_expression('root_P_goal_point', root_P_goal_point)
+        god_map.debug_expression_manager.add_debug_expression('root_P_goal_point_original', root_P_goal_point)
 
         # %% keep the closest point in footprint radius
         stay_in_circle = Task(name='in circle')
@@ -406,11 +418,12 @@ class CarryMyBullshit(Goal):
 
         # %% laser avoidance
         # todo will be completely replaced with VFH soon
-        # todo either update tasks goal vector in cml update method or delete and re-add task each time cml runs through
-        print(root_V_goal_angle)
-        if root_V_goal_angle is not None:
-            vfh_move_task = VFHMoveDir(self.root, self.tip, root_V_goal_angle, name="vfh_move_task")
-            self.add_task(vfh_move_task)
+        print(f'goal angle:{root_V_goal_angle}')
+        vfh_move_task = VFHMoveDir(self.root, self.tip, self.laser_frame, root_V_goal_angle, name="vfh_move_task")
+        self.add_task(vfh_move_task)
+
+        if not self.drive_back:
+            vfh_move_task.pause_condition = arrived_at_target
         # if self.enable_laser_avoidance: --tbr
         #     laser_avoidance_task = Task(name='laser avoidance')
         #     self.add_task(laser_avoidance_task)
@@ -535,9 +548,9 @@ class CarryMyBullshit(Goal):
         self.closest_laser_reading, self.closest_laser_left, self.closest_laser_right = self.muddle_laser_scan(scan,
                                                                                                                self.thresholds)
         self.get_current_target()
-        # todo transform target point into right format
+        # print(f'TAR:{self.current_target}')
 
-        self.vfh.run(target_point=self.current_target[:2])
+        self.vfh.run(target_point=self.current_target[:3].copy())
 
     def point_cloud_laser_cb(self, scan: LaserScan):
         self.last_scan_pc = scan
@@ -585,9 +598,11 @@ class CarryMyBullshit(Goal):
             'closest_x': traj[closest_idx, 0],
             'closest_y': traj[closest_idx, 1],
         }
-        # todo save as self something
-        # todo do for closest too
+
         self.current_target = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
+        laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
+        self.current_target = laser_T_root @ self.current_target
+
         self.closest_point = np.array([traj[closest_idx, 0], traj[closest_idx, 1], 0, 1])
         return result
 

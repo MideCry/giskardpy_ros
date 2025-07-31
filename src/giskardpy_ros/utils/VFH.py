@@ -6,12 +6,13 @@ from operator import itemgetter
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-from geometry_msgs.msg import Vector3Stamped, PointStamped
 
 from sensor_msgs.msg import LaserScan
 import rospy
 import timeit
 import tf
+
+from giskardpy.utils.math import angle_between_vector
 
 matplotlib.use('Qt5Agg')
 
@@ -57,50 +58,44 @@ class VectorFieldHistogram:
         self.distances = np.array(data.ranges)
         self.angles = data.angle_min + np.arange(len(self.distances)) * data.angle_increment
 
-        self.laser_points_x = []
-        self.laser_points_y = []
-
-        for i, r in enumerate(self.distances):
-            if np.isnan(r) or np.isinf(r):
-                continue
-
-            angle = self.angles[i]
-
-            point = PointStamped()
-            point.header.frame_id = data.header.frame_id
-            point.header.stamp = data.header.stamp
-            point.point.x = np.cos(angle)
-            point.point.y = np.sin(angle)
-            point.point.z = 0.0
-
-            try:
-                transformed_point = self.tf_listener.transformPoint("map", point)
-                self.laser_points_x.append(transformed_point.point.x)
-                self.laser_points_y.append(transformed_point.point.y)
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                continue
-
-            self.x_points = np.array(self.laser_points_x)
-            self.y_points = np.array(self.laser_points_y)
+        # self.laser_points_x = []
+        # self.laser_points_y = []
+        #
+        # for i, r in enumerate(self.distances):
+        #     if np.isnan(r) or np.isinf(r):
+        #         continue
+        #
+        #     angle = self.angles[i]
+        #
+        #     point = PointStamped()
+        #     point.header.frame_id = data.header.frame_id
+        #     point.header.stamp = data.header.stamp
+        #     point.point.x = np.cos(angle)
+        #     point.point.y = np.sin(angle)
+        #     point.point.z = 0.0
+        #
+        #     try:
+        #         transformed_point = self.tf_listener.transformPoint("map", point)
+        #         self.laser_points_x.append(transformed_point.point.x)
+        #         self.laser_points_y.append(transformed_point.point.y)
+        #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+        #         continue
+        #
+        #     self.x_points = np.array(self.laser_points_x)
+        #     self.y_points = np.array(self.laser_points_y)
 
     def target_sim(self,
-                   target_point=(0.0, 0.0)):
+                   target_point=(1.0, 0.0, 0.0)):
         # start_time = time.perf_counter() - benchmark stuff
 
-        try:
-            (trans, rot) = self.tf_listener.lookupTransform("map", "base_footprint", rospy.Time(0))
-            self.robot_position = (trans[0], trans[1])
-            # print(f'R_POS:{self.robot_position}')
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            self.robot_position = (0.0, 0.0)
         # calculating sector that target is in
-        tx, ty = target_point
-        target_angle = np.arctan2(ty - self.robot_position[1], tx - self.robot_position[0])
-        print('target_angle:', target_angle)
+        target_angle = angle_between_vector(v1=np.array([1, 0, 0]), v2=target_point) + 2.0944
+
+        # print('target_angle:', target_angle)
         target_angle_deg = np.rad2deg(target_angle) % 240
-        print('target_angle_deg:', target_angle_deg)
+        # print('target_angle_deg:', target_angle_deg)
         target_sector = int(target_angle_deg // self.sector_angle)
-        print(f"Target Sector:{target_sector}")
+        # print(f"Target Sector:{target_sector}")
         # end_time = time.perf_counter()  # End timing
         # elapsed_time_ms = (end_time - start_time) * 1000
         # rospy.loginfo(f"target_sim took {elapsed_time_ms:.3f} ms") - benchmark stuff
@@ -110,9 +105,10 @@ class VectorFieldHistogram:
             target_point):
         if len(self.distances) == 0:
             return
+        # print(f'target_point: {target_point}')
         target_sector, target_angle_deg, target_point = self.target_sim(target_point=target_point)
         self.update_histogram(self.distances, self.angles, target_sector, target_angle_deg)
-        self.histogram_plot(target_point)
+        # self.histogram_plot(target_point)
 
     def update_histogram(self, distances, angles, target_sector, target_angle_deg):
         # start_time = time.perf_counter()
@@ -133,21 +129,23 @@ class VectorFieldHistogram:
         polar_histogram = np.zeros(num_sectors)
         angles = angles - angles[0]
         # calculate sector magnitudes
-        for sector in range(num_sectors):
+        for sector in range(num_sectors):  # TODO: refactor to be faster
             start_angle = np.deg2rad(sector * self.sector_angle)
             end_angle = np.deg2rad((sector + 1) * self.sector_angle)
             mask = (angles >= start_angle) & (angles <= end_angle)
             sector_dists = distances[mask]
             # density = np.sum((self.max_range - sector_dists) / self.max_range)
             clipped_dists = np.clip(sector_dists, 0, self.d_max)
-            magnitudes = 1 - (clipped_dists / self.d_max)  # magnitude stuff
+            # replace formula so that distance is between max.range and 0, whereas max.range is nearest to the robot
+            magnitudes = 1 - (clipped_dists / self.d_max)
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
         # print(polar_histogram)
 
         # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
-        free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]  # replace obstacle threshold with POD
+        free_sectors = np.where(polar_histogram <= self.obstacle_threshold)[0] # replace obstacle threshold with POD
+        # print(free_sectors)
         # valley calculation
         valleys = []
         for k, g in groupby(enumerate(free_sectors), lambda ix: ix[0] - ix[1]):
@@ -159,7 +157,7 @@ class VectorFieldHistogram:
         selected_valley = None
 
         for valley in valleys:
-            if min(valley) <= target_sector <= max(valley):
+            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # check condition and how the valley is picked
                 selected_valley = valley
                 # print(f"Selected Valley: {selected_valley}")
                 break
@@ -186,7 +184,7 @@ class VectorFieldHistogram:
             # print(f"Nearby sectors: {nearby_sectors}")
             candidate_valleys = []
             for valley in valleys:
-                if not set(valley).isdisjoint(nearby_sectors):
+                if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                     candidate_valleys.append(valley)
             # candidate valley has been found in first iteration
             if candidate_valleys:
@@ -200,10 +198,10 @@ class VectorFieldHistogram:
                 theta = (k_near + k_far) / 2
                 best_sector = int(theta)
                 theta_deg = best_sector * self.sector_angle
-                print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
-                print(f"Steering Valley: {selected_valley}")
-                print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
-                print(f"Steering angle: {theta_deg:.2f}°")
+                # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
+                # print(f"Steering Valley: {selected_valley}")
+                # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+                # print(f"Steering angle: {theta_deg:.2f}°")
             # Dynamically expand search radius if no candidate is found in first iteration
             else:
                 # print("No immediately adjacent Valleys found, expanding search radius")
@@ -220,9 +218,10 @@ class VectorFieldHistogram:
                     # check whether target sector is adjacent to any valleys, then check which of the two is larger
                     candidate_valleys = []
                     for valley in valleys:
-                        if not set(valley).isdisjoint(nearby_sectors):
+                        if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                             candidate_valleys.append(valley)
-                    if candidate_valleys and len(candidate_valleys) >= 2:
+                            # TODO: replace choosing bigger valley with minimum valley size
+                    if candidate_valleys:
                         found_valley = max(candidate_valleys, key=len)
                         # print(f"Found valley at radius {radius}: {found_valley}")
                         break
@@ -237,10 +236,10 @@ class VectorFieldHistogram:
                     theta = (k_near + k_far) / 2
                     best_sector = int(theta)
                     theta_deg = best_sector * self.sector_angle
-                    print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
-                    print(f"Steering Valley: {selected_valley}")
-                    print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
-                    print(f"Steering angle: {theta_deg:.2f}°")
+                    # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
+                    # print(f"Steering Valley: {selected_valley}")
+                    # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+                    # print(f"Steering angle: {theta_deg:.2f}°")
 
         self.polar_histogram = polar_histogram
         self.theta_deg = theta_deg
@@ -249,20 +248,15 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            theta_rad = math.radians(-(theta_deg - 120.0)) # -- maybe np. instead of .math?
-            # direction_vector = Vector3Stamped()
-            # direction_vector.header.frame_id = "base_footprint"
-            # direction_vector.vector.x = math.cos(theta_rad)
-            # direction_vector.vector.y = math.sin(theta_rad)
-            # direction_vector.vector.z = 0.0
-            direction_vector = np.array([math.cos(theta_rad), math.sin(theta_rad), 0])
-            print(f"Directional Vector: {direction_vector}")
+            theta_rad = np.radians(-(theta_deg - 120.0)) # -- maybe np. instead of .math?
+            direction_vector = np.array([np.cos(theta_rad), np.sin(theta_rad), 0])
+            # print(f"Directional Vector: {direction_vector}")
             # print("---------------------------------------")
             self.direction_vector = direction_vector
             return direction_vector
         else:
             direction_vector = np.array([0.0, 0.0, 0.0])
-            print(f"Directional Vector: {direction_vector}")
+            # print(f"Directional Vector: {direction_vector}")
             # print("---------------------------------------")
             self.direction_vector = direction_vector
             return direction_vector
@@ -295,42 +289,42 @@ class VectorFieldHistogram:
     #
     #     return smoothed
     # ------------------- ONLY USE THE PLOT FOR TESTING ---------------------
-    def histogram_plot(self, target_point):
-        # Start of plot gen
-        fig = plt.figure(figsize=(12, 6))
-        ax0 = fig.add_subplot(1, 2, 1)
-        ax1 = fig.add_subplot(1, 2, 2, polar=True)
-
-        # LIDAR PointCloud
-        ax0.set_title('LIDAR Map')
-        ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
-        ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
-        ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
-        ax0.set_xlim(-self.max_range, self.max_range)
-        ax0.set_ylim(-self.max_range, self.max_range)
-        ax0.set_aspect('equal')
-        ax0.grid(True)
-        ax0.legend()
-
-        # Polar Histogram
-        ax1.set_title('Polar Histogram')
-        ax1.set_theta_direction(-1)
-        ax1.set_theta_zero_location('W', 30)
-        colors = ['green' if self.polar_histogram[i] < self.obstacle_threshold else 'red'
-                  for i in range(len(self.polar_histogram))]
-        angles_rad = np.deg2rad(np.arange(0, 240, self.sector_angle))
-        ax1.bar(angles_rad, self.polar_histogram, width=np.deg2rad(self.sector_angle), bottom=0.0, align='edge',
-                color=colors)
-        ax1.plot('m--', linewidth=0.5, label='sectors')  # needed to portray legend for graph accurately
-        for angles in angles_rad:
-            ax1.plot([angles, angles], [0, np.max(self.polar_histogram)], 'm--', linewidth=0.5)
-        if self.theta_deg is not None:
-            best_rad = np.deg2rad(self.theta_deg)
-            ax1.plot([best_rad, best_rad], [0, np.max(self.polar_histogram)], 'b--', linewidth=2,
-                     label='best direction')
-        ax1.legend(loc='upper right')
-        plt.tight_layout()
-        plt.savefig('/home/yannis/Documents/vfh.png')
+    # def histogram_plot(self, target_point):
+    #     # Start of plot gen
+    #     fig = plt.figure(figsize=(12, 6))
+    #     ax0 = fig.add_subplot(1, 2, 1)
+    #     ax1 = fig.add_subplot(1, 2, 2, polar=True)
+    #
+    #     # LIDAR PointCloud
+    #     ax0.set_title('LIDAR Map')
+    #     ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
+    #     ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
+    #     ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
+    #     ax0.set_xlim(-self.max_range, self.max_range)
+    #     ax0.set_ylim(-self.max_range, self.max_range)
+    #     ax0.set_aspect('equal')
+    #     ax0.grid(True)
+    #     ax0.legend()
+    #
+    #     # Polar Histogram
+    #     ax1.set_title('Polar Histogram')
+    #     ax1.set_theta_direction(-1)
+    #     ax1.set_theta_zero_location('W', 30)
+    #     colors = ['green' if self.polar_histogram[i] < self.obstacle_threshold else 'red'
+    #               for i in range(len(self.polar_histogram))]
+    #     angles_rad = np.deg2rad(np.arange(0, 240, self.sector_angle))
+    #     ax1.bar(angles_rad, self.polar_histogram, width=np.deg2rad(self.sector_angle), bottom=0.0, align='edge',
+    #             color=colors)
+    #     ax1.plot('m--', linewidth=0.5, label='sectors')  # needed to portray legend for graph accurately
+    #     for angles in angles_rad:
+    #         ax1.plot([angles, angles], [0, np.max(self.polar_histogram)], 'm--', linewidth=0.5)
+    #     if self.theta_deg is not None:
+    #         best_rad = np.deg2rad(self.theta_deg)
+    #         ax1.plot([best_rad, best_rad], [0, np.max(self.polar_histogram)], 'b--', linewidth=2,
+    #                  label='best direction')
+    #     ax1.legend(loc='upper right')
+    #     plt.tight_layout()
+    #     plt.savefig('/home/yannis/Documents/vfh.png')
 
 
 # if __name__ == '__main__':
