@@ -373,7 +373,7 @@ class GiskardTester:
             # self.wait_heartbeats()
             diff = time() - time_spend_giskarding
             self.total_time_spend_giskarding += diff
-            self.total_time_spend_moving += (len(god_map.trajectory.keys()) *
+            self.total_time_spend_moving += (len(god_map.trajectory) *
                                              god_map.qp_controller.config.mpc_dt)
             get_middleware().logwarn(f'Goal processing took {diff}')
             result_exception = msg_converter.error_msg_to_exception(r.error)
@@ -391,7 +391,7 @@ class GiskardTester:
 
     def sync_world_with_trajectory(self):
         t = god_map.trajectory
-        whole_last_joint_state = t.get_last().to_position_dict()
+        whole_last_joint_state = t[-1].to_position_dict()
         for group_name in self.env_joint_state_pubs:
             group_joints = self.api.world.get_group_info(group_name).joint_state.name
             group_last_joint_state = {str(k): v for k, v in whole_last_joint_state.items() if k in group_joints}
@@ -400,15 +400,15 @@ class GiskardTester:
     def get_result_trajectory_position(self):
         trajectory = god_map.trajectory
         trajectory2 = {}
-        for joint_name in trajectory.get_exact(0).keys():
-            trajectory2[joint_name] = np.array([p[joint_name].position for t, p in trajectory.items()])
+        for joint_name in trajectory[0].keys():
+            trajectory2[joint_name] = np.array([p[joint_name].position for p in trajectory])
         return trajectory2
 
     def get_result_trajectory_velocity(self):
         trajectory = god_map.trajectory
         trajectory2 = {}
-        for joint_name in trajectory.get_exact(0).keys():
-            trajectory2[joint_name] = np.array([p[joint_name].velocity for t, p in trajectory.items()])
+        for joint_name in trajectory[0].keys():
+            trajectory2[joint_name] = np.array([p[joint_name].velocity for p in trajectory])
         return trajectory2
 
     def are_joint_limits_violated(self, eps=1e-2):

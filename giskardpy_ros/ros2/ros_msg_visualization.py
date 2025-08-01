@@ -233,7 +233,7 @@ class ROSMsgVisualization:
 
         with god_map.world.reset_joint_state_context():
             for point_id, point in enumerate(raw_debug_trajectory):
-                joint_state = joint_space_traj.get_exact(point_id)
+                joint_state = joint_space_traj[point_id]
                 god_map.world.state = joint_state
                 god_map.world.notify_state_change()
                 if self.mode not in [VisualizationMode.Visuals, VisualizationMode.VisualsFrameLocked]:

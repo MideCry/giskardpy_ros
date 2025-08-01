@@ -202,13 +202,13 @@ def trajectory_to_ros_trajectory(data: Trajectory,
     trajectory_msg = trajectory_msgs.JointTrajectory()
     trajectory_msg.header.stamp = start_time.to_msg()
     trajectory_msg.joint_names = []
-    for i, (time, traj_point) in enumerate(data.items()):
+    for time, traj_point in enumerate(data):
         p = trajectory_msgs.JointTrajectoryPoint()
         p.time_from_start = Duration(seconds=time * sample_period).to_msg()
         for joint in joints:
             for free_variable in joint.active_dofs:
                 if free_variable.name in traj_point:
-                    if i == 0:
+                    if time == 0:
                         joint_name = free_variable.name
                         if isinstance(joint_name, PrefixedName):
                             joint_name = joint_name.name

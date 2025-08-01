@@ -28,7 +28,7 @@ class PlotDebugExpressions(PlotTrajectory):
         if the trajectory has entries that describe vectors or matrices, split them into separate entries
         """
         new_traj = Trajectory()
-        for time, js in traj.items():
+        for js in traj:
             new_js = WorldState()
             for name, js_ in js.items():
                 if isinstance(js_[0], np.ndarray):
@@ -45,13 +45,13 @@ class PlotDebugExpressions(PlotTrajectory):
                                 new_js[tmp_name].velocity = js_.velocity[x, y]
                 else:
                     new_js[name] = js_
-                new_traj.set(time, new_js)
+                new_traj.append(new_js)
 
         return new_traj
 
     def plot(self):
         trajectory = god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt)
-        if trajectory and len(trajectory.items()) > 0:
+        if trajectory and len(trajectory) > 0:
             sample_period = god_map.qp_controller.config.mpc_dt
             traj = self.split_traj(trajectory)
             try:

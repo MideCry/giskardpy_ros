@@ -113,7 +113,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
 
         self.action_goal = goal
         deadline = self.action_goal.trajectory.header.stamp + \
-                   self.action_goal.trajectory.points[-1].time_from_start + \
+                   self.action_goal.trajectory._points[-1].time_from_start + \
                    self.action_goal.goal_time_tolerance
         self.min_deadline = deadline - self.goal_time_tolerance
         self.max_deadline = deadline + self.goal_time_tolerance

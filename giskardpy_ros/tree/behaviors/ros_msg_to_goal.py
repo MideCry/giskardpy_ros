@@ -108,7 +108,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
         local_min = LocalMinimumReached('local min')
         god_map.motion_statechart_manager.add_monitor(local_min)
 
-        time_monitor = TimeAbove(threshold=god_map.trajectory.length_in_seconds, name='timeout')
+        time_monitor = TimeAbove(threshold=len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt, name='timeout')
         god_map.motion_statechart_manager.add_monitor(time_monitor)
 
         end_motion = EndMotion(name='end motion')

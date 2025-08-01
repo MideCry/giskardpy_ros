@@ -469,7 +469,7 @@ class TestMonitors:
         zero_pose.api.motion_goals.add_joint_position(goal_state=zero_pose.default_pose)
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.execute(local_min_end=False)
-        assert god_map.trajectory.length_in_seconds > 4
+        assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 4
 
     def test_joint_sequence(self, zero_pose: PR2Tester):
         g1 = 'g1'
@@ -975,7 +975,7 @@ class TestMonitors:
                                                                                   base_monitor]))
         zero_pose.api.monitors.add_check_trajectory_length(120)
         zero_pose.execute(local_min_end=False)
-        assert god_map.trajectory.length_in_seconds > 6
+        assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 6
         current_pose = zero_pose.compute_fk_pose(root_link='map',
                                                  tip_link='base_footprint')
         compare_poses(current_pose.pose, base_goal.pose)
@@ -1379,12 +1379,12 @@ class TestConstraints:
         result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException)
         dt = god_map.qp_controller.config.mpc_dt
         # due to rounding, its sometimes two or three steps longer, depending on dt
-        assert new_length + dt * 2 <= len(result.trajectory.points) * dt <= new_length + dt * 3
+        assert new_length + dt * 2 <= len(result.trajectory._points) * dt <= new_length + dt * 3
 
         zero_pose.api.motion_goals.add_cartesian_pose(base_goal, tip_link='base_footprint', root_link='map')
         result = zero_pose.execute(expected_error_type=MaxTrajectoryLengthException)
         dt = god_map.qp_controller.config.mpc_dt
-        assert len(result.trajectory.points) * dt > new_length + 1.
+        assert len(result.trajectory._points) * dt > new_length + 1.
 
     def test_CollisionAvoidanceHint(self, kitchen_setup: PR2Tester):
         tip = 'base_footprint'
@@ -1656,7 +1656,7 @@ class TestConstraints:
                                                       weight=WEIGHT_BELOW_CA)
         zero_pose.execute()
 
-        for time, state in god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt).items():
+        for state in god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt):
             key = f'trans_error'
             assert key in state
             assert state[key].position <= base_linear_velocity + 2e3
