@@ -1489,7 +1489,8 @@ class TestConstraints:
         zero_pose.api.motion_goals.add_joint_position(goal_state={joint.short_name: joint_goal})
         zero_pose.execute()
         np.testing.assert_almost_equal(god_map.world.state[joint].position, joint_goal, decimal=3)
-        np.testing.assert_array_less(god_map.trajectory.to_dict()[1][joint], vel_limit + 1e-4)
+        for joint_state in god_map.trajectory:
+            assert np.less_equal(joint_state[joint].velocity, vel_limit + 1e-4)
 
     def test_JointPosition_kitchen(self, kitchen_setup: PR2Tester):
         joint_name1 = 'iai_fridge_door_joint'

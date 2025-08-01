@@ -22,7 +22,7 @@ class RobotDescriptionPublisher(GiskardBehavior):
         super().__init__(name)
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.pub = rospy.node.create_publisher(String, topic, qos)
-        description = GiskardBlackboard().giskard.world_config.robot_description
+        description = GiskardBlackboard().giskard.world_config.urdf
         self.msg = String()
         self.msg.data = description
 

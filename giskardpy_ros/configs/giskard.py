@@ -83,7 +83,6 @@ class Giskard:
 
     def set_defaults(self) -> None:
         # self.qp_controller_config.set_defaults() todo reimplement
-        self.world_config.set_defaults()
         self.robot_interface_config.set_defaults()
         self.collision_avoidance_config.set_defaults()
         self.behavior_tree_config.set_defaults()
@@ -92,8 +91,9 @@ class Giskard:
         """
         Initialize the behavior tree and world. You usually don't need to call this.
         """
-        with god_map.world.modify_world():
+        with self.world_config.world.modify_world():
             self.world_config.setup()
+        god_map.world = self.world_config.world
         self.qp_controller_config.setup()
         self.behavior_tree_config._create_behavior_tree()
         self.behavior_tree_config.setup()

@@ -1,4 +1,4 @@
-from typing import Optional
+from dataclasses import dataclass
 
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
@@ -8,21 +8,16 @@ from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
 from semantic_world.connections import OmniDrive, RevoluteConnection
 from semantic_world.prefixed_name import PrefixedName
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots import PR2
 
 
+@dataclass
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
-    def __init__(self, odom_link_name: str = 'odom_combined', urdf: Optional[str] = None):
-        super().__init__(urdf=urdf, odom_link_name=odom_link_name)
-        self.odom_link_name = PrefixedName(odom_link_name)
-        self.robot_description = urdf
+    odom_body_name: PrefixedName = PrefixedName('odom_combined')
 
-    def setup(self, robot_name: Optional[str] = None):
-        super().setup(robot_name)
-        # PR2.get_view(self.world)
-        # robot = AbstractRobot(root=self.world.get_body_by_name(self.odom_link_name), _world=self.world,
-        #                       name=PrefixedName('pr2'))
-        # self.world.add_view(robot)
+    def setup(self):
+        super().setup()
+        PR2.from_world(world=self.world)
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
@@ -144,6 +139,7 @@ class PR2CollisionAvoidance(CollisionAvoidanceConfig):
                                                     hard_threshold=0.1)
 
 
+@dataclass
 class PR2QPControllerConfig(QPControllerConfig):
     def setup(self):
         head_pan_joint: RevoluteConnection = god_map.world.get_connection_by_name('head_pan_joint')
