@@ -2,19 +2,13 @@ import traceback
 from typing import Union
 
 from giskard_msgs.action import Move
-from giskard_msgs.msg import MotionStatechartNode
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.data_types.exceptions import InvalidGoalException, UnknownGoalException
+from giskardpy.data_types.exceptions import InvalidGoalException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.joints import OmniDrive, DiffDrive
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
-from giskardpy.motion_statechart.goals.goal import Goal
-from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimumReached, EndMotion, CancelMotion, \
-    Monitor
-from giskardpy.motion_statechart.tasks.task import Task
+from giskardpy.motion_statechart.monitors.monitors import TimeAbove, LocalMinimumReached, EndMotion, CancelMotion
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2.msg_converter import create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior

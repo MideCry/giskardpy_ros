@@ -1,14 +1,14 @@
 import traceback
 from threading import Lock
-import numpy as np
-from line_profiler import profile
 
-from giskardpy.data_types.data_types import JointStates, PrefixedName
+import numpy as np
+
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
-from line_profiler import profile
+from semantic_world.prefixed_name import PrefixedName
+from semantic_world.world_state import WorldState
 
 plot_lock = Lock()
 
@@ -29,7 +29,7 @@ class PlotDebugExpressions(PlotTrajectory):
         """
         new_traj = Trajectory()
         for time, js in traj.items():
-            new_js = JointStates()
+            new_js = WorldState()
             for name, js_ in js.items():
                 if isinstance(js_[0], np.ndarray):
                     if len(js_.position.shape) == 1:

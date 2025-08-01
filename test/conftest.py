@@ -5,13 +5,13 @@ from geometry_msgs.msg import PoseStamped, Quaternion
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware, set_middleware
-from giskardpy.model.joints import OneDofJoint
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.ros2 import rospy, ros2_interface
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from semantic_world.connections import Has1DOFState
 
 
 @pytest.fixture(scope='module')
@@ -102,11 +102,11 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     js = {}
     for joint_name in god_map.world.groups[better_pose.default_env_name].movable_joint_names:
         joint = god_map.world.joints[joint_name]
-        if isinstance(joint, OneDofJoint):
+        if isinstance(joint, Has1DOFState):
             if GiskardBlackboard().tree.is_standalone():
-                js[str(joint.free_variable.name)] = 0.0
+                js[str(joint.dof.name)] = 0.0
             else:
-                js[str(joint.free_variable.name.short_name)] = 0.0
+                js[str(joint.dof.name.name)] = 0.0
     better_pose.set_env_state(js)
     return better_pose
 
@@ -133,11 +133,11 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     js = {}
     for joint_name in god_map.world.groups[better_pose.default_env_name].movable_joint_names:
         joint = god_map.world.joints[joint_name]
-        if isinstance(joint, OneDofJoint):
+        if isinstance(joint, Has1DOFState):
             if GiskardBlackboard().tree.is_standalone():
-                js[str(joint.free_variable.name)] = 0.0
+                js[str(joint.dof.name)] = 0.0
             else:
-                js[str(joint.free_variable.name.short_name)] = 0.0
+                js[str(joint.dof.name.name)] = 0.0
     better_pose.set_env_state(js)
     return better_pose
 
@@ -162,7 +162,7 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     js = {}
     for joint_name in god_map.world.groups[better_pose.default_env_name].movable_joint_names:
         joint = god_map.world.joints[joint_name]
-        if isinstance(joint, OneDofJoint):
+        if isinstance(joint, Has1DOFState):
             js[str(joint.free_variable.name)] = 0.0
     better_pose.set_env_state(js)
     base_pose = PoseStamped()

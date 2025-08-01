@@ -13,12 +13,12 @@ from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import MarkerArray, Marker
 
+from semantic_world.connections import OmniDrive
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GoalInitalizationException, ExecutionException
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.joints import OmniDrive
 from giskardpy.motion_statechart.monitors.monitors import Monitor, EndMotion
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.spatial_types.symbol_manager import symbol_manager

@@ -1,9 +1,9 @@
 import numpy as np
 
+from semantic_world.connections import RevoluteConnection
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
-from giskardpy.model.joints import JustinTorso, RevoluteJoint
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
 
@@ -52,9 +52,9 @@ class WorldWithJustinConfig(WorldConfig):
                                       Derivatives.jerk: None
                                   },
                                   robot_group_name=self.robot_group_name)
-        torso2_joint: RevoluteJoint = self.world.joints[self.world.search_for_joint_name('torso2_joint')]
-        torso3_joint: RevoluteJoint = self.world.joints[self.world.search_for_joint_name('torso3_joint')]
-        torso4_joint: RevoluteJoint = self.world.joints[self.world.search_for_joint_name('torso4_joint')]
+        torso2_joint: RevoluteConnection = self.world.joints[self.world.search_for_joint_name('torso2_joint')]
+        torso3_joint: RevoluteConnection = self.world.joints[self.world.search_for_joint_name('torso3_joint')]
+        torso4_joint: RevoluteConnection = self.world.joints[self.world.search_for_joint_name('torso4_joint')]
         passive_torso_joint = JustinTorso(name=torso4_joint.name,
                                           parent_link_name=torso4_joint.parent_link_name,
                                           child_link_name=torso4_joint.child_link_name,

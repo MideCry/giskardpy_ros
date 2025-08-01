@@ -1,12 +1,12 @@
 from typing import List, Dict, Any
 
+from semantic_world.connections import Has1DOFState
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import ExecutionException, FollowJointTrajectory_INVALID_JOINTS, \
     FollowJointTrajectory_INVALID_GOAL, FollowJointTrajectory_OLD_HEADER_TIMESTAMP, \
     FollowJointTrajectory_PATH_TOLERANCE_VIOLATED, FollowJointTrajectory_GOAL_TOLERANCE_VIOLATED, \
     ExecutionTimeoutException, ExecutionSucceededPrematurely, ExecutionPreemptedException
 from giskardpy.god_map import god_map
-from giskardpy.model.joints import OneDofJoint, OmniDrive
 from giskardpy_ros.ros2 import rospy
 from semantic_world.spatial_types.derivatives import Derivatives
 
@@ -51,7 +51,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         GiskardBehavior.__init__(self, str(self))
         self.min_deadline: rospy.Time
         self.max_deadline: rospy.Time
-        self.controlled_joints: List[OneDofJoint] = []
+        self.controlled_joints: List[Has1DOFState] = []
         self.fill_velocity_values = fill_velocity_values
         self.goal_time_tolerance = rospy.Duration(goal_time_tolerance)
         self.path_tolerance = path_tolerance
