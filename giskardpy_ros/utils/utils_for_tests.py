@@ -124,7 +124,7 @@ class GiskardTester:
         self.env_joint_state_pubs: Dict[str, Publisher] = {}
 
         self.giskard = giskard
-        self.giskard.grow()
+        self.giskard.setup()
         if god_map.is_in_github_workflow():
             get_middleware().loginfo('Inside github workflow, turning off visualization')
             GiskardBlackboard().tree.turn_off_visualization()
@@ -169,7 +169,7 @@ class GiskardTester:
     def transform_msg(self, target_frame, msg, timeout=1):
         result_msg = deepcopy(msg)
         try:
-            if not GiskardBlackboard().tree.is_standalone():
+            if not GiskardBlackboard().tree_config.is_standalone():
                 return tf.transform_msg(target_frame, result_msg, timeout=timeout)
             else:
                 raise LookupException('just to trigger except block')
@@ -235,7 +235,7 @@ class GiskardTester:
         # TODO it is strange that I need to kill the services... should be investigated. (:
         # GiskardBlackboard().tree.kill_all_services()
         giskarding_time = self.total_time_spend_giskarding
-        if not GiskardBlackboard().tree.is_standalone():
+        if not GiskardBlackboard().tree_config.is_standalone():
             giskarding_time -= self.total_time_spend_moving
         get_middleware().loginfo(f'total time spend giskarding: {giskarding_time}')
         get_middleware().loginfo(f'total time spend moving: {self.total_time_spend_moving}')
@@ -244,7 +244,7 @@ class GiskardTester:
     def set_env_state(self, joint_state: Dict[str, float], object_name: Optional[str] = None):
         if object_name is None:
             object_name = self.default_env_name
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree_config.is_standalone():
             self.api.monitors.add_set_seed_configuration(seed_configuration=joint_state,
                                                          name='set kitchen state')
             self.api.motion_goals.allow_all_collisions()

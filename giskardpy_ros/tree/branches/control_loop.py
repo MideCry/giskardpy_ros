@@ -1,8 +1,7 @@
-from typing import Optional
-
 from py_trees.decorators import FailureIsRunning, SuccessIsRunning
 
 from giskardpy.god_map import god_map
+from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.collision_checker import CollisionChecker
 from giskardpy_ros.tree.behaviors.evaluate_debug_expressions import EvaluateDebugExpressions
 from giskardpy_ros.tree.behaviors.evaluate_monitors import EvaluateMonitors
@@ -17,7 +16,6 @@ from giskardpy_ros.tree.branches.publish_state import PublishState
 from giskardpy_ros.tree.branches.send_controls import SendControls
 from giskardpy_ros.tree.branches.synchronization import Synchronization
 from giskardpy_ros.tree.composites.async_composite import AsyncBehavior
-from giskardpy.utils.decorators import toggle_on, toggle_off
 
 
 class ControlLoop(AsyncBehavior):
@@ -40,7 +38,7 @@ class ControlLoop(AsyncBehavior):
     def __init__(self, name: str = 'control_loop', log_traj: bool = True):
         control_dt = GiskardBlackboard().giskard.qp_controller_config.control_dt
         if control_dt is not None:
-            max_hz = 1/control_dt
+            max_hz = 1 / control_dt
         else:
             max_hz = None
         name = f'{name}\nmax_hz -- {max_hz}'
@@ -89,7 +87,7 @@ class ControlLoop(AsyncBehavior):
 
     @toggle_off('in_projection')
     def switch_to_closed_loop(self):
-        assert GiskardBlackboard().tree.is_closed_loop()
+        assert GiskardBlackboard().tree_config.is_closed_loop()
         self.remove_projection_behaviors()
         self.add_closed_loop_behaviors()
 

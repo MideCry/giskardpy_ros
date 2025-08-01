@@ -9,6 +9,7 @@ from py_trees.common import Status, Access
 from giskardpy.data_types.exceptions import DontPrintStackTrace
 
 if TYPE_CHECKING:
+    from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
     from giskardpy_ros.configs.giskard import Giskard
     from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
     from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 
 class GiskardBlackboard:
     giskard: Giskard
-    tree: GiskardBT
+    tree_config: BehaviorTreeConfig
     runtime: float
     move_action_server: ActionServerHandler
     world_action_server: ActionServerHandler
@@ -30,6 +31,10 @@ class GiskardBlackboard:
 
     def __init__(self):
         self.__dict__ = self.__shared_state
+
+    @property
+    def tree(self):
+        return self.tree_config.tree
 
 
 def raise_to_blackboard(exception):

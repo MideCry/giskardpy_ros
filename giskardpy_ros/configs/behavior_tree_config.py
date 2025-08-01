@@ -1,49 +1,42 @@
-from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Optional
-
-from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
 
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
+from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from giskardpy_ros.tree.control_modes import ControlModes
-from giskardpy_ros.ros2.visualization_mode import VisualizationMode
-from giskardpy.utils.utils import is_running_in_pytest
 
 
-class BehaviorTreeConfig(ABC):
+@dataclass
+class BehaviorTreeConfig:
+    tree: GiskardBT = field(init=False)
+    tree_tick_rate: float = 0.05
+    debug_mode: bool = False
+    visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed
 
-    def __init__(self, mode: ControlModes):
-        """
+    def __post_init__(self):
+        if god_map.is_in_github_workflow():
+            self.debug_mode = False
+            self.visualization_mode = VisualizationMode.Nothing
 
-        :param mode: Defines the default setup of the behavior tree.
-        """
-        self._control_mode = mode
+    def is_closed_loop(self) -> bool:
+        return isinstance(self, ClosedLoopBTConfig)
 
-    @abstractmethod
+    def is_standalone(self) -> bool:
+        return isinstance(self, StandAloneBTConfig)
+
+    def is_open_loop(self) -> bool:
+        return isinstance(self, OpenLoopBTConfig)
+
     def setup(self):
         """
         Implement this method to configure the behavior tree using it's self. methods.
         """
-
-    @property
-    def tree(self) -> GiskardBT:
-        return GiskardBlackboard().tree
-
-    def _create_behavior_tree(self):
-        GiskardBlackboard().tree = GiskardBT(control_mode=self._control_mode)
-
-    def set_defaults(self):
-        pass
-
-    def set_tree_tick_rate(self, rate: float = 0.05):
-        """
-        How often the tree ticks per second.
-        :param rate: in /s
-        """
-        self.tree_tick_rate = rate
+        GiskardBlackboard().tree_config = self
+        self.tree = GiskardBT()
 
     def add_visualization_marker_publisher(self,
                                            mode: VisualizationMode,
@@ -74,7 +67,7 @@ class BehaviorTreeConfig(ABC):
         QP data is streamed and can be visualized in e.g. plotjuggler. Useful for debugging.
         """
         self.add_evaluate_debug_expressions()
-        if GiskardBlackboard().tree.is_open_loop():
+        if GiskardBlackboard().tree_config.is_open_loop():
             self.tree.execute_traj.base_closed_loop.publish_state.add_qp_data_publisher(
                 publish_lb=publish_lb,
                 publish_ub=publish_ub,
@@ -147,21 +140,21 @@ class BehaviorTreeConfig(ABC):
         self.tree.wait_for_goal.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                tf_topic=tf_topic,
                                                                mode=mode)
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree_config.is_standalone():
             self.tree.control_loop_branch.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                          tf_topic=tf_topic,
                                                                          mode=mode)
     def add_robot_description_publisher(self, topic: str = 'robot_description'):
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree_config.is_standalone():
             self.tree.wait_for_goal.publish_state.add_robot_description_publisher(topic=topic)
 
     def add_evaluate_debug_expressions(self):
         self.tree.prepare_control_loop.add_compile_debug_expressions()
-        if GiskardBlackboard().tree.is_closed_loop():
+        if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=False)
         else:
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=True)
-        if GiskardBlackboard().tree.is_open_loop() and hasattr(GiskardBlackboard().tree.execute_traj, 'prepare_base_control'):
+        if GiskardBlackboard().tree_config.is_open_loop() and hasattr(GiskardBlackboard().tree.execute_traj, 'prepare_base_control'):
             GiskardBlackboard().tree.execute_traj.prepare_base_control.add_compile_debug_expressions()
             GiskardBlackboard().tree.execute_traj.base_closed_loop.add_evaluate_debug_expressions(log_traj=False)
 
@@ -190,40 +183,31 @@ class BehaviorTreeConfig(ABC):
                                                                                        only_prismatic_and_revolute=False)
 
 
+@dataclass
 class StandAloneBTConfig(BehaviorTreeConfig):
-    def __init__(self,
-                 debug_mode: bool = False,
-                 publish_js: bool = False,
-                 visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked,
-                 publish_free_variables: bool = False,
-                 publish_tf: bool = True,
-                 include_prefix: bool = False,
-                 publish_robot_description: bool = True):
-        """
-        The default behavior tree for Giskard in standalone mode. Make sure to set up the robot interface accordingly.
-        :param debug_mode: enable various debugging tools.
-        :param publish_js: publish current world state.
-        :param publish_tf: publish all link poses in tf.
-        :param include_prefix: whether to include the robot name prefix when publishing joint states or tf
-        """
-        self.include_prefix = include_prefix
-        self.visualization_mode = visualization_mode
-        if is_running_in_pytest():
-            if god_map.is_in_github_workflow():
-                publish_js = False
-                publish_tf = True
-                debug_mode = False
-                self.visualization_mode = VisualizationMode.Nothing
-        super().__init__(ControlModes.standalone)
-        self.debug_mode = debug_mode
-        self.publish_js = publish_js
-        self.publish_free_variables = publish_free_variables
-        self.publish_tf = publish_tf
-        self.publish_robot_description = publish_robot_description
-        if publish_js and publish_free_variables:
+    """
+    The default behavior tree for Giskard in standalone mode. Make sure to set up the robot interface accordingly.
+    :param publish_js: publish current world state.
+    :param publish_tf: publish all link poses in tf.
+    :param include_prefix: whether to include the robot name prefix when publishing joint states or tf
+    """
+    publish_js: bool = False
+    publish_free_variables: bool = False
+    publish_tf: bool = True
+    include_prefix: bool = False
+    publish_robot_description: bool = True
+    visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
+
+    def __post_init__(self):
+        super().__post_init__()
+        if god_map.is_in_github_workflow():
+            self.publish_js = False
+            self.publish_tf = True
+        if self.publish_js and self.publish_free_variables:
             raise SetupException('publish_js and publish_free_variables cannot be True at the same time.')
 
     def setup(self):
+        super().setup()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
         if self.publish_tf:
@@ -244,24 +228,16 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             self.add_free_variable_publisher(include_prefix=False)
 
 
+@dataclass
 class OpenLoopBTConfig(BehaviorTreeConfig):
-    def __init__(self,
-                 debug_mode: bool = False,
-                 visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
-        """
-        The default behavior tree for Giskard in open-loop mode. It will first plan the trajectory in simulation mode
-        and then publish it to connected joint trajectory followers. The base trajectory is tracked with a closed-loop
-        controller.
-        :param debug_mode:  enable various debugging tools.
-        :param control_loop_max_hz: if not None, limits the frequency of the base trajectory controller.
-        """
-        super().__init__(ControlModes.open_loop)
-        if god_map.is_in_github_workflow():
-            debug_mode = False
-        self.debug_mode = debug_mode
-        self.visualization_mode = visualization_mode
+    """
+    The default behavior tree for Giskard in open-loop mode. It will first plan the trajectory in simulation mode
+    and then publish it to connected joint trajectory followers. The base trajectory is tracked with a closed-loop
+    controller.
+    """
 
     def setup(self):
+        super().setup()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
         if self.debug_mode:
@@ -278,21 +254,14 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
             # )
 
 
+@dataclass
 class ClosedLoopBTConfig(BehaviorTreeConfig):
-    def __init__(self, debug_mode: bool = False,
-                 visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
-        """
-        The default configuration for Giskard in closed loop mode. Make use to set up the robot interface accordingly.
-        :param debug_mode: If True, will publish debug data on topics. This will significantly slow down the control loop.
-        :param control_loop_max_hz: Limits the control loop frequency. If None, it will go as fast as possible.
-        """
-        super().__init__(ControlModes.close_loop)
-        if god_map.is_in_github_workflow():
-            debug_mode = False
-        self.debug_mode = debug_mode
-        self.visualization_mode = visualization_mode
+    """
+    The default configuration for Giskard in closed loop mode. Make use to set up the robot interface accordingly.
+    """
 
     def setup(self):
+        super().setup()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=False,
                                                 mode=self.visualization_mode)
         # self.add_qp_data_publisher(publish_xdot=True, publish_lb=True, publish_ub=True)

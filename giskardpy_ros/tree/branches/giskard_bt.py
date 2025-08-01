@@ -28,7 +28,6 @@ from giskardpy_ros.tree.branches.prepare_control_loop import PrepareControlLoop
 from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
 from giskardpy_ros.tree.branches.wait_for_goal import WaitForGoal
 from giskardpy_ros.tree.composites.async_composite import AsyncBehavior
-from giskardpy_ros.tree.control_modes import ControlModes
 
 
 def behavior_is_instance_of(obj: Any, type_: Type) -> bool:
@@ -37,7 +36,6 @@ def behavior_is_instance_of(obj: Any, type_: Type) -> bool:
 
 class GiskardBT(BehaviourTree):
     tick_hz: float = 10
-    control_mode: ControlModes
     wait_for_goal: WaitForGoal
     prepare_control_loop: PrepareControlLoop
     post_processing: PostProcessing
@@ -46,11 +44,7 @@ class GiskardBT(BehaviourTree):
     root: Sequence
     execute_traj: ExecuteTraj
 
-    def __init__(self, control_mode: ControlModes):
-        GiskardBlackboard().tree = self
-        self.control_mode = control_mode
-        if control_mode not in ControlModes:
-            raise AttributeError(f'Control mode {control_mode} doesn\'t exist.')
+    def __init__(self):
         self.root = Sequence('Giskard', memory=True)
         self.wait_for_goal = WaitForGoal()
         self.prepare_control_loop = PrepareControlLoop()
@@ -58,7 +52,7 @@ class GiskardBT(BehaviourTree):
                                                                         self.prepare_control_loop)
         self.control_loop_branch = ControlLoop()
         self.control_loop_branch_failure_is_success = FailureIsSuccess('ignore failure', self.control_loop_branch)
-        if self.is_closed_loop():
+        if GiskardBlackboard().tree_config.is_closed_loop():
             self.control_loop_branch.add_closed_loop_behaviors()
         else:
             self.control_loop_branch.add_projection_behaviors()
@@ -66,7 +60,7 @@ class GiskardBT(BehaviourTree):
         self.post_processing = PostProcessing()
         self.post_processing_failure_is_success = FailureIsSuccess('ignore failure', self.post_processing)
         self.cleanup_control_loop = CleanupControlLoop()
-        if self.is_open_loop():
+        if GiskardBlackboard().tree_config.is_open_loop():
             self.execute_traj = ExecuteTraj()
             self.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.execute_traj)
 
@@ -82,15 +76,6 @@ class GiskardBT(BehaviourTree):
     def has_started(self) -> bool:
         return self.count > 1
 
-    def is_closed_loop(self):
-        return self.control_mode == self.control_mode.close_loop
-
-    def is_standalone(self):
-        return self.control_mode == self.control_mode.standalone
-
-    def is_open_loop(self):
-        return self.control_mode == self.control_mode.open_loop
-
     @toggle_on('visualization_mode')
     def turn_on_visualization(self):
         self.wait_for_goal.publish_state.add_visualization_marker_behavior()
@@ -103,17 +88,17 @@ class GiskardBT(BehaviourTree):
 
     @toggle_on('projection_mode')
     def switch_to_projection(self):
-        if self.is_open_loop():
+        if GiskardBlackboard().tree_config.is_open_loop():
             self.root.remove_child(self.execute_traj_failure_is_success)
-        elif self.is_closed_loop():
+        elif GiskardBlackboard().tree_config.is_closed_loop():
             self.control_loop_branch.switch_to_projection()
         self.cleanup_control_loop.add_reset_world_state()
 
     @toggle_off('projection_mode')
     def switch_to_execution(self):
-        if self.is_open_loop():
+        if GiskardBlackboard().tree_config.is_open_loop():
             self.root.insert_child(self.execute_traj_failure_is_success, -2)
-        elif self.is_closed_loop():
+        elif GiskardBlackboard().tree_config.is_closed_loop():
             self.control_loop_branch.switch_to_closed_loop()
         self.cleanup_control_loop.remove_reset_world_state()
 

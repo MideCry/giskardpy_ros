@@ -18,7 +18,6 @@ from giskardpy_ros.ros2.ros2_interface import search_for_subscriber_of_node_with
     search_for_unique_subscriber_of_type
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from giskardpy_ros.tree.control_modes import ControlModes
 from semantic_world.connections import OmniDrive
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
@@ -27,9 +26,6 @@ from semantic_world.world import World
 
 
 class RobotInterfaceConfig(ABC):
-    def set_defaults(self):
-        pass
-
     @abstractmethod
     def setup(self):
         """
@@ -48,10 +44,6 @@ class RobotInterfaceConfig(ABC):
     def tree(self) -> GiskardBT:
         return GiskardBlackboard().tree
 
-    @property
-    def control_mode(self) -> ControlModes:
-        return GiskardBlackboard().tree.control_mode
-
     def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str] = None,
                             sync_in_control_loop: bool = True):
         """
@@ -62,7 +54,7 @@ class RobotInterfaceConfig(ABC):
         odom_connection = self.world.get_connection_by_name(joint_name)
         assert isinstance(odom_connection, OmniDrive)
         self.tree.wait_for_goal.synchronization.sync_odometry_topic(odometry_topic, joint_name)
-        if sync_in_control_loop and GiskardBlackboard().tree.is_closed_loop():
+        if sync_in_control_loop and GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_odometry_topic(
                 odometry_topic,
                 joint_name)
@@ -75,7 +67,7 @@ class RobotInterfaceConfig(ABC):
         self.tree.wait_for_goal.synchronization.sync_6dof_joint_with_tf_frame(joint_name,
                                                                               tf_parent_frame,
                                                                               tf_child_frame)
-        if GiskardBlackboard().tree.is_closed_loop():
+        if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_6dof_joint_with_tf_frame(
                 joint_name,
                 tf_parent_frame,
@@ -89,7 +81,7 @@ class RobotInterfaceConfig(ABC):
             group_name = self.world.robot_name
         self.tree.wait_for_goal.synchronization.sync_joint_state_topic(group_name=group_name,
                                                                        topic_name=topic_name)
-        if GiskardBlackboard().tree.is_closed_loop() and group_name == self.world.robot_name:
+        if GiskardBlackboard().tree_config.is_closed_loop() and group_name == self.world.robot_name:
             self.tree.control_loop_branch.closed_loop_synchronization.sync_joint_state2_topic(
                 group_name=group_name,
                 topic_name=topic_name)
@@ -107,16 +99,16 @@ class RobotInterfaceConfig(ABC):
         """
         if cmd_vel_topic is None:
             cmd_vel_topic = search_for_unique_subscriber_of_type(Twist)
-        if GiskardBlackboard().tree.is_closed_loop():
+        if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.send_controls.add_send_cmd_velocity(topic_name=cmd_vel_topic,
                                                                               joint_name=joint_name)
-        elif GiskardBlackboard().tree.is_open_loop():
+        elif GiskardBlackboard().tree_config.is_open_loop():
             self.tree.execute_traj.add_base_traj_action_server(cmd_vel_topic=cmd_vel_topic,
                                                                track_only_velocity=track_only_velocity)
 
     def register_controlled_joints(self, joint_names: List[Union[str, PrefixedName]]) -> None:
-        if self.control_mode != ControlModes.standalone:
-            raise SetupException(f'Joints only need to be registered in {ControlModes.standalone.name} mode.')
+        if not GiskardBlackboard().tree_config.is_standalone():
+            raise SetupException(f'Joints only need to be registered in StandAlone mode.')
         controlled_connections = [self.world.get_connection_by_name(j) for j in joint_names]
         self.robot.controlled_connections.connections = controlled_connections
 
@@ -134,7 +126,7 @@ class RobotInterfaceConfig(ABC):
         """
         if group_name is None:
             group_name = self.world.robot_name
-        if not GiskardBlackboard().tree.is_open_loop():
+        if not GiskardBlackboard().tree_config.is_open_loop():
             raise SetupException('add_follow_joint_trajectory_server only works in planning mode')
         self.tree.execute_traj.add_follow_joint_traj_action_server(namespace=namespace,
                                                                    group_name=group_name,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import traceback
+from dataclasses import dataclass, field
 from typing import Optional, List
 
 import rclpy
@@ -23,80 +24,46 @@ from semantic_world.connections import ActiveConnection
 from semantic_world.robots import AbstractRobot
 
 
+@dataclass
 class Giskard:
-    world_config: WorldConfig = None
-    collision_avoidance_config: CollisionAvoidanceConfig = None
-    behavior_tree_config: BehaviorTreeConfig = None
-    robot_interface_config: RobotInterfaceConfig = None
-    qp_controller_config: QPControllerConfig = None
+    """
+    The main Class of Giskard.
+    Instantiate it with appropriate configs for you setup and then call giskard.live()
+    :param world_config: A world configuration. Use a predefined one or implement your own WorldConfig class.
+    :param robot_interface_config: How Giskard talk to the robot. You probably have to implement your own RobotInterfaceConfig.
+    :param collision_avoidance_config: default is no collision avoidance or implement your own collision_avoidance_config.
+    :param behavior_tree_config: default is open loop mode
+    :param qp_controller_config: default is good for almost all cases
+    :param additional_goal_package_paths: specify paths that Giskard needs to import to find your custom Goals.
+                                          Giskard will run 'from <additional path> import *' for each additional
+                                          path in the list.
+    :param additional_monitor_package_paths: specify paths that Giskard needs to import to find your custom Monitors.
+                                          Giskard will run 'from <additional path> import *' for each additional
+                                          path in the list.
+    """
+    world_config: WorldConfig
+    behavior_tree_config: BehaviorTreeConfig
+    robot_interface_config: RobotInterfaceConfig
+    collision_avoidance_config: CollisionAvoidanceConfig = field(default_factory=DisableCollisionAvoidanceConfig)
+    qp_controller_config: QPControllerConfig = field(default_factory=QPControllerConfig)
 
-    def __init__(self,
-                 world_config: WorldConfig,
-                 robot_interface_config: RobotInterfaceConfig,
-                 collision_avoidance_config: Optional[CollisionAvoidanceConfig] = None,
-                 behavior_tree_config: Optional[BehaviorTreeConfig] = None,
-                 qp_controller_config: Optional[QPControllerConfig] = None,
-                 additional_goal_package_paths: Optional[List[str]] = None,
-                 additional_monitor_package_paths: Optional[List[str]] = None):
-        """
-        The main Class of Giskard.
-        Instantiate it with appropriate configs for you setup and then call giskard.live()
-        :param world_config: A world configuration. Use a predefined one or implement your own WorldConfig class.
-        :param robot_interface_config: How Giskard talk to the robot. You probably have to implement your own RobotInterfaceConfig.
-        :param collision_avoidance_config: default is no collision avoidance or implement your own collision_avoidance_config.
-        :param behavior_tree_config: default is open loop mode
-        :param qp_controller_config: default is good for almost all cases
-        :param additional_goal_package_paths: specify paths that Giskard needs to import to find your custom Goals.
-                                              Giskard will run 'from <additional path> import *' for each additional
-                                              path in the list.
-        :param additional_monitor_package_paths: specify paths that Giskard needs to import to find your custom Monitors.
-                                              Giskard will run 'from <additional path> import *' for each additional
-                                              path in the list.
-        """
+    def __post_init__(self):
         god_map.tmp_folder = get_middleware().resolve_iri('package://giskardpy_ros/tmp/')
         GiskardBlackboard().giskard = self
-        self.world_config = world_config
-        self.robot_interface_config = robot_interface_config
-        if collision_avoidance_config is None:
-            collision_avoidance_config = DisableCollisionAvoidanceConfig()
-        self.collision_avoidance_config = collision_avoidance_config
-        if behavior_tree_config is None:
-            behavior_tree_config = OpenLoopBTConfig()
-        self.behavior_tree_config = behavior_tree_config
-        # god_map.behavior_tree_config = behavior_tree_config
-        if qp_controller_config is None:
-            qp_controller_config = QPControllerConfig()
-        self.qp_controller_config = qp_controller_config
-        if additional_goal_package_paths is None:
-            additional_goal_package_paths = {'giskardpy_ros.goals'}
-        for additional_path in additional_goal_package_paths:
-            self.add_goal_package_name(additional_path)
-        if additional_monitor_package_paths is None:
-            additional_monitor_package_paths = set()
-        for additional_path in additional_monitor_package_paths:
-            self.add_monitor_package_name(additional_path)
         god_map.hack = 0
 
-    @property
-    def action_server_name(self) -> str:
-        return f'{rospy.node.get_name()}/command'
-
-    def set_defaults(self) -> None:
-        # self.qp_controller_config.set_defaults() todo reimplement
-        self.robot_interface_config.set_defaults()
-        self.collision_avoidance_config.set_defaults()
-        self.behavior_tree_config.set_defaults()
-
-    def grow(self):
+    def setup(self):
         """
         Initialize the behavior tree and world. You usually don't need to call this.
         """
         with self.world_config.world.modify_world():
             self.world_config.setup()
         god_map.world = self.world_config.world
+
         self.qp_controller_config.setup()
-        self.behavior_tree_config._create_behavior_tree()
+
         self.behavior_tree_config.setup()
+
         self.robot_interface_config.setup()
         god_map.world._notify_model_change()
         self.collision_avoidance_config.setup()
@@ -121,7 +88,7 @@ class Giskard:
             raise SetupException('No joints are flagged as controlled.')
         if len(non_controlled_joints) > 0:
             get_middleware().loginfo(f'The following joints are non-fixed according to the urdf, '
-                               f'but not flagged as controlled: {[c.name for c in non_controlled_joints]}.')
+                                     f'but not flagged as controlled: {[c.name for c in non_controlled_joints]}.')
 
     def add_goal_package_name(self, package_name: str):
         new_goals = get_all_classes_in_package(package_name, Goal)
@@ -149,7 +116,7 @@ class Giskard:
         Start Giskard.
         """
         try:
-            self.grow()
+            self.setup()
             GiskardBlackboard().tree.live()
         except Exception as e:
             traceback.print_exc()

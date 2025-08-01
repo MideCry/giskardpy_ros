@@ -245,7 +245,7 @@ def giskard(request, ros):
 
 @pytest.fixture()
 def pocky_pose_setup(resetted_giskard: PR2Tester) -> PR2Tester:
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         resetted_giskard.api.monitors.add_set_seed_configuration(pocky_pose)
         resetted_giskard.api.motion_goals.allow_all_collisions()
     else:
@@ -2831,7 +2831,7 @@ class TestWorldManipulation:
         p.pose.position.x = 1.
         q = quaternion_from_axis_angle([0, 0, 1], np.pi, )
         p.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree_config.is_standalone():
             js_topic = ''
             set_js_topic = ''
         else:

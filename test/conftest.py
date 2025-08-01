@@ -37,7 +37,7 @@ def ros(request):
 def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
     get_middleware().loginfo('resetting giskard')
     giskard.api.clear_motion_goals_and_monitors()
-    if GiskardBlackboard().tree.is_standalone() and giskard.has_odometry_joint():
+    if GiskardBlackboard().tree_config.is_standalone() and giskard.has_odometry_joint():
         zero = PoseStamped()
         zero.header.frame_id = 'map'
         zero.pose.orientation.w = 1.0
@@ -52,7 +52,7 @@ def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
 
 @pytest.fixture()
 def zero_pose(resetted_giskard: GiskardTester) -> GiskardTester:
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         done = resetted_giskard.api.monitors.add_set_seed_configuration(resetted_giskard.default_pose,
                                                                     name='initial joint state')
         resetted_giskard.api.motion_goals.allow_all_collisions()
@@ -68,7 +68,7 @@ def zero_pose(resetted_giskard: GiskardTester) -> GiskardTester:
 
 @pytest.fixture()
 def better_pose(resetted_giskard: GiskardTester) -> GiskardTester:
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         done = resetted_giskard.api.monitors.add_set_seed_configuration(resetted_giskard.better_pose,
                                                                     name='initial joint state')
         resetted_giskard.api.motion_goals.allow_all_collisions()
@@ -84,7 +84,7 @@ def better_pose(resetted_giskard: GiskardTester) -> GiskardTester:
 @pytest.fixture()
 def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'iai_kitchen'
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
         kitchen_pose.pose.orientation.w = 1.0
@@ -103,7 +103,7 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     for joint_name in god_map.world.groups[better_pose.default_env_name].movable_joint_names:
         joint = god_map.world.joints[joint_name]
         if isinstance(joint, Has1DOFState):
-            if GiskardBlackboard().tree.is_standalone():
+            if GiskardBlackboard().tree_config.is_standalone():
                 js[str(joint.dof.name)] = 0.0
             else:
                 js[str(joint.dof.name.name)] = 0.0
@@ -113,7 +113,7 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
 @pytest.fixture()
 def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'dlr_kitchen'
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
         kitchen_pose.pose.position.x = -2.
@@ -134,7 +134,7 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
     for joint_name in god_map.world.groups[better_pose.default_env_name].movable_joint_names:
         joint = god_map.world.joints[joint_name]
         if isinstance(joint, Has1DOFState):
-            if GiskardBlackboard().tree.is_standalone():
+            if GiskardBlackboard().tree_config.is_standalone():
                 js[str(joint.dof.name)] = 0.0
             else:
                 js[str(joint.dof.name.name)] = 0.0
@@ -145,7 +145,7 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
 @pytest.fixture()
 def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     better_pose.default_env_name = 'iai_apartment'
-    if GiskardBlackboard().tree.is_standalone():
+    if GiskardBlackboard().tree_config.is_standalone():
         kitchen_pose = PoseStamped()
         kitchen_pose.header.frame_id = str(better_pose.default_root)
         kitchen_pose.pose.orientation.w = 1.0

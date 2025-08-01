@@ -95,9 +95,9 @@ class GenericRobotInterface(RobotInterfaceConfig):
         self.controller_manager_name = controller_manager_name
 
     def setup(self):
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree_config.is_standalone():
             self.register_controlled_joints(self.world.movable_joint_names)
-        elif GiskardBlackboard().tree.is_closed_loop():
+        elif GiskardBlackboard().tree_config.is_closed_loop():
             self.discover_interfaces_from_controller_manager()
             try:
                 self.world.get_drive_joint()
