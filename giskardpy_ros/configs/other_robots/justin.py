@@ -1,6 +1,7 @@
 import numpy as np
 
-from giskardpy.data_types.data_types import Derivatives, PrefixedName
+from semantic_world.prefixed_name import PrefixedName
+from semantic_world.spatial_types.derivatives import Derivatives
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.joints import JustinTorso, RevoluteJoint
 from giskardpy.model.world_config import WorldConfig

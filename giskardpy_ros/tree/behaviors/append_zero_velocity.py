@@ -1,11 +1,9 @@
-from line_profiler import profile
 from py_trees.common import Status
 
 from giskardpy.god_map import god_map
-from giskardpy.data_types.data_types import Derivatives
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
-from line_profiler import profile
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from semantic_world.spatial_types.derivatives import Derivatives
 
 
 class SetZeroVelocity(GiskardBehavior):
@@ -19,7 +17,7 @@ class SetZeroVelocity(GiskardBehavior):
 
     def update(self):
         for free_variable, state in god_map.world.state.items():
-            for derivative in Derivatives:
+            for derivative in Derivatives.range(Derivatives.velocity, Derivatives.jerk):
                 if derivative == Derivatives.position:
                     continue
                 god_map.world.state[free_variable][derivative] = 0

@@ -4,8 +4,9 @@ import numpy as np
 from nav_msgs.msg import Odometry
 
 import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.data_types.exceptions import UnknownLinkException
+from semantic_world.prefixed_name import PrefixedName
+from semantic_world.spatial_types.derivatives import Derivatives
 from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.model.world_config import WorldConfig
