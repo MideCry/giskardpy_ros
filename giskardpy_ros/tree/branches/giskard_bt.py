@@ -42,7 +42,7 @@ class GiskardBT(BehaviourTree):
     cleanup_control_loop: CleanupControlLoop
     control_loop_branch: ControlLoop
     root: Sequence
-    execute_traj: ExecuteTraj
+    execute_traj: Optional[ExecuteTraj] = None
 
     def __init__(self):
         self.root = Sequence('Giskard', memory=True)
@@ -52,18 +52,10 @@ class GiskardBT(BehaviourTree):
                                                                         self.prepare_control_loop)
         self.control_loop_branch = ControlLoop()
         self.control_loop_branch_failure_is_success = FailureIsSuccess('ignore failure', self.control_loop_branch)
-        if GiskardBlackboard().tree_config.is_closed_loop():
-            self.control_loop_branch.add_closed_loop_behaviors()
-        else:
-            self.control_loop_branch.add_projection_behaviors()
 
         self.post_processing = PostProcessing()
         self.post_processing_failure_is_success = FailureIsSuccess('ignore failure', self.post_processing)
         self.cleanup_control_loop = CleanupControlLoop()
-        if GiskardBlackboard().tree_config.is_open_loop():
-            self.execute_traj = ExecuteTraj()
-            self.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.execute_traj)
-
         self.root.add_child(self.wait_for_goal)
         self.root.add_child(self.prepare_control_loop_failure_is_success)
         self.root.add_child(self.control_loop_branch_failure_is_success)
@@ -88,18 +80,12 @@ class GiskardBT(BehaviourTree):
 
     @toggle_on('projection_mode')
     def switch_to_projection(self):
-        if GiskardBlackboard().tree_config.is_open_loop():
-            self.root.remove_child(self.execute_traj_failure_is_success)
-        elif GiskardBlackboard().tree_config.is_closed_loop():
-            self.control_loop_branch.switch_to_projection()
+        GiskardBlackboard().tree_config.switch_to_projection_mode()
         self.cleanup_control_loop.add_reset_world_state()
 
     @toggle_off('projection_mode')
     def switch_to_execution(self):
-        if GiskardBlackboard().tree_config.is_open_loop():
-            self.root.insert_child(self.execute_traj_failure_is_success, -2)
-        elif GiskardBlackboard().tree_config.is_closed_loop():
-            self.control_loop_branch.switch_to_closed_loop()
+        GiskardBlackboard().tree_config.switch_to_execution_mode()
         self.cleanup_control_loop.remove_reset_world_state()
 
     def live(self):
@@ -109,19 +95,6 @@ class GiskardBT(BehaviourTree):
         self.shutdown()
         rclpy.try_shutdown()
         get_middleware().loginfo('giskard died')
-
-    def stop_spinning(self):
-        self.executer.shutdown()
-
-    def kill_all_services(self):
-        self.blackboard_exchange.get_blackboard_variables_srv.shutdown()
-        self.blackboard_exchange.open_blackboard_watcher_srv.shutdown()
-        self.blackboard_exchange.close_blackboard_watcher_srv.shutdown()
-        # for value in GiskardBlackboard().tree_nodes.values():
-        #     node = value.node
-        #     for attribute_name, attribute in vars(node).items():
-        #         if isinstance(attribute, rospy.Service):
-        #             attribute.shutdown(reason='life is pain')
 
     def render(self):
         path = 'tmp/tree'

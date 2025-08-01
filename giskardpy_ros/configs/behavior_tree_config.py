@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from py_trees.decorators import FailureIsSuccess
+
+from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
+
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
 from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
@@ -37,6 +41,14 @@ class BehaviorTreeConfig:
         """
         GiskardBlackboard().tree_config = self
         self.tree = GiskardBT()
+
+    def switch_to_projection_mode(self):
+        """Override this method to define projection mode behavior for each config type."""
+        raise NotImplementedError()
+
+    def switch_to_execution_mode(self):
+        """Override this method to define execution mode behavior for each config type."""
+        raise NotImplementedError()
 
     def add_visualization_marker_publisher(self,
                                            mode: VisualizationMode,
@@ -144,6 +156,7 @@ class BehaviorTreeConfig:
             self.tree.control_loop_branch.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                          tf_topic=tf_topic,
                                                                          mode=mode)
+
     def add_robot_description_publisher(self, topic: str = 'robot_description'):
         if GiskardBlackboard().tree_config.is_standalone():
             self.tree.wait_for_goal.publish_state.add_robot_description_publisher(topic=topic)
@@ -154,7 +167,8 @@ class BehaviorTreeConfig:
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=False)
         else:
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=True)
-        if GiskardBlackboard().tree_config.is_open_loop() and hasattr(GiskardBlackboard().tree.execute_traj, 'prepare_base_control'):
+        if GiskardBlackboard().tree_config.is_open_loop() and hasattr(GiskardBlackboard().tree.execute_traj,
+                                                                      'prepare_base_control'):
             GiskardBlackboard().tree.execute_traj.prepare_base_control.add_compile_debug_expressions()
             GiskardBlackboard().tree.execute_traj.base_closed_loop.add_evaluate_debug_expressions(log_traj=False)
 
@@ -208,6 +222,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
 
     def setup(self):
         super().setup()
+        self.tree.control_loop_branch.add_projection_behaviors()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
         if self.publish_tf:
@@ -227,6 +242,14 @@ class StandAloneBTConfig(BehaviorTreeConfig):
         if self.publish_free_variables:
             self.add_free_variable_publisher(include_prefix=False)
 
+    def switch_to_projection_mode(self):
+        # StandAlone specific projection logic
+        pass
+
+    def switch_to_execution_mode(self):
+        # StandAlone specific execution logic
+        pass
+
 
 @dataclass
 class OpenLoopBTConfig(BehaviorTreeConfig):
@@ -238,6 +261,9 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
 
     def setup(self):
         super().setup()
+        self.tree.control_loop_branch.add_projection_behaviors()
+        self.tree.execute_traj = ExecuteTraj()
+        self.tree.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.tree.execute_traj)
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
         if self.debug_mode:
@@ -253,6 +279,12 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
             #     # publish_ubA=True
             # )
 
+    def switch_to_projection_mode(self):
+        self.tree.root.remove_child(self.tree.execute_traj_failure_is_success)
+
+    def switch_to_execution_mode(self):
+        self.tree.root.insert_child(self.tree.execute_traj_failure_is_success, -2)
+
 
 @dataclass
 class ClosedLoopBTConfig(BehaviorTreeConfig):
@@ -262,6 +294,7 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
 
     def setup(self):
         super().setup()
+        self.tree.control_loop_branch.add_closed_loop_behaviors()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=False,
                                                 mode=self.visualization_mode)
         # self.add_qp_data_publisher(publish_xdot=True, publish_lb=True, publish_ub=True)
@@ -277,3 +310,9 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
             #     # publish_lbA=True,
             #     # publish_ubA=True
             # )
+
+    def switch_to_projection_mode(self):
+        self.tree.control_loop_branch.switch_to_projection()
+
+    def switch_to_execution_mode(self):
+        self.tree.control_loop_branch.switch_to_closed_loop()
