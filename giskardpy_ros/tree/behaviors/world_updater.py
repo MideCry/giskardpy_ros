@@ -4,8 +4,9 @@ from threading import Thread
 
 from giskard_msgs.action import World
 from giskard_msgs.action._world import World_Result, World_Goal
-from giskard_msgs.srv import GetGroupNames, GetGroupInfo, DyeGroup, GetGroupInfo_Response, GetGroupInfo_Request, \
-    GetGroupNames_Request, GetGroupNames_Response, DyeGroup_Response, DyeGroup_Request
+from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
+from giskard_msgs.srv._get_group_info import GetGroupInfo, GetGroupInfo_Response, GetGroupInfo_Request
+from giskard_msgs.srv._get_group_names import GetGroupNames, GetGroupNames_Response, GetGroupNames_Request
 from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray

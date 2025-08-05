@@ -14,7 +14,7 @@ from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 from giskard_msgs.action._move import Move_Result, Move_Goal
 from giskard_msgs.action._world import World_Result
 from giskard_msgs.msg import GiskardError
-from giskard_msgs.srv import DyeGroup_Response
+from giskard_msgs.srv._dye_group import DyeGroup_Response
 from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
 from tf2_py import LookupException, ExtrapolationException

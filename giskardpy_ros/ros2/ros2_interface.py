@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Optional, Tuple, Union, Any
 
 import xacro
-from rcl_interfaces.srv import GetParameters_Request, GetParameters_Response, GetParameters
+from rcl_interfaces.srv._get_parameters import GetParameters_Request, GetParameters_Response, GetParameters
 from rclpy import Future
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle

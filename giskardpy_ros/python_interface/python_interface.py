@@ -15,8 +15,9 @@ from giskard_msgs.action._move import Move_Result
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
 from giskard_msgs.msg import WorldBody, CollisionEntry, GiskardError, LinkName
-from giskard_msgs.srv import GetGroupInfo, GetGroupNames, DyeGroup, DyeGroup_Response, DyeGroup_Request, \
-    GetGroupNames_Response, GetGroupInfo_Response, GetGroupInfo_Request, GetGroupNames_Request
+from giskard_msgs.srv._get_group_names import GetGroupNames, GetGroupNames_Response, GetGroupNames_Request
+from giskard_msgs.srv._get_group_info import GetGroupInfo, GetGroupInfo_Response, GetGroupInfo_Request
+from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
 from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
@@ -2566,8 +2567,7 @@ class GiskardWrapperNode(Node, GiskardWrapper):
                       use_global_arguments=use_global_arguments, enable_rosout=enable_rosout,
                       start_parameter_services=start_parameter_services, parameter_overrides=parameter_overrides,
                       allow_undeclared_parameters=allow_undeclared_parameters,
-                      automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides,
-                      enable_logger_service=enable_logger_service)
+                      automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides)
         rospy.executor.add_node(self)
         GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name)
         self.is_spinning = False
