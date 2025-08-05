@@ -24,7 +24,7 @@ from rclpy.client import Client
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
-from giskardpy.data_types.data_types import goal_parameter
+from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, ExecutionException
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \

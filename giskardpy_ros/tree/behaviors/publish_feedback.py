@@ -1,7 +1,4 @@
 from typing import Optional
-from line_profiler import profile
-
-from line_profiler import profile
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import numpy as np
@@ -9,7 +6,6 @@ from giskard_msgs.msg import ExecutionState
 from py_trees.common import Status
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 
-from giskardpy.data_types.data_types import LifeCycleState
 from giskardpy.god_map import god_map
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy

@@ -8,7 +8,7 @@ from giskard_msgs.action._world import World_Result
 from giskard_msgs.msg import CollisionEntry
 
 from giskard_msgs.srv import GetGroupInfo_Response, DyeGroup_Response
-from giskardpy.data_types.data_types import goal_parameter
+from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 
