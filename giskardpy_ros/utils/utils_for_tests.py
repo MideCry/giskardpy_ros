@@ -22,6 +22,7 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
+from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
 from giskardpy.god_map import god_map
@@ -125,7 +126,7 @@ class GiskardTester:
 
         self.giskard = giskard
         self.giskard.setup()
-        if god_map.is_in_github_workflow():
+        if is_in_github_workflow():
             get_middleware().loginfo('Inside github workflow, turning off visualization')
             GiskardBlackboard().tree.turn_off_visualization()
         if 'QP_SOLVER' in os.environ:

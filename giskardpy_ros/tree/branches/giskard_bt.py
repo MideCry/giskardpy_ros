@@ -43,6 +43,7 @@ class GiskardBT(BehaviourTree):
     control_loop_branch: ControlLoop
     root: Sequence
     execute_traj: Optional[ExecuteTraj] = None
+    execute_traj_failure_is_success: Optional[FailureIsSuccess] = None
 
     def __init__(self):
         self.root = Sequence('Giskard', memory=True)

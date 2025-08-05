@@ -3,6 +3,7 @@ from typing import Optional
 
 from py_trees.decorators import FailureIsSuccess
 
+from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
 from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
 
 from giskardpy.data_types.exceptions import SetupException
@@ -12,6 +13,7 @@ from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
+from giskardpy_ros.utils.utils import is_in_github_workflow
 
 
 @dataclass
@@ -21,8 +23,17 @@ class BehaviorTreeConfig:
     debug_mode: bool = False
     visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed
 
+    add_gantt_chart_plotter: bool = False
+    add_goal_graph_plotter: bool = False
+    add_trajectory_plotter: bool = False
+    add_debug_trajectory_plotter: bool = False
+    add_debug_marker_publisher: bool = False
+    add_trajectory_visualizer: bool = False
+    add_debug_trajectory_visualizer: bool = False
+    add_qp_data_publisher: QPDataPublisherConfig = field(default_factory=QPDataPublisherConfig)
+
     def __post_init__(self):
-        if god_map.is_in_github_workflow():
+        if is_in_github_workflow():
             self.debug_mode = False
             self.visualization_mode = VisualizationMode.Nothing
 
@@ -41,6 +52,17 @@ class BehaviorTreeConfig:
         """
         GiskardBlackboard().tree_config = self
         self.tree = GiskardBT()
+        if self.debug_mode:
+            # self.add_gantt_chart_plotter()
+            # self.add_goal_graph_plotter()
+            if self.add_trajectory_plotter: self._add_trajectory_plotter(wait=True)
+            if self.add_debug_trajectory_plotter: self._add_debug_trajectory_plotter(wait=True)
+            if self.add_debug_marker_publisher: self._add_debug_marker_publisher()
+            if self.add_trajectory_visualizer: self._add_trajectory_visualizer()
+            if self.add_debug_trajectory_visualizer: self._add_debug_trajectory_visualizer()
+            if self.add_gantt_chart_plotter: self._add_gantt_chart_plotter()
+            if self.add_goal_graph_plotter: self._add_goal_graph_plotter()
+            if self.add_qp_data_publisher.any(): self._add_qp_data_publisher(publish_config=self.add_qp_data_publisher)
 
     def switch_to_projection_mode(self):
         """Override this method to define projection mode behavior for each config type."""
@@ -69,44 +91,17 @@ class BehaviorTreeConfig:
         if add_to_control_loop:
             self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale)
 
-    def add_qp_data_publisher(self, publish_lb: bool = False, publish_ub: bool = False,
-                              publish_lbA: bool = False, publish_ubA: bool = False,
-                              publish_bE: bool = False, publish_Ax: bool = False,
-                              publish_Ex: bool = False, publish_xdot: bool = False,
-                              publish_weights: bool = False, publish_g: bool = False,
-                              publish_debug: bool = False, add_to_base: bool = False):
+    def _add_qp_data_publisher(self, publish_config: QPDataPublisherConfig):
         """
         QP data is streamed and can be visualized in e.g. plotjuggler. Useful for debugging.
         """
         self.add_evaluate_debug_expressions()
         if GiskardBlackboard().tree_config.is_open_loop():
-            self.tree.execute_traj.base_closed_loop.publish_state.add_qp_data_publisher(
-                publish_lb=publish_lb,
-                publish_ub=publish_ub,
-                publish_lbA=publish_lbA,
-                publish_ubA=publish_ubA,
-                publish_bE=publish_bE,
-                publish_Ax=publish_Ax,
-                publish_Ex=publish_Ex,
-                publish_xdot=publish_xdot,
-                publish_weights=publish_weights,
-                publish_g=publish_g,
-                publish_debug=publish_debug)
+            self.tree.execute_traj.base_closed_loop.publish_state.add_qp_data_publisher(publish_config=publish_config)
         else:
-            self.tree.control_loop_branch.publish_state.add_qp_data_publisher(
-                publish_lb=publish_lb,
-                publish_ub=publish_ub,
-                publish_lbA=publish_lbA,
-                publish_ubA=publish_ubA,
-                publish_bE=publish_bE,
-                publish_Ax=publish_Ax,
-                publish_Ex=publish_Ex,
-                publish_xdot=publish_xdot,
-                publish_weights=publish_weights,
-                publish_g=publish_g,
-                publish_debug=publish_debug)
+            self.tree.control_loop_branch.publish_state.add_qp_data_publisher(publish_config=publish_config)
 
-    def add_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
+    def _add_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
         """
         Plots the generated trajectories.
         :param normalize_position: Positions are centered around zero.
@@ -115,13 +110,13 @@ class BehaviorTreeConfig:
         """
         self.tree.cleanup_control_loop.add_plot_trajectory(normalize_position, wait)
 
-    def add_trajectory_visualizer(self):
+    def _add_trajectory_visualizer(self):
         self.tree.cleanup_control_loop.add_visualize_trajectory()
 
-    def add_debug_trajectory_visualizer(self):
+    def _add_debug_trajectory_visualizer(self):
         self.tree.cleanup_control_loop.add_debug_visualize_trajectory()
 
-    def add_debug_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
+    def _add_debug_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
         """
         Plots debug expressions defined in goals.
         """
@@ -129,15 +124,15 @@ class BehaviorTreeConfig:
         self.tree.cleanup_control_loop.add_plot_debug_trajectory(normalize_position=normalize_position,
                                                                  wait=wait)
 
-    def add_gantt_chart_plotter(self):
+    def _add_gantt_chart_plotter(self):
         self.add_evaluate_debug_expressions()
         self.tree.cleanup_control_loop.add_plot_gantt_chart()
 
-    def add_goal_graph_plotter(self):
+    def _add_goal_graph_plotter(self):
         self.add_evaluate_debug_expressions()
         self.tree.prepare_control_loop.add_plot_goal_graph()
 
-    def add_debug_marker_publisher(self):
+    def _add_debug_marker_publisher(self):
         """
         Publishes debug expressions defined in goals.
         """
@@ -214,7 +209,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        if god_map.is_in_github_workflow():
+        if is_in_github_workflow():
             self.publish_js = False
             self.publish_tf = True
         if self.publish_js and self.publish_free_variables:
@@ -230,12 +225,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
         if self.publish_robot_description:
             self.add_robot_description_publisher()
         self.add_evaluate_debug_expressions()
-        if self.debug_mode:
-            # self.add_gantt_chart_plotter()
-            # self.add_goal_graph_plotter()
-            self.add_trajectory_plotter(wait=True)
-            self.add_debug_trajectory_plotter(wait=True)
-            self.add_debug_marker_publisher()
         # self.add_debug_marker_publisher()
         if self.publish_js:
             self.add_js_publisher(include_prefix=self.include_prefix)
@@ -266,18 +255,6 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
         self.tree.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.tree.execute_traj)
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
                                                 mode=self.visualization_mode)
-        if self.debug_mode:
-            self.add_gantt_chart_plotter()
-            self.add_goal_graph_plotter()
-            self.add_trajectory_plotter(wait=True)
-            self.add_debug_trajectory_plotter(wait=True)
-            self.add_debug_marker_publisher()
-            # self.add_qp_data_publisher(
-            #     publish_debug=True,
-            #     publish_xdot=True,
-            #     # publish_lbA=True,
-            #     # publish_ubA=True
-            # )
 
     def switch_to_projection_mode(self):
         self.tree.root.remove_child(self.tree.execute_traj_failure_is_success)
@@ -297,19 +274,6 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         self.tree.control_loop_branch.add_closed_loop_behaviors()
         self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=False,
                                                 mode=self.visualization_mode)
-        # self.add_qp_data_publisher(publish_xdot=True, publish_lb=True, publish_ub=True)
-        if self.debug_mode:
-            self.add_gantt_chart_plotter()
-            self.add_goal_graph_plotter()
-            self.add_trajectory_plotter(wait=True)
-            self.add_debug_trajectory_plotter(wait=True)
-            self.add_debug_marker_publisher()
-            # self.add_qp_data_publisher(
-            #     publish_debug=True,
-            #     publish_xdot=True,
-            #     # publish_lbA=True,
-            #     # publish_ubA=True
-            # )
 
     def switch_to_projection_mode(self):
         self.tree.control_loop_branch.switch_to_projection()
