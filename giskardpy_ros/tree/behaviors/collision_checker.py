@@ -15,9 +15,9 @@ class CollisionChecker(GiskardBehavior):
     def __init__(self, name: str):
         super().__init__(name)
 
-    def initialise(self) -> None:
-        god_map.collision_scene.add_added_checks()
-        super().initialise()
+    # def initialise(self) -> None:
+    #     god_map.collision_scene.add_added_checks()
+    #     super().initialise()
 
     def are_self_collisions_violated(self, collsions: Collisions) -> None:
         for key, self_collisions in collsions.self_collisions.items():

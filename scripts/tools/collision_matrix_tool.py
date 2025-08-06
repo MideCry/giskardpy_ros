@@ -22,7 +22,6 @@ from std_msgs.msg import ColorRGBA
 
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware, set_middleware
-from giskardpy.model.collision_avoidance_config import BPBCollisionAvoidanceConfig
 from giskardpy.model.world_config import EmptyWorld
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig, StandAloneBTConfig
@@ -30,7 +29,7 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig, StandAloneRobotInterfaceConfig
 from giskardpy.god_map import god_map
-from giskardpy.model.better_pybullet_syncer import BetterPyBulletSyncer
+from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
 from giskardpy.model.collision_world_syncer import DisableCollisionReason
 from giskardpy.model.utils import robot_name_from_urdf_string
 from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization

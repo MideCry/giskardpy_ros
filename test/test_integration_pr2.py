@@ -17,6 +17,7 @@ from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import ColorRGBA
 
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengthException, UnknownGoalException, \
     DuplicateNameException, CorruptMeshException, UnknownGroupException, UnknownLinkException, \
@@ -25,7 +26,6 @@ from giskardpy.data_types.exceptions import GiskardException, MaxTrajectoryLengt
     EmptyProblemException, SetupException, UnknownJointException, ExecutionException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence, ToDriveOrNotToDrive
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
@@ -42,7 +42,7 @@ from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rot
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2StandaloneInterface, WorldWithPR2Config, \
-    PR2QPControllerConfig
+    PR2QPControllerConfig, PR2CollisionAvoidance
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
@@ -170,15 +170,13 @@ class PR2Tester(GiskardTester):
         if giskard is None:
             giskard = Giskard(world_config=WorldWithPR2Config(urdf=robot_desc),
                               robot_interface_config=PR2StandaloneInterface(),
-                              collision_avoidance_config=DisableCollisionAvoidanceConfig(),
+                              collision_checker_id=CollisionCheckerLib.bpb,
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
-                              # qp_controller_config=QPControllerConfig(qp_solver=SupportedQPSolver.gurobi))
                               qp_controller_config=PR2QPControllerConfig(mpc_dt=0.05,
                                                                          control_dt=None,
                                                                          retries_with_relaxed_constraints=15,
                                                                          qp_formulation=QPFormulation()
-                                                                         # qp_solver=SupportedQPSolver.gurobi,
                                                                          ))
         super().__init__(giskard)
         self.robot = god_map.world.get_view_by_name(self.api.robot_name)

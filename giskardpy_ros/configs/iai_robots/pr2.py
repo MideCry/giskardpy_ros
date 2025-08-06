@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 
 from giskardpy.god_map import god_map
-from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
 from semantic_world.connections import OmniDrive, RevoluteConnection
 from semantic_world.prefixed_name import PrefixedName
-from semantic_world.robots import PR2
+from semantic_world.robots import PR2, CollisionAvoidanceThreshold
 
 
 @dataclass
@@ -17,7 +16,40 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
 
     def setup(self):
         super().setup()
-        PR2.from_world(world=self.world)
+        pr2 = PR2.from_world(world=self.world)
+        pr2.load_collision_config('self_collision_matrices/iai/pr2.srdf')
+        pr2.collision_config.frozen_connections = {
+            self.world.get_connection_by_name('r_gripper_l_finger_joint'),
+            self.world.get_connection_by_name('l_gripper_l_finger_joint')
+        }
+        pr2.collision_config.default_external_threshold = CollisionAvoidanceThreshold(soft_threshold=0.1,
+                                                                                      hard_threshold=0.0)
+        for joint_name in ['r_wrist_roll_joint', 'l_wrist_roll_joint']:
+            connection = self.world.get_connection_by_name(joint_name)
+            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0,
+                                                    number_of_repeller=4)
+            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
+                                                                       threshold=threshold)
+
+        for joint_name in ['r_wrist_flex_joint', 'l_wrist_flex_joint']:
+            connection = self.world.get_connection_by_name(joint_name)
+            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0,
+                                                    number_of_repeller=2)
+            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
+                                                                       threshold=threshold)
+        for joint_name in ['r_elbow_flex_joint', 'l_elbow_flex_joint']:
+            connection = self.world.get_connection_by_name(joint_name)
+            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0)
+            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
+                                                                       threshold=threshold)
+        for joint_name in ['r_forearm_roll_joint', 'l_forearm_roll_joint']:
+            connection = self.world.get_connection_by_name(joint_name)
+            threshold = CollisionAvoidanceThreshold(soft_threshold=0.025, hard_threshold=0.0)
+            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
+                                                                       threshold=threshold)
+        drive_threshold = CollisionAvoidanceThreshold(soft_threshold=0.2, hard_threshold=0.1, number_of_repeller=2)
+        pr2.collision_config.set_external_threshold_for_connection(connection=pr2.drive,
+                                                                   threshold=drive_threshold)
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
@@ -97,46 +129,6 @@ class PR2VelocityMujocoInterface(RobotInterfaceConfig):
         self.discover_interfaces_from_controller_manager()
         self.sync_odometry_topic('/odom', self.drive_joint_name)
         self.add_base_cmd_velocity(cmd_vel_topic='/cmd_vel')
-
-
-class PR2CollisionAvoidance(CollisionAvoidanceConfig):
-    def __init__(self, drive_joint_name: str = 'brumbrum',
-                 collision_checker: CollisionCheckerLib = CollisionCheckerLib.bpb):
-        super().__init__(collision_checker=collision_checker)
-        self.drive_joint_name = drive_joint_name
-
-    def setup(self):
-        self.load_self_collision_matrix('self_collision_matrices/iai/pr2.srdf')
-        self.set_default_external_collision_avoidance(soft_threshold=0.1,
-                                                      hard_threshold=0.0)
-        for joint_name in ['r_wrist_roll_joint', 'l_wrist_roll_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        number_of_repeller=4,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0,
-                                                        max_velocity=0.2)
-        for joint_name in ['r_wrist_flex_joint', 'l_wrist_flex_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        number_of_repeller=2,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0,
-                                                        max_velocity=0.2)
-        for joint_name in ['r_elbow_flex_joint', 'l_elbow_flex_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0)
-        for joint_name in ['r_forearm_roll_joint', 'l_forearm_roll_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        soft_threshold=0.025,
-                                                        hard_threshold=0.0)
-        self.fix_joints_for_collision_avoidance([
-            'r_gripper_l_finger_joint',
-            'l_gripper_l_finger_joint'
-        ])
-        self.overwrite_external_collision_avoidance(self.drive_joint_name,
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.2,
-                                                    hard_threshold=0.1)
 
 
 @dataclass

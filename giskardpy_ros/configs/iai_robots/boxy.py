@@ -1,4 +1,3 @@
-from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
 
 
