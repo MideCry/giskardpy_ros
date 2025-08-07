@@ -121,6 +121,24 @@ class VectorFieldHistogram:
         # self.histogram_plot(target_point)
 
     def update_histogram(self, distances, angles, target_sector, target_angle_deg):
+        """
+        The update_histogram method constitutes the core of the Vector Field Histogram.
+        The method first constructs the histogram by cutting the scanners range up into
+        48 5-degree sectors, after which the magnitudes of each sector are calculated.
+        If the calculated magnitude is under a certain threshold, the sectors in which the threshold
+        has been undershot are marked as free, whereas sector where the threshold has been overshot are
+        marked as obstructed. Consecutive free sector are merged into lists, so-called "valleys";
+        at which point the algorithm checks whether the direction of the target is within one of these valleys.
+        Should the sector of the target direction coincide with a sector that's part of a valley,
+        then the robot will be pushed into the direction of a target. Should the target be obstructed
+        by an obstacle, the algorithm will search for the nearest available valley of a certain size to
+        autonomously avoid the obstacle.
+
+        :param distances: distances from the target sector
+        :param angles: angles from the respective laser scanner reading
+        :param target_sector: the sector of the histogram the target is in (from point of the robot)
+        :param target_angle_deg: target angle in degrees
+        """
         # start_time = time.perf_counter()
         theta_deg = None
         x_points = distances * np.cos(angles)
@@ -288,7 +306,7 @@ class VectorFieldHistogram:
     #         weight_sum = 0
     #         for offset in range(-l, l+1):
     #             idx = k + offset % length # wrap around
-    #             weight = 2 if offset != -l and offset !=l else 1 # this is dogwater
+    #             weight = 2 if offset != -l and offset !=l else 1
     #
     #             value += weight * polar_histogram[idx]
     #             weight_sum += weight
