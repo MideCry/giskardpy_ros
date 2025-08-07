@@ -428,27 +428,6 @@ class TestCartGoals:
 
 
 class TestConstraints:
-    def test_carry_my_bs(self, zero_pose: HSRTestWrapper):
-        laser = 'base_range_sensor_link'
-        zero_pose.motion_goals.add_carry_my_luggage(name='cmb',
-                                                    camera_link='head_center_camera_frame',
-                                                    point_cloud_laser_topic_name='',
-                                                    laser_frame_id=laser,
-                                                    height_for_camera_target=1.5)
-        zero_pose.allow_all_collisions()
-        zero_pose.execute(expected_error_type=PreemptedException,
-                          # stop_after=20,
-                          add_local_minimum_reached=False)
-
-        zero_pose.motion_goals.add_carry_my_luggage(name='cmb',
-                                                    camera_link='head_center_camera_frame',
-                                                    point_cloud_laser_topic_name='',
-                                                    # laser_topic_name='/laser',
-                                                    laser_frame_id=laser,
-                                                    drive_back=True)
-        zero_pose.allow_all_collisions()
-        zero_pose.execute(add_local_minimum_reached=False)
-
     def test_PointingCone(self, zero_pose: HSRTestWrapper):
         tip_link = 'head_center_camera_frame'
         goal_point = PointStamped()
@@ -1598,6 +1577,27 @@ class TestSUTURO:
                                                max_velocity=0.3,
                                                weight=WEIGHT_COLLISION_AVOIDANCE)
 
+        zero_pose.execute(add_local_minimum_reached=False)
+
+    def test_carry_my_bs(self, zero_pose: HSRTestWrapper):
+        laser = 'base_range_sensor_link'
+        zero_pose.motion_goals.add_carry_my_luggage(name='cmb',
+                                                    camera_link='head_center_camera_frame',
+                                                    point_cloud_laser_topic_name='',
+                                                    laser_frame_id=laser,
+                                                    height_for_camera_target=1.5)
+        zero_pose.allow_all_collisions()
+        zero_pose.execute(expected_error_type=PreemptedException,
+                          # stop_after=20,
+                          add_local_minimum_reached=False)
+
+        zero_pose.motion_goals.add_carry_my_luggage(name='cmb',
+                                                    camera_link='head_center_camera_frame',
+                                                    point_cloud_laser_topic_name='',
+                                                    # laser_topic_name='/laser',
+                                                    laser_frame_id=laser,
+                                                    drive_back=True)
+        zero_pose.allow_all_collisions()
         zero_pose.execute(add_local_minimum_reached=False)
 
 
