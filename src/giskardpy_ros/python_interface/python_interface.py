@@ -36,7 +36,7 @@ from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached,
 from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
     DistanceMonitor
 from giskardpy.motion_statechart.monitors.force_torque_monitor import PayloadForceTorque
-from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
+from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached, JointPositionAbove
 from giskardpy.motion_statechart.monitors.lidar_monitor import LidarPayloadMonitor
 from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached, TimeAbove, Alternator, CancelMotion, \
     EndMotion, TrueMonitor, FalseMonitor
@@ -53,9 +53,11 @@ from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionListStop
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
-from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath, RealTimeConePointing
+from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath
+from giskardpy_ros.goals.realtime_goals import RealTimeConePointing
 from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundHinge, Reaching, Placing, OpenDoorGoal, Mixing, \
     JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy_ros.monitors.handle_offset_monitor import HandleOffsetCorrection, OffsetCorrectionReset
@@ -558,17 +560,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     end_condition: str = '',
                                     **kwargs: goal_parameter) -> str:
         """
-        This goal will use the kinematic chain between root and tip link to move tip link to the goal pose.
-        The max velocities enforce a strict limit, but require a lot of additional constraints, thus making the
-        system noticeably slower.
-        The reference velocities don't enforce a strict limit, but also don't require any additional constraints.
+        This goal maximizes the manipulability of the kinematic chain between root_link and tip_link.
+        This chain should only include rotational joint and no linear joints i.e. torso lift joints or odometry joints.
         :param root_link: name of the root link of the kin chain
         :param tip_link: name of the tip link of the kin chain
-        :param goal_pose: the goal pose
-        :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
-        :param reference_linear_velocity: m/s
-        :param reference_angular_velocity: rad/s
-        :param weight: None = use default weight
         """
         if isinstance(root_link, str):
             root_link = giskard_msgs.LinkName(name=root_link)
@@ -578,6 +573,46 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     name=name,
                                     tip_link=tip_link,
                                     root_link=root_link,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition,
+                                    **kwargs)
+
+    def add_base_arm_weight_scaling(self,
+                                    tip_link: Union[str, giskard_msgs.LinkName],
+                                    root_link: Union[str, giskard_msgs.LinkName],
+                                    tip_goal: PointStamped,
+                                    arm_joints: List[str],
+                                    base_joints: List[str],
+                                    gain: int = 100000,
+                                    name: Optional[str] = None,
+                                    start_condition: str = '',
+                                    pause_condition: str = '',
+                                    end_condition: str = '',
+                                    **kwargs: goal_parameter) -> str:
+        """
+        This goals adds weight scaling constraints with the distance between a tip_link and its goal Position as a
+        scaling expression. The larger the scaling expression the more is the base movement used to achieve
+        all other constraints instead of arm movements. When the expression decreases this relation changes to favor
+        arm movements instead of base movements.
+        :param root_link: name of the root link of the kin chain
+        :param tip_link: name of the tip link of the kin chain
+        :param tip_goal: the goal position
+        :param arm_joints: joints of the arm that should be scaled.
+        :param base_joints: joints of the base that should be scaled.
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        return self.add_motion_goal(class_name=BaseArmWeightScaling.__name__,
+                                    name=name,
+                                    tip_link=tip_link,
+                                    root_link=root_link,
+                                    tip_goal=tip_goal,
+                                    arm_joints=arm_joints,
+                                    base_joints=base_joints,
+                                    gain=gain,
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
@@ -840,6 +875,64 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     pause_condition=pause_condition,
                                     end_condition=end_condition,
                                     **kwargs)
+
+    def add_wiggle_insert(self,
+                          root_link: giskard_msgs.LinkName,
+                          tip_link: giskard_msgs.LinkName,
+                          hole_point: PointStamped,
+                          name: Optional[str] = None,
+                          down_velocity: float = 0.2,
+                          noise_translation: float = 0.5,
+                          noise_angle: float = 10,
+                          random_walk: bool = True,
+                          vector_momentum_factor: float = 0.9,
+                          angular_momentum_factor: float = 0.9,
+                          center_pull_strength_angle: float = 0.1,
+                          center_pull_strength_vector: float = 0.25,
+                          weight: Optional[float] = None,
+                          start_condition: str = '',
+                          pause_condition: str = '',
+                          end_condition: str = ''):
+        """
+        Press down while wiggling the end effector.
+        :param root_link:
+        :param tip_link:
+        :param hole_point: Center point of the hole
+        :param hole_normal: Vector perpendicular to the hole. default = z-axis of map
+        :param threshold: threshold for distance to hole_point to end task
+        :param noise_translation: describes how strong the translation wiggle is.
+        :param noise_angle: describes how strong the angular wiggle is.
+        :param random_walk: determines if random walk or random sample strategy is used
+        :param vector_momentum_factor: (only when random_walk=True) Higher value increases influence of momentum,
+                                                                    creating smoother but less random translation movement
+        :param angular_momentum_factor: (only when random_walk=True) Higher value increases influence of momentum,
+                                                                     creating smoother but less random angular movement
+        :param center_pull_strength_angle: (only when random_walk=True) Forces angular movement faster back towards
+                                                                        starting angle
+        :param center_pull_strength_vector: (only when random_walk=True) Forces translation movement faster back towards
+                                                                         hole_point
+        """
+        if isinstance(root_link, str):
+            root_link = giskard_msgs.LinkName(name=root_link)
+        if isinstance(tip_link, str):
+            tip_link = giskard_msgs.LinkName(name=tip_link)
+        return self.add_motion_goal(class_name=WiggleInsert.__name__,
+                                    root_link=root_link,
+                                    tip_link=tip_link,
+                                    name=name,
+                                    down_velocity=down_velocity,
+                                    hole_point=hole_point,
+                                    noise_translation=noise_translation,
+                                    noise_angle=noise_angle,
+                                    random_walk=random_walk,
+                                    vector_momentum_factor=vector_momentum_factor,
+                                    angular_momentum_factor=angular_momentum_factor,
+                                    center_pull_strength_angle=center_pull_strength_angle,
+                                    center_pull_strength_vector=center_pull_strength_vector,
+                                    weight=weight,
+                                    start_condition=start_condition,
+                                    pause_condition=pause_condition,
+                                    end_condition=end_condition)
 
     def _add_collision_avoidance(self,
                                  collisions: List[CollisionEntry],
@@ -1393,6 +1486,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                     start_condition=start_condition,
                                     pause_condition=pause_condition,
                                     end_condition=end_condition)
+
     # --tbr
     def add_follow_nav_path(self,
                             path: Path,
@@ -2415,6 +2509,28 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         return self.add_monitor(class_name=JointGoalReached.__name__,
                                 name=name,
                                 goal_state=goal_state,
+                                threshold=threshold,
+                                start_condition=start_condition,
+                                pause_condition=pause_condition,
+                                end_condition=end_condition,
+                                reset_condition=reset_condition)
+
+    def add_joint_position_above(self,
+                                 joint_name: Union[str, giskard_msgs.LinkName],
+                                 threshold: float,
+                                 name: Optional[str] = None,
+                                 start_condition: str = '',
+                                 pause_condition: str = '',
+                                 end_condition: str = '',
+                                 reset_condition: str = '') -> str:
+        """
+        True if `joint_name` is above `threshold`.
+        """
+        if isinstance(joint_name, str):
+            joint_name = giskard_msgs.LinkName(name=joint_name)
+        return self.add_monitor(class_name=JointPositionAbove.__name__,
+                                name=name,
+                                joint_name=joint_name,
                                 threshold=threshold,
                                 start_condition=start_condition,
                                 pause_condition=pause_condition,

@@ -46,7 +46,9 @@ class BehaviorTreeConfig(ABC):
     def add_visualization_marker_publisher(self,
                                            mode: VisualizationMode,
                                            add_to_sync: Optional[bool] = None,
-                                           add_to_control_loop: Optional[bool] = None):
+                                           add_to_control_loop: Optional[bool] = None,
+                                           scale_scale: float = 1.0,
+                                           include_tf_predix: bool = False):
         """
 
         :param add_to_sync: Markers are published while waiting for a goal.
@@ -56,9 +58,9 @@ class BehaviorTreeConfig(ABC):
                                       False: use meshes defined in urdf.
         """
         if add_to_sync:
-            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode)
+            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale, include_tf_predix=include_tf_predix)
         if add_to_control_loop:
-            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode)
+            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale, include_tf_predix=include_tf_predix)
 
     def add_qp_data_publisher(self, publish_lb: bool = False, publish_ub: bool = False,
                               publish_lbA: bool = False, publish_ubA: bool = False,
@@ -143,7 +145,7 @@ class BehaviorTreeConfig(ABC):
         self.tree.wait_for_goal.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                tf_topic=tf_topic,
                                                                mode=mode)
-        if GiskardBlackboard().tree.is_standalone():
+        if GiskardBlackboard().tree.is_standalone() or GiskardBlackboard().tree.is_open_loop():
             self.tree.control_loop_branch.publish_state.add_tf_publisher(include_prefix=include_prefix,
                                                                          tf_topic=tf_topic,
                                                                          mode=mode)
@@ -247,7 +249,7 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
     def __init__(self,
                  debug_mode: bool = False,
                  publish_free_variables: bool = False, add_tf_pub: bool = False,
-                 visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed):
+                 visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposedFrameLocked):
         """
         The default behavior tree for Giskard in open-loop mode. It will first plan the trajectory in simulation mode
         and then publish it to connected joint trajectory followers. The base trajectory is tracked with a closed-loop

@@ -42,6 +42,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 
 # Get requirements.txt from DOWNLOAD_URL-Parameter
 RUN curl -fsSL $DOWNLOAD_URL -o requirements.txt
+RUN sudo pip install pybind11
 
 RUN sudo apt install libeigen3-dev && \
     python3 -m pip install --upgrade pip && \

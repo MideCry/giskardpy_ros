@@ -11,9 +11,10 @@ from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
 import giskardpy_ros.ros1.tfwrapper as tf
-from giskardpy.data_types.exceptions import PreemptedException
 from giskard_msgs.msg import LinkName
-from giskardpy.data_types.exceptions import EmptyProblemException, ObjectForceTorqueThresholdException
+from giskardpy.data_types.exceptions import EmptyProblemException
+from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
+from giskardpy.data_types.exceptions import PreemptedException
 from giskardpy.data_types.suturo_types import ForceTorqueThresholds, GraspTypes, TakePoseTypes, ObjectTypes
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
@@ -27,11 +28,12 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy_ros.tasks.vfh_task import VFHMoveDir
 from giskardpy_ros.utils.VFH import VectorFieldHistogram
-from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from giskardpy_ros.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
         Retracting, Tilting, KeepRotationGoal
+from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTestWrapper
+from giskardpy_ros.utils.utils_for_tests import launch_launchfile
 
 
 class HSRTestWrapper(GiskardTestWrapper):
@@ -55,8 +57,8 @@ class HSRTestWrapper(GiskardTestWrapper):
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,
                                                                       publish_js=False),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
-                                                                      control_dt=0.05))
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.0125,
+                                                                      control_dt=0.0125))
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
@@ -384,6 +386,45 @@ class TestCartGoals:
         zero_pose.set_cart_goal(goal_pose=r_goal, tip_link=zero_pose.tip, root_link='map')
         zero_pose.allow_all_collisions()
         zero_pose.execute()
+
+    def test_wiggle_insert(self, zero_pose: HSRTestWrapper):
+        goal_state = {
+            'arm_flex_joint': -1.5,
+            'arm_lift_joint': 0.5,
+            'arm_roll_joint': 0,
+            'head_pan_joint': 0,
+            'head_tilt_joint': 0,
+            'wrist_flex_joint': -1.5,
+            'wrist_roll_joint': 0,
+        }
+
+        zero_pose.monitors.add_set_seed_configuration(seed_configuration=goal_state)
+        zero_pose.execute()
+
+        hpl = god_map.world.search_for_link_name(link_name='hand_gripper_tool_frame',
+                                                 group_name='hsrb')
+        root_link = god_map.world.search_for_link_name(link_name='map')
+        hole_point = PointStamped()
+        hole_point.header.frame_id = 'map'
+        hole_point.point.x = 0.5
+        hole_point.point.z = 0.3
+        wiggle = 'wiggle'
+        zero_pose.motion_goals.add_wiggle_insert(name=wiggle,
+                                                 root_link=root_link,
+                                                 tip_link=hpl,
+                                                 hole_point=hole_point,
+                                                 end_condition=wiggle)
+        resistence_point = PointStamped()
+        resistence_point.header.frame_id = 'map'
+        resistence_point.point.x = 0.5
+        resistence_point.point.z = 0.4
+        timer = zero_pose.monitors.add_sleep(5)
+        zero_pose.motion_goals.add_cartesian_position(root_link=root_link,
+                                                      tip_link=hpl,
+                                                      goal_point=resistence_point,
+                                                      end_condition=timer)
+        zero_pose.monitors.add_end_motion(start_condition=wiggle)
+        zero_pose.execute(add_local_minimum_reached=False)
 
 
 class TestConstraints:

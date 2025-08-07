@@ -37,6 +37,15 @@ def ros(request):
             launch_launchfile('package://iai_kitchen/launch/upload_kitchen_obj.launch')
         except:
             get_middleware().logwarn('iai_apartment not found')
+
+    try:
+        rospy.get_param('dlr_kitchen_description')
+    except:
+        try:
+            launch_launchfile('package://dlr_kitchen/launch/upload_kitchen.launch')
+        except:
+            get_middleware().logwarn('dlr_kitchen_description not found')
+
     try:
         rospy.get_param('apartment_description')
     except:
@@ -148,12 +157,12 @@ def dlr_kitchen_setup(better_pose: GiskardTestWrapper) -> GiskardTestWrapper:
         kitchen_pose.pose.position.y = 2
         kitchen_pose.pose.orientation = Quaternion(*quaternion_from_axis_angle([0,0,1], -np.pi/2))
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=rospy.get_param('dlr_kitchen_description'),
                                       pose=kitchen_pose)
     else:
         kitchen_pose = tf.lookup_pose('map', 'iai_kitchen/world')
         better_pose.add_urdf_to_world(name=better_pose.default_env_name,
-                                      urdf=rospy.get_param('kitchen_description'),
+                                      urdf=rospy.get_param('dlr_kitchen_description'),
                                       pose=kitchen_pose,
                                       js_topic='/kitchen/joint_states',
                                       set_js_topic='/kitchen/cram_joint_states')
