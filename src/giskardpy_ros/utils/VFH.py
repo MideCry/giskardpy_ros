@@ -14,7 +14,7 @@ import tf
 
 from giskardpy.utils.math import angle_between_vector
 
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 
 
 class VectorFieldHistogram:
