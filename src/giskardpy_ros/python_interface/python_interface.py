@@ -1913,7 +1913,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
         bar_center = PointStamped()
         bar_center.header.frame_id = handle_name
-        bar_center.point.y = 0.045
 
         if grasp_axis_offset is None:
             return self.add_grasp_bar(name=name,
@@ -1936,6 +1935,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
                                              bar_center=bar_center,
                                              bar_axis=bar_axis,
                                              bar_length=handle_bar_length,
+                                             handle_link=handle_name,
                                              reference_linear_velocity=0.1 * ref_speed,
                                              reference_angular_velocity=0.5 * ref_speed,
                                              grasp_axis_offset=grasp_axis_offset,

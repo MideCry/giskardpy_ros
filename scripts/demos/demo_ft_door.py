@@ -128,15 +128,10 @@ def setup_door1(init_pose_pub: Publisher):
 
 
 def setup_door2(init_pose_pub: Publisher):
-    # handle_joint = "iai_kitchen/iai_kitchen:arena:door_handle_joint"
-    # hinge_joint = "iai_kitchen/iai_kitchen:arena:door_origin_revolute_joint"
-
     base_pose = PoseStamped()
     base_pose.header.frame_id = 'map'
     base_pose.pose.position.x = 1.8
     base_pose.pose.position.y = 3.0
-    # base_pose.pose.position.x = 1.8
-    # base_pose.pose.position.y = -0.8
     base_pose.pose.orientation.z = -1
 
     odom = gis.monitors.add_local_minimum_reached()

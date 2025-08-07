@@ -10,7 +10,6 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, PointStamped, Vect
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 
-import giskard_msgs
 import giskardpy_ros.ros1.tfwrapper as tf
 from giskardpy.data_types.exceptions import PreemptedException
 from giskard_msgs.msg import LinkName
@@ -27,8 +26,8 @@ from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy_ros.tasks.vfh_task import VFHMoveDir
-from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 from giskardpy_ros.utils.VFH import VectorFieldHistogram
+from giskardpy_ros.utils.utils_for_tests import GiskardTestWrapper, launch_launchfile, compare_poses
 
 if 'GITHUB_WORKFLOW' not in os.environ:
     from giskardpy_ros.goals.suturo import Reaching, TakePose, VerticalMotion, AlignHeight, Placing, \
@@ -875,10 +874,11 @@ class TestSUTURO:
         offset = Vector3Stamped()
         offset.header.frame_id = 'hand_gripper_tool_frame'
         offset.vector.x = -0.1
+        offset.vector.y = -0.045
 
         slep = door_setup.monitors.add_sleep(1000)
         force = door_setup.monitors.add_force_torque(ForceTorqueThresholds.DOOR.value, '')
-        door_setup.motion_goals.hsrb_door_handle_grasp(handle_name=handle_name, handle_bar_length=0.05,
+        door_setup.motion_goals.hsrb_door_handle_grasp(handle_name=handle_name, handle_bar_length=0.00,
                                                        grasp_axis_offset=offset, end_condition=force)
 
         goal_point = PointStamped()
@@ -896,15 +896,17 @@ class TestSUTURO:
         door_setup.allow_all_collisions()
         door_setup.execute(add_local_minimum_reached=False)
 
-        door_setup.close_gripper()
-
-        door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=0.35,
-                                                    hinge_limit=-0.8)
-
         door_setup.allow_all_collisions()
 
+        door_setup.close_gripper()
+        open_door = door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=np.pi / 2,
+                                                                hinge_limit=-0.8)
+        door_setup.monitors.add_end_motion(start_condition=open_door)
+
+        door_setup.allow_all_collisions()
         door_setup.execute(add_local_minimum_reached=False)
 
+        door_setup.allow_all_collisions()
         door_setup.open_gripper()
 
     def test_open_hohc_simon(self, hohc_setup: HSRTestWrapper):

@@ -1259,7 +1259,7 @@ class OpenDoorGoal(Goal):
 
         handle_state = {handle_frame_id: limit_handle}
         handle_state_monitor = JointGoalReached(goal_state=handle_state,
-                                                threshold=0.001,
+                                                threshold=0.005,
                                                 name=f'{name}_handle_joint_monitor')
         self.add_monitor(handle_state_monitor)
 
