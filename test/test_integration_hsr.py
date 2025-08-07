@@ -828,7 +828,7 @@ class TestSUTURO:
     def test_continuous_pointing(self, zero_pose):
         pub = rospy.Publisher('/human_pose', PointStamped, queue_size=10)
 
-        zero_pose.continuous_pointing_head()
+        zero_pose.motion_goals.continuous_pointing_head()
         zero_pose.execute(wait=False, add_local_minimum_reached=False)
 
         rospy.sleep(1)
@@ -886,9 +886,10 @@ class TestSUTURO:
         door_setup.allow_all_collisions()
         door_setup.close_gripper()
 
-        door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=0.35,
-                                                    hinge_limit=-0.8)
+        open_door = door_setup.motion_goals.hsrb_open_door_goal(handle_name=handle_name, handle_limit=0.35,
+                                                                hinge_limit=-0.8)
 
+        door_setup.monitors.add_end_motion(start_condition=open_door)
         door_setup.allow_all_collisions()
         door_setup.execute(add_local_minimum_reached=False)
         door_setup.open_gripper()
