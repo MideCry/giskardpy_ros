@@ -7,10 +7,6 @@ from giskardpy.god_map import god_map
 
 
 class VFHMoveDir(Task):
-    """
-    The VFH MoveDir task
-    """
-
     def __init__(self,
                  root_link: PrefixName,
                  tip_link: PrefixName,
@@ -19,6 +15,18 @@ class VFHMoveDir(Task):
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_COLLISION_AVOIDANCE,
                  name: Optional[str] = None):
+        """
+        The VFH MoveDir task pushes the robot in a given direction calculated by
+        the Vector Field Histogram Algorithm.
+
+        :param root_link: prefix name of the root link
+        :param tip_link: prefix name of the tip link
+        :param laser_link: prefix name of the laser link
+        :param laser_V_goal_angle: vector of the angle between the laser scanner and the goal
+        :param max_velocity: maximum velocity of the robot
+        :param weight: weight of the movement
+        :param name: name of the task
+        """
         self.tip_link = tip_link
         self.root = root_link
         self.max_velocity = max_velocity

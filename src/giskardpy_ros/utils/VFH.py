@@ -18,18 +18,30 @@ from giskardpy.utils.math import angle_between_vector
 
 
 class VectorFieldHistogram:
-    """
-
-    """
     def __init__(self,
-                 num_readings: int,
                  max_range: float,
                  grid_size: float,
                  sector_angle: int,
                  obstacle_threshold: float,
                  s_max: int,
                  input_topic: str):
-        self.num_readings = num_readings
+
+        """
+        The Vector Field Histogram is a real-time collision avoidance algorithm,
+        which is specifically designed to handle mid-maneuver path obstructions and
+        the problem of autonomous maneuvering of narrow paths. This is done by creating
+        a polar histogram which essentially cuts the HSRs LiDar scanner into 48 equally
+        sized sectors and calculates the so-called Polar Obstacle Density(POD) for each of those sectors.
+        If the POD overshoots a certain threshold, the sector in which the threshold has been found is marked as
+        obstructed, whereas sectors in which the threshold hasn't been overshot are marked as free.
+
+        :param max_range: maximal that the VFH should consider when doing its calculations
+        :param grid_size: size of the histogram grid
+        :param sector_angle: size of the sectors in degrees that the polar histogram is being constructed with
+        :param obstacle_threshold: threshold to differentiate between obstructed and free sectors
+        :param s_max: variable to decide whether a valley is wide or narrow, which changes the direction vector calculation
+        :param input_topic: the topic the laser data is taken from
+        """
         self.max_range = max_range
         self.grid_size = grid_size
         self.sector_angle = sector_angle
@@ -53,7 +65,6 @@ class VectorFieldHistogram:
     # calculate polar obstacle density, as indicator how many obstacles are within a sector - tbd
     # Unit testing by checking steering angles - tbd
 
-    # Get LiDAR Data from /hsrb/base_scan topic
     def laser_callback(self, data: LaserScan):
         self.distances = np.array(data.ranges)
         self.angles = data.angle_min + np.arange(len(self.distances)) * data.angle_increment
@@ -87,7 +98,6 @@ class VectorFieldHistogram:
     def target_sim(self,
                    target_point=(1.0, 0.0, 0.0)):
         # start_time = time.perf_counter() - benchmark stuff
-
         # calculating sector that target is in
         target_angle = angle_between_vector(v1=np.array([1, 0, 0]), v2=target_point) + 2.0944
 
@@ -95,7 +105,7 @@ class VectorFieldHistogram:
         target_angle_deg = np.rad2deg(target_angle) % 240
         # print('target_angle_deg:', target_angle_deg)
         target_sector = int(target_angle_deg // self.sector_angle)
-        # print(f"Target Sector:{target_sector}")
+        print(f"Target Sector:{target_sector}")
         # end_time = time.perf_counter()  # End timing
         # elapsed_time_ms = (end_time - start_time) * 1000
         # rospy.loginfo(f"target_sim took {elapsed_time_ms:.3f} ms") - benchmark stuff
@@ -140,12 +150,12 @@ class VectorFieldHistogram:
             magnitudes = 1 - (clipped_dists / self.d_max)
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
-        # print(polar_histogram)
+        print(polar_histogram)
 
         # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
-        free_sectors = np.where(polar_histogram <= self.obstacle_threshold)[0] # replace obstacle threshold with POD
-        # print(free_sectors)
+        free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]
+        print(free_sectors)
         # valley calculation
         valleys = []
         for k, g in groupby(enumerate(free_sectors), lambda ix: ix[0] - ix[1]):
@@ -159,7 +169,7 @@ class VectorFieldHistogram:
         for valley in valleys:
             if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # check condition and how the valley is picked
                 selected_valley = valley
-                # print(f"Selected Valley: {selected_valley}")
+                print(f"Selected Valley: {selected_valley}")
                 break
 
         if selected_valley:
@@ -250,8 +260,8 @@ class VectorFieldHistogram:
         if theta_deg is not None:
             theta_rad = np.radians(-(theta_deg - 120.0)) # -- maybe np. instead of .math?
             direction_vector = np.array([np.cos(theta_rad), np.sin(theta_rad), 0])
-            # print(f"Directional Vector: {direction_vector}")
-            # print("---------------------------------------")
+            print(f"Directional Vector: {direction_vector}")
+            print("---------------------------------------")
             self.direction_vector = direction_vector
             return direction_vector
         else:
