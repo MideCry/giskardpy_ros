@@ -32,7 +32,8 @@ class Giskard:
                  behavior_tree_config: Optional[BehaviorTreeConfig] = None,
                  qp_controller_config: Optional[QPControllerConfig] = None,
                  additional_goal_package_paths: Optional[List[str]] = None,
-                 additional_monitor_package_paths: Optional[List[str]] = None):
+                 additional_monitor_package_paths: Optional[List[str]] = None,
+                 additional_task_package_paths: Optional[List[str]] = None):
         """
         The main Class of Giskard.
         Instantiate it with appropriate configs for you setup and then call giskard.live()
@@ -70,6 +71,10 @@ class Giskard:
             additional_monitor_package_paths = set()
         for additional_path in additional_monitor_package_paths:
             self.add_monitor_package_name(additional_path)
+        if additional_task_package_paths is None:
+            additional_task_package_paths = set()
+        for additional_path in additional_task_package_paths:
+            self.add_task_package_name(additional_path)
         god_map.hack = 0
 
     def set_defaults(self) -> None:
