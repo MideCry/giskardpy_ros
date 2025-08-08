@@ -58,7 +58,9 @@ class HSRTestWrapper(GiskardTestWrapper):
                                                                       publish_tf=True,
                                                                       publish_js=False),
                               qp_controller_config=QPControllerConfig(mpc_dt=0.0125,
-                                                                      control_dt=0.0125))
+                                                                      control_dt=0.0125),
+                              additional_monitor_package_paths=['giskardpy_ros.monitors'],
+                              additional_task_package_paths=['giskardpy_ros.tasks'])
         super().__init__(giskard)
         self.gripper_group = 'gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
