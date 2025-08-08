@@ -56,8 +56,9 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
 from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
-from giskardpy_ros.goals.realtime_goals import CarryMyBullshit, RealTimePointing, FollowNavPath
-from giskardpy_ros.goals.realtime_goals import RealTimeConePointing
+from giskardpy_ros.tasks.realtime_tasks import RealTimePointing
+from giskardpy_ros.goals.carry_my_luggage import CarryMyBullshit, FollowNavPath
+from giskardpy_ros.tasks.realtime_tasks import RealTimeConePointing
 from giskardpy_ros.goals.suturo import GraspBarOffset, MoveAroundHinge, Reaching, Placing, OpenDoorGoal, Mixing, \
     JointRotationGoalContinuous, Tilting, TakePose, AlignHeight, Retracting, VerticalMotion, GraspWithForceTorqueGoal
 from giskardpy_ros.monitors.handle_offset_monitor import HandleOffsetCorrection, OffsetCorrectionReset
