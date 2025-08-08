@@ -48,6 +48,9 @@ class Giskard:
         :param additional_monitor_package_paths: specify paths that Giskard needs to import to find your custom Monitors.
                                               Giskard will run 'from <additional path> import *' for each additional
                                               path in the list.
+        :param additional_task_package_paths: specify paths that Giskard needs to import to find your custom Tasks.
+                                              Giskard will run 'from <additional path> import *' for each additional
+                                              path in the list.
         """
         god_map.tmp_folder = get_middleware().resolve_iri('package://giskardpy_ros/tmp/')
         GiskardBlackboard().giskard = self
