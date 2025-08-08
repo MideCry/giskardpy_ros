@@ -3893,11 +3893,11 @@ class GiskardWrapper:
         # TODO: make parameters better available
         root_link = 'map'
         tip_link = 'hand_gripper_tool_frame'
-        grasp_bar_offset = 0.1
+        grasp_bar_offset = 0.2
         goal_angle_half = 0.5
         goal_angle_full = 1.35
         bar_length = 0.1
-        after_force_retract = 0.05
+        after_force_retract = 0.015
         env_name = 'iai_kitchen'
         allow_collision_group = 'arm'
 
@@ -3944,6 +3944,7 @@ class GiskardWrapper:
                                                bar_center=bar_center,
                                                bar_axis=bar_axis,
                                                bar_length=bar_length,
+                                               handle_link=handle_frame_id,
                                                grasp_axis_offset=grasp_axis_offset_pre,
                                                start_condition=first_open,
                                                end_condition=local_min_pre_grasp)
@@ -3958,6 +3959,7 @@ class GiskardWrapper:
                                                bar_center=bar_center,
                                                bar_axis=bar_axis,
                                                bar_length=bar_length,
+                                               handle_link=handle_frame_id,
                                                reference_linear_velocity=0.02,
                                                reference_angular_velocity=0.05,
                                                grasp_axis_offset=grasp_axis_offset,
@@ -4037,7 +4039,7 @@ class GiskardWrapper:
                                                                    tip_gripper_axis=tip_grasp_axis_push,
                                                                    weight=WEIGHT_ABOVE_CA,
                                                                    goal_angle=goal_angle_half,
-                                                                   intermediate_point_scale=0.95,
+                                                                   intermediate_point_scale=1.05,
                                                                    start_condition=joint_monitor)
         self.motion_goals.update_end_condition(node_name=align_push_door, condition=align_push_door)
 
