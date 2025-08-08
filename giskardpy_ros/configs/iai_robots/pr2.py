@@ -9,6 +9,8 @@ from semantic_world.connections import OmniDrive, RevoluteConnection
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import PR2, CollisionAvoidanceThreshold
 
+from pkg_resources import resource_filename
+
 
 @dataclass
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
@@ -17,7 +19,8 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
     def setup(self):
         super().setup()
         pr2 = PR2.from_world(world=self.world)
-        pr2.load_collision_config('self_collision_matrices/iai/pr2.srdf')
+        path_to_srdf = resource_filename('giskardpy', '../self_collision_matrices/iai/pr2.srdf')
+        pr2.load_collision_config(path_to_srdf)
         pr2.collision_config.frozen_connections = {
             self.world.get_connection_by_name('r_gripper_l_finger_joint'),
             self.world.get_connection_by_name('l_gripper_l_finger_joint')

@@ -5,8 +5,10 @@ import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, Vector3Stamped, PointStamped
 
 from giskard_msgs.msg import LinkName
+
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.iai_robots.boxy import BoxyCollisionAvoidanceConfig, BoxyStandaloneInterfaceConfig
+from giskardpy_ros.configs.iai_robots.boxy import BoxyStandaloneInterfaceConfig
 from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
@@ -65,10 +67,11 @@ class BoxyTester(GiskardTester):
     def __init__(self, giskard=None):
         if giskard is None:
             giskard = Giskard(world_config=WorldWithBoxyBaseConfig(),
-                              collision_avoidance_config=BoxyCollisionAvoidanceConfig(),
+                              collision_checker_id=CollisionCheckerLib.bpb,
                               robot_interface_config=BoxyStandaloneInterfaceConfig(),
                               behavior_tree_config=StandAloneBTConfig(),
-                              qp_controller_config=QPControllerConfig())
+                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
+                                                                      control_dt=None))
         self.camera_tip = 'camera_link'
         self.r_tip = 'right_gripper_tool_frame'
         self.l_tip = 'left_gripper_tool_frame'

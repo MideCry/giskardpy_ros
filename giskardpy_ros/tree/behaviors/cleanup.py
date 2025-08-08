@@ -37,9 +37,9 @@ class CleanUp(GiskardBehavior):
             self.clear_markers()
             GiskardBlackboard().ros_visualizer.publish_markers(force=True)
         god_map.world.compiled_all_fks = None
-        god_map.collision_scene.reset_cache()
-        god_map.collision_scene.clear_collision_matrix()
-        god_map.closest_point = Collisions(1)
+        # god_map.collision_scene.reset_cache()
+        # god_map.collision_scene.clear_collision_matrix()
+        god_map.closest_point = Collisions(collision_list_size=1)
         god_map.time = 0
         god_map.control_cycle_counter = 1
         god_map.motion_statechart_manager.reset()

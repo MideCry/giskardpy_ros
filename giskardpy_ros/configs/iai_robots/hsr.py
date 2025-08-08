@@ -66,26 +66,26 @@ class WorldWithHSRConfig(WorldConfig):
             joint_name='arm_lift_joint')
 
 
-class HSRCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-    def __init__(self, drive_joint_name: str = 'brumbrum'):
-        super().__init__()
-        self.drive_joint_name = drive_joint_name
-
-    def setup(self):
-        self.load_self_collision_matrix('self_collision_matrices/iai/hsrb.srdf')
-        self.set_default_external_collision_avoidance(soft_threshold=0.05,
-                                                      hard_threshold=0.0)
-        self.overwrite_external_collision_avoidance('wrist_roll_joint',
-                                                    number_of_repeller=4,
-                                                    soft_threshold=0.05,
-                                                    hard_threshold=0.0,
-                                                    max_velocity=0.2)
-        self.overwrite_external_collision_avoidance(joint_name=self.drive_joint_name,
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.1,
-                                                    hard_threshold=0.03)
-        self.overwrite_self_collision_avoidance(link_name='head_tilt_link',
-                                                soft_threshold=0.03)
+# class HSRCollisionAvoidanceConfig(CollisionAvoidanceConfig):
+#     def __init__(self, drive_joint_name: str = 'brumbrum'):
+#         super().__init__()
+#         self.drive_joint_name = drive_joint_name
+#
+#     def setup(self):
+#         self.load_self_collision_matrix('self_collision_matrices/iai/hsrb.srdf')
+#         self.set_default_external_collision_avoidance(soft_threshold=0.05,
+#                                                       hard_threshold=0.0)
+#         self.overwrite_external_collision_avoidance('wrist_roll_joint',
+#                                                     number_of_repeller=4,
+#                                                     soft_threshold=0.05,
+#                                                     hard_threshold=0.0,
+#                                                     max_velocity=0.2)
+#         self.overwrite_external_collision_avoidance(joint_name=self.drive_joint_name,
+#                                                     number_of_repeller=2,
+#                                                     soft_threshold=0.1,
+#                                                     hard_threshold=0.03)
+#         self.overwrite_self_collision_avoidance(link_name='head_tilt_link',
+#                                                 soft_threshold=0.03)
 
 
 class HSRStandaloneInterface(StandAloneRobotInterfaceConfig):

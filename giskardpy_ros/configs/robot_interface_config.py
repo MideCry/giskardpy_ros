@@ -18,7 +18,7 @@ from giskardpy_ros.ros2.ros2_interface import search_for_subscriber_of_node_with
     search_for_unique_subscriber_of_type
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from semantic_world.connections import OmniDrive
+from semantic_world.connections import OmniDrive, ActiveConnection
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
@@ -109,8 +109,11 @@ class RobotInterfaceConfig(ABC):
     def register_controlled_joints(self, joint_names: List[Union[str, PrefixedName]]) -> None:
         if not GiskardBlackboard().tree_config.is_standalone():
             raise SetupException(f'Joints only need to be registered in StandAlone mode.')
-        controlled_connections = [self.world.get_connection_by_name(j) for j in joint_names]
-        self.robot.controlled_connections.connections = controlled_connections
+        for joint_name in joint_names:
+            connection = self.world.get_connection_by_name(joint_name)
+            if not isinstance(connection, ActiveConnection):
+                raise Exception(f'{joint_name} is not an active connection and cannot be controlled.')
+            self.robot.controlled_connections.add(connection)
 
     def add_follow_joint_trajectory_server(self,
                                            namespace: str,

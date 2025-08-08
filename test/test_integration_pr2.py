@@ -42,7 +42,7 @@ from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rot
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import PR2StandaloneInterface, WorldWithPR2Config, \
-    PR2QPControllerConfig, PR2CollisionAvoidance
+    PR2QPControllerConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
@@ -170,7 +170,7 @@ class PR2Tester(GiskardTester):
         if giskard is None:
             giskard = Giskard(world_config=WorldWithPR2Config(urdf=robot_desc),
                               robot_interface_config=PR2StandaloneInterface(),
-                              collision_checker_id=CollisionCheckerLib.bpb,
+                              collision_checker_id=CollisionCheckerLib.none,
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
                               qp_controller_config=PR2QPControllerConfig(mpc_dt=0.05,

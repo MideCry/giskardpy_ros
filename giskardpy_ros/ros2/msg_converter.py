@@ -24,7 +24,7 @@ import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException, UnknownGoalException
 from giskardpy.god_map import god_map
-from giskardpy.model.collision_world_syncer import CollisionEntry
+from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
@@ -540,8 +540,8 @@ def quaternion_stamped_to_quaternion(msg: geometry_msgs.QuaternionStamped, world
                           reference_frame=world.get_body_by_name(msg.header.frame_id)).to_rotation_matrix()
 
 
-def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry) -> CollisionEntry:
-    return CollisionEntry(msg.type, msg.distance, msg.group1, msg.group2)
+def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry) -> CollisionViewRequest:
+    return CollisionViewRequest(type_=msg.type, distance=msg.distance, view1=msg.group1, view2=msg.group2)
 
 
 __tf_messages: List[TransformStamped] = None

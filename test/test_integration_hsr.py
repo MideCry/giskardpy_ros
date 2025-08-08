@@ -8,6 +8,7 @@ from numpy import pi
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.tasks.pointing import Pointing
@@ -15,7 +16,7 @@ from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
+from giskardpy_ros.configs.iai_robots.hsr import WorldWithHSRConfig, HSRStandaloneInterface
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 
@@ -37,7 +38,7 @@ class HSRTester(GiskardTester):
         if giskard is None:
             robot_desc = load_xacro('package://hsr_description/robots/hsrb4s.urdf.xacro')
             giskard = Giskard(world_config=WorldWithHSRConfig(urdf=robot_desc),
-                              collision_avoidance_config=HSRCollisionAvoidanceConfig(),
+                              collision_checker_id=CollisionCheckerLib.bpb,
                               robot_interface_config=HSRStandaloneInterface(),
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True,

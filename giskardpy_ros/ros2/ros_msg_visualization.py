@@ -115,6 +115,8 @@ class ROSMsgVisualization:
         except AttributeError as e:
             # no collisions
             return []
+        if len(collisions.all_collisions) == 0:
+            return []
         collision_avoidance_configs = god_map.collision_scene.collision_avoidance_configs
         m = Marker()
         m.header.frame_id = self.tf_root

@@ -13,7 +13,7 @@ from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle, quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface, TiagoCollisionAvoidanceConfig
+from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface
 from giskardpy_ros.ros2.ros2_interface import get_robot_description, load_urdf
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 

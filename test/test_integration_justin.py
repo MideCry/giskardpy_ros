@@ -10,8 +10,7 @@ from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
-from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig, JustinStandaloneInterface, \
-    JustinCollisionAvoidanceConfig
+from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig, JustinStandaloneInterface
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 
 

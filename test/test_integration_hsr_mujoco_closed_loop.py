@@ -7,8 +7,7 @@ from numpy import pi
 
 from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import WorldWithHSRConfig, HSRCollisionAvoidanceConfig, \
-    HSRMujocoVelocityInterface
+from giskardpy_ros.configs.iai_robots.hsr import WorldWithHSRConfig, HSRMujocoVelocityInterface
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester

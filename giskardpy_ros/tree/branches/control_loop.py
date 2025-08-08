@@ -65,7 +65,7 @@ class ControlLoop(AsyncBehavior):
         self.add_child(FailureIsRunning(f'failure is running\n{goal_canceled.name}', goal_canceled),
                        success_is_running=False)
 
-        if god_map.is_collision_checking_enabled():
+        if god_map.collision_scene.is_collision_checking_enabled():
             self.add_child(CollisionChecker('collision checker'))
 
         self.add_child(self.evaluate_monitors, success_is_running=False)

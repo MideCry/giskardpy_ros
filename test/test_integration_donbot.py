@@ -6,7 +6,7 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Po
 
 from giskardpy.data_types.exceptions import GoalInitalizationException
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig, DonbotCollisionAvoidanceConfig, DonbotStandaloneInterfaceConfig
+from giskardpy_ros.configs.iai_robots.donbot import WorldWithBoxyBaseConfig, DonbotStandaloneInterfaceConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.god_map import god_map

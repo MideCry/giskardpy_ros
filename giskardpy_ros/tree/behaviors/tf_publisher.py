@@ -1,6 +1,7 @@
 from enum import Enum
 
 from geometry_msgs.msg import TransformStamped
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from py_trees.common import Status
 from tf2_msgs.msg import TFMessage
 
@@ -10,6 +11,7 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from semantic_world.robots import AbstractRobot
 
 
 class TfPublishingModes(Enum):
@@ -31,7 +33,7 @@ class TFPublisher(GiskardBehavior):
         self.original_links = set(body.name for body in god_map.world.bodies)
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)
         self.mode = mode
-        self.robot_names = god_map.collision_scene.robot_names
+        self.robots = GiskardBlackboard().giskard.robots
         self.include_prefix = include_prefix
 
     def make_transform(self, parent_frame, child_frame, pose):
@@ -53,22 +55,23 @@ class TFPublisher(GiskardBehavior):
             else:
                 tf_msg = TFMessage()
                 if self.mode in [TfPublishingModes.attached_objects, TfPublishingModes.attached_and_world_objects]:
-                    for robot_name in self.robot_names:
-                        robot_links = set(god_map.world.groups[robot_name].link_names_as_set)
+                    for robot in self.robots:
+                        robot_links = set(robot.bodies)
                     attached_links = robot_links - self.original_links
                     if attached_links:
                         get_fk = god_map.world.compute_fk
-                        for link_name in attached_links:
-                            parent_link_name = god_map.world.get_parent_link_of_link(link_name)
+                        for body in attached_links:
+                            link_name = body.name
+                            parent_link_name = body.parent_body
                             fk = get_fk(parent_link_name, link_name)
                             if self.include_prefix:
                                 tf = self.make_transform(fk.header.frame_id, str(link_name), fk.pose)
                             else:
-                                tf = self.make_transform(fk.header.frame_id, str(link_name.short_name), fk.pose)
+                                tf = self.make_transform(fk.header.frame_id, str(link_name.name), fk.pose)
                             tf_msg.transforms.append(tf)
             if self.mode in [TfPublishingModes.world_objects, TfPublishingModes.attached_and_world_objects]:
                 for group_name, group in god_map.world.groups.items():
-                    if group_name in self.robot_names:
+                    if group_name in self.robots:
                         # robot frames will exist for sure
                         continue
                     if len(group.joints) > 0:

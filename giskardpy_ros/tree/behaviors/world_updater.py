@@ -217,7 +217,7 @@ class ProcessWorldUpdate(GiskardBehavior):
                 del god_map.world.state[v]
         god_map.world.notify_state_change()
         god_map.collision_scene.sync()
-        GiskardBlackboard().giskard.collision_avoidance_config.setup()
+        # GiskardBlackboard().giskard.collision_scene.setup()
         # self.clear_markers()
         get_middleware().loginfo('Cleared world.')
 

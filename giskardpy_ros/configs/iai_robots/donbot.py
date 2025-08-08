@@ -29,27 +29,27 @@ class WorldWithBoxyBaseConfig(WorldConfig):
         self.set_joint_limits(limit_map={Derivatives.velocity: 0.05}, joint_name='odom_z_joint')
 
 
-class DonbotCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-    def setup(self):
-        self.load_self_collision_matrix(
-            'package://giskardpy_ros/self_collision_matrices/iai/iai_donbot.srdf')
-        self.set_default_external_collision_avoidance(soft_threshold=0.1,
-                                                      hard_threshold=0.0)
-        self.overwrite_external_collision_avoidance('odom_z_joint',
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.1,
-                                                    hard_threshold=0.05)
-        close_links = ['ur5_wrist_1_link', 'ur5_wrist_2_link', 'ur5_wrist_3_link', 'ur5_forearm_link',
-                       'ur5_upper_arm_link']
-        for link_name in close_links:
-            self.overwrite_self_collision_avoidance(link_name,
-                                                    soft_threshold=0.02,
-                                                    hard_threshold=0.005)
-        super_close_links = ['gripper_gripper_left_link', 'gripper_gripper_right_link']
-        for link_name in super_close_links:
-            self.overwrite_self_collision_avoidance(link_name,
-                                                    soft_threshold=0.00001,
-                                                    hard_threshold=0.0)
+# class DonbotCollisionAvoidanceConfig(CollisionAvoidanceConfig):
+#     def setup(self):
+#         self.load_self_collision_matrix(
+#             'package://giskardpy_ros/self_collision_matrices/iai/iai_donbot.srdf')
+#         self.set_default_external_collision_avoidance(soft_threshold=0.1,
+#                                                       hard_threshold=0.0)
+#         self.overwrite_external_collision_avoidance('odom_z_joint',
+#                                                     number_of_repeller=2,
+#                                                     soft_threshold=0.1,
+#                                                     hard_threshold=0.05)
+#         close_links = ['ur5_wrist_1_link', 'ur5_wrist_2_link', 'ur5_wrist_3_link', 'ur5_forearm_link',
+#                        'ur5_upper_arm_link']
+#         for link_name in close_links:
+#             self.overwrite_self_collision_avoidance(link_name,
+#                                                     soft_threshold=0.02,
+#                                                     hard_threshold=0.005)
+#         super_close_links = ['gripper_gripper_left_link', 'gripper_gripper_right_link']
+#         for link_name in super_close_links:
+#             self.overwrite_self_collision_avoidance(link_name,
+#                                                     soft_threshold=0.00001,
+#                                                     hard_threshold=0.0)
 
 
 class DonbotStandaloneInterfaceConfig(StandAloneRobotInterfaceConfig):

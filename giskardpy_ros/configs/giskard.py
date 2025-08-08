@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import traceback
 from dataclasses import dataclass, field
+from typing import List
 
 import rclpy
 
@@ -48,9 +49,6 @@ class Giskard:
     qp_controller_config: QPControllerConfig = field(default_factory=QPControllerConfig)
 
     def __post_init__(self):
-        collision_detector = self.create_collision_detector(self.collision_checker_id)
-        self.collision_scene = CollisionWorldSynchronizer(collision_detector=collision_detector)
-
         god_map.tmp_folder = get_middleware().resolve_iri('package://giskardpy_ros/tmp/')
         GiskardBlackboard().giskard = self
         god_map.hack = 0
@@ -78,12 +76,20 @@ class Giskard:
             self.world_config.setup()
         god_map.world = self.world_config.world
 
+        collision_detector = self.create_collision_detector(self.collision_checker_id)
+
+        robots = self.world_config.world.search_for_views_of_type(AbstractRobot)
+        self.collision_scene = CollisionWorldSynchronizer(collision_detector=collision_detector,
+                                                          world=self.world_config.world,
+                                                          robots=robots)
+        god_map.collision_scene = self.collision_scene
         self.qp_controller_config.setup()
 
         self.behavior_tree_config.setup()
 
         self.robot_interface_config.setup()
         god_map.world._notify_model_change()
+
         self.collision_scene.sync()
 
         self.sanity_check()
@@ -94,7 +100,11 @@ class Giskard:
 
     @property
     def robot(self) -> AbstractRobot:
-        return god_map.world.search_for_views_of_type(AbstractRobot)[0]
+        return self.robots[0]
+
+    @property
+    def robots(self) -> List[AbstractRobot]:
+        return self.world_config.world.search_for_views_of_type(AbstractRobot)
 
     def _controlled_joints_sanity_check(self):
         world = god_map.world

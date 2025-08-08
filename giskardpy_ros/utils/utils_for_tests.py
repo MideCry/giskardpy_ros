@@ -22,12 +22,13 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
+from giskardpy.model.collision_detector import Collisions
+from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_world_syncer import Collisions, Collision, CollisionEntry
 from giskardpy.motion_statechart.tasks.diff_drive_goals import DiffDriveTangentialToPoint, KeepHandInWorkspace
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
@@ -42,7 +43,8 @@ from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
 
 
-def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose], desired_pose: Union[cas.TransformationMatrix, Pose],
+def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose],
+                  desired_pose: Union[cas.TransformationMatrix, Pose],
                   decimal: int = 2) -> None:
     if isinstance(actual_pose, cas.TransformationMatrix):
         actual_pose = msg_converter.to_ros_message(actual_pose).pose
@@ -696,25 +698,25 @@ class GiskardTester:
     def get_external_collisions(self) -> Collisions:
         collision_goals = []
         for robot_name in self.robot_names:
-            collision_goals.append(CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                                  distance=-1.,
-                                                  group1=robot_name))
-            collision_goals.append(CollisionEntry(type_=CollisionEntry.ALLOW_COLLISION,
-                                                  distance=-1.,
-                                                  group1=robot_name,
-                                                  group2=robot_name))
+            collision_goals.append(CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
+                                                        distance=-1.,
+                                                        view1=robot_name))
+            collision_goals.append(CollisionViewRequest(type_=CollisionViewRequest.ALLOW_COLLISION,
+                                                        distance=-1.,
+                                                        view1=robot_name,
+                                                        view2=robot_name))
         return self.compute_collisions(collision_goals)
 
     def get_self_collisions(self, group_name: Optional[str] = None) -> Collisions:
         if group_name is None:
             group_name = self.robot_names[0]
-        collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1.,
-                                            group1=group_name,
-                                            group2=group_name)]
+        collision_entries = [CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
+                                                  distance=-1.,
+                                                  view1=group_name,
+                                                  view2=group_name)]
         return self.compute_collisions(collision_entries)
 
-    def compute_collisions(self, collision_entries: List[CollisionEntry]) -> Collisions:
+    def compute_collisions(self, collision_entries: List[CollisionViewRequest]) -> Collisions:
         god_map.collision_scene.reset_cache()
         collision_matrix = god_map.collision_scene.create_collision_matrix(collision_entries,
                                                                            defaultdict(lambda: 0.3))
@@ -722,8 +724,8 @@ class GiskardTester:
         return god_map.collision_scene.check_collisions()
 
     def compute_all_collisions(self) -> Collisions:
-        collision_entries = [CollisionEntry(type_=CollisionEntry.AVOID_COLLISION,
-                                            distance=-1.)]
+        collision_entries = [CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
+                                                  distance=-1.)]
         return self.compute_collisions(collision_entries)
 
     def check_cpi_geq(self, links, distance_threshold, check_external=True, check_self=True):
