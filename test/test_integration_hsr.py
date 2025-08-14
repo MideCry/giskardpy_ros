@@ -1564,8 +1564,7 @@ class TestSUTURO:
 
     def test_full_VFH(self, zero_pose: HSRTestWrapper):
 
-        VectorFieldHistogram(num_readings=240,
-                             max_range=5.0,
+        VectorFieldHistogram(max_range=5.0,
                              grid_size=0.1,
                              sector_angle=5,
                              obstacle_threshold=8,

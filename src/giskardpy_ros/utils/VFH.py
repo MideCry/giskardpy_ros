@@ -132,7 +132,7 @@ class VectorFieldHistogram:
         Should the sector of the target direction coincide with a sector that's part of a valley,
         then the robot will be pushed into the direction of a target. Should the target be obstructed
         by an obstacle, the algorithm will search for the nearest available valley of a certain size to
-        autonomously avoid the obstacle.
+        autonomously avoid said obstacle.
 
         :param distances: distances from the target sector
         :param angles: angles from the respective laser scanner reading
@@ -164,11 +164,10 @@ class VectorFieldHistogram:
             sector_dists = distances[mask]
             # density = np.sum((self.max_range - sector_dists) / self.max_range)
             clipped_dists = np.clip(sector_dists, 0, self.d_max)
-            # replace formula so that distance is between max.range and 0, whereas max.range is nearest to the robot
             magnitudes = 1 - (clipped_dists / self.d_max)
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
-        print(polar_histogram)
+        # print(polar_histogram)
 
         # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
