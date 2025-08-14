@@ -307,7 +307,6 @@ class CarryMyBullshit(Goal):
             self.add_monitor(arrived_at_target)
             arrived_at_target.observation_expression = cas.less_equal(distance_to_human, self.min_distance_to_target)
 
-
         # TODO: if everything VFH related works, test deleting this
         # %% follow next point --tbr
         # follow_next_point = Task(name='follow next')
@@ -336,7 +335,7 @@ class CarryMyBullshit(Goal):
         #                                              weight=self.weight,
         #                                              name='min dist to next')
         god_map.debug_expression_manager.add_debug_expression('root_P_goal_point_original', root_P_goal_point)
-
+        # ask whether this is actually necessary for first half of cml challenge (maybe needs an update ??)
         # %% keep the closest point in footprint radius
         stay_in_circle = Task(name='in circle')
         self.add_task(stay_in_circle)
@@ -696,7 +695,3 @@ class CarryMyBullshit(Goal):
         except Exception as e:
             get_middleware().logwarn(f'rejected new target because: {e}')
         self.publish_trajectory()
-
-
-class FollowNavPath(Goal):
-    pass
