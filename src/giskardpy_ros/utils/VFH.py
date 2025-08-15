@@ -14,7 +14,7 @@ import tf
 
 from giskardpy.utils.math import angle_between_vector
 
-# matplotlib.use('Qt5Agg')
+matplotlib.use('Qt5Agg')
 
 
 class VectorFieldHistogram:
@@ -61,6 +61,9 @@ class VectorFieldHistogram:
 
         self.sub = rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
         self.rate = rospy.Rate(10)
+
+        self.plotting = 0
+        self.frequency = 50
 
     # calculate polar obstacle density, as indicator how many obstacles are within a sector - tbd
     # Unit testing by checking steering angles - tbd
@@ -118,7 +121,11 @@ class VectorFieldHistogram:
         # print(f'target_point: {target_point}')
         target_sector, target_angle_deg, target_point = self.target_sim(target_point=target_point)
         self.update_histogram(self.distances, self.angles, target_sector, target_angle_deg)
-        # self.histogram_plot(target_point)
+        if self.plotting >= self.frequency:
+            self.histogram_plot(target_point)
+            self.plotting = 0
+        else:
+            self.plotting += 1
 
     def update_histogram(self, distances, angles, target_sector, target_angle_deg):
         """
@@ -184,7 +191,8 @@ class VectorFieldHistogram:
         selected_valley = None
 
         for valley in valleys:
-            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # check condition and how the valley is picked
+            if min(valley) <= target_sector <= max(valley) and len(
+                    valley) >= 4:  # check condition and how the valley is picked
                 selected_valley = valley
                 print(f"Selected Valley: {selected_valley}")
                 break
@@ -275,7 +283,7 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            theta_rad = np.radians(-(theta_deg - 120.0)) # -- maybe np. instead of .math?
+            theta_rad = np.radians(-(theta_deg - 120.0))  # -- maybe np. instead of .math?
             direction_vector = np.array([np.cos(theta_rad), np.sin(theta_rad), 0])
             print(f"Directional Vector: {direction_vector}")
             print("---------------------------------------")
@@ -316,43 +324,42 @@ class VectorFieldHistogram:
     #
     #     return smoothed
     # ------------------- ONLY USE THE PLOT FOR TESTING ---------------------
-    # def histogram_plot(self, target_point):
-    #     # Start of plot gen
-    #     fig = plt.figure(figsize=(12, 6))
-    #     ax0 = fig.add_subplot(1, 2, 1)
-    #     ax1 = fig.add_subplot(1, 2, 2, polar=True)
-    #
-    #     # LIDAR PointCloud
-    #     ax0.set_title('LIDAR Map')
-    #     ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
-    #     ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
-    #     ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
-    #     ax0.set_xlim(-self.max_range, self.max_range)
-    #     ax0.set_ylim(-self.max_range, self.max_range)
-    #     ax0.set_aspect('equal')
-    #     ax0.grid(True)
-    #     ax0.legend()
-    #
-    #     # Polar Histogram
-    #     ax1.set_title('Polar Histogram')
-    #     ax1.set_theta_direction(-1)
-    #     ax1.set_theta_zero_location('W', 30)
-    #     colors = ['green' if self.polar_histogram[i] < self.obstacle_threshold else 'red'
-    #               for i in range(len(self.polar_histogram))]
-    #     angles_rad = np.deg2rad(np.arange(0, 240, self.sector_angle))
-    #     ax1.bar(angles_rad, self.polar_histogram, width=np.deg2rad(self.sector_angle), bottom=0.0, align='edge',
-    #             color=colors)
-    #     ax1.plot('m--', linewidth=0.5, label='sectors')  # needed to portray legend for graph accurately
-    #     for angles in angles_rad:
-    #         ax1.plot([angles, angles], [0, np.max(self.polar_histogram)], 'm--', linewidth=0.5)
-    #     if self.theta_deg is not None:
-    #         best_rad = np.deg2rad(self.theta_deg)
-    #         ax1.plot([best_rad, best_rad], [0, np.max(self.polar_histogram)], 'b--', linewidth=2,
-    #                  label='best direction')
-    #     ax1.legend(loc='upper right')
-    #     plt.tight_layout()
-    #     plt.savefig('/home/yannis/Documents/vfh.png')
+    def histogram_plot(self, target_point):
+        # Start of plot gen
+        fig = plt.figure(figsize=(12, 6))
+        ax0 = fig.add_subplot(1, 2, 1)
+        ax1 = fig.add_subplot(1, 2, 2, polar=True)
 
+        # LIDAR PointCloud
+        ax0.set_title('LIDAR Map')
+        ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
+        ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
+        ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
+        ax0.set_xlim(-self.max_range, self.max_range)
+        ax0.set_ylim(-self.max_range, self.max_range)
+        ax0.set_aspect('equal')
+        ax0.grid(True)
+        ax0.legend()
+
+        # Polar Histogram
+        ax1.set_title('Polar Histogram')
+        ax1.set_theta_direction(-1)
+        ax1.set_theta_zero_location('W', 30)
+        colors = ['green' if self.polar_histogram[i] < self.obstacle_threshold else 'red'
+                  for i in range(len(self.polar_histogram))]
+        angles_rad = np.deg2rad(np.arange(0, 240, self.sector_angle))
+        ax1.bar(angles_rad, self.polar_histogram, width=np.deg2rad(self.sector_angle), bottom=0.0, align='edge',
+                color=colors)
+        ax1.plot('m--', linewidth=0.5, label='sectors')  # needed to portray legend for graph accurately
+        for angles in angles_rad:
+            ax1.plot([angles, angles], [0, np.max(self.polar_histogram)], 'm--', linewidth=0.5)
+        if self.theta_deg is not None:
+            best_rad = np.deg2rad(self.theta_deg)
+            ax1.plot([best_rad, best_rad], [0, np.max(self.polar_histogram)], 'b--', linewidth=2,
+                     label='best direction')
+        ax1.legend(loc='upper right')
+        plt.tight_layout()
+        plt.savefig('/home/suturo/Documents/vfh.png')
 
 # if __name__ == '__main__':
 #     rospy.init_node('vfh_node')
