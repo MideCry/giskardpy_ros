@@ -50,7 +50,7 @@ class RealTimePointing(Pointing):
 
     def cb(self, data: PointStamped):
         data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
-        data = god_map.world.transform(self.root, data).to_np()
+        data = god_map.world.transform(target_frame=self.root, spatial_object=data).to_np()
         self.root_P_goal_point = data
 
 

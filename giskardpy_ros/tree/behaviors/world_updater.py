@@ -11,6 +11,7 @@ from visualization_msgs.msg import MarkerArray
 from giskardpy.data_types.exceptions import UnknownGroupException, \
     TransformException, DuplicateNameException, InvalidWorldOperationException
 from giskardpy.god_map import god_map
+from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
@@ -128,7 +129,7 @@ class ProcessWorldUpdate(GiskardBehavior):
     def add_object(self, req: World_Goal) -> None:
         group_name = PrefixedName(req.group_name)
         if req.parent_link.name != '' and req.parent_link.group_name != '':
-            parent_link = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
+            parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
         else:
             parent_link = god_map.world.root
         world_body = req.body
@@ -144,7 +145,7 @@ class ProcessWorldUpdate(GiskardBehavior):
             pass
         with god_map.world.modify_world() as world:
             pose = msg_converter.pose_stamped_to_trans_matrix(pose, world)
-            parent_link_T_group_root_link = world.transform(parent_link, pose)
+            parent_link_T_group_root_link = world.transform(target_frame=parent_link, spatial_object=pose)
             link_name = PrefixedName(req.group_name, req.group_name)
             if world_body.type == world_body.URDF_BODY:
                 world.add_urdf(urdf=world_body.urdf,
@@ -163,6 +164,7 @@ class ProcessWorldUpdate(GiskardBehavior):
                 world.add_connection(joint)
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
                 world.add_view(view)
+
         # SUB-CASE: If it is an articulated object, open up a joint state subscriber
         get_middleware().loginfo(f'Attached object \'{group_name}\' at \'{parent_link}\'.')
         if world_body.joint_state_topic:
@@ -176,15 +178,15 @@ class ProcessWorldUpdate(GiskardBehavior):
     def update_group_pose(self, req: World_Goal):
         if req.group_name not in god_map.world.groups:
             raise UnknownGroupException(f'Can\'t update pose of unknown group: \'{req.group_name}\'')
-        group = god_map.world.groups[req.group_name]
-        joint_name = group.root_link.parent_joint_name
+        group: RootedView = god_map.world.get_view_by_name(req.group_name)
+        connection: Connection6DoF = group.root.parent_connection
         pose = msg_converter.ros_msg_to_giskard_obj(req.pose, god_map.world)
-        pose = god_map.world.transform(god_map.world.joints[joint_name].parent_link_name, pose)
-        god_map.world.joints[joint_name].update_transform(pose)
+        pose = god_map.world.transform(target_frame=connection.parent, spatial_object=pose)
+        connection.origin = pose
         god_map.world.notify_state_change()
 
     def update_parent_link(self, req: World_Goal):
-        parent_link = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
+        parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
         if req.group_name not in god_map.world.groups:
             raise UnknownGroupException(f'Can\'t attach to unknown group: \'{req.group_name}\'')
         group = god_map.world.groups[req.group_name]
@@ -209,6 +211,13 @@ class ProcessWorldUpdate(GiskardBehavior):
         with god_map.world.modify_world():
             god_map.world.clear()
             GiskardBlackboard().giskard.world_config.setup()
+        robots = god_map.world.search_for_views_of_type(AbstractRobot)
+        self.collision_scene = CollisionWorldSynchronizer(collision_detector=god_map.collision_scene.collision_detector,
+                                                          world=god_map.world,
+                                                          robots=robots)
+        god_map.collision_scene = self.collision_scene
+        self.collision_scene.sync()
+        GiskardBlackboard().giskard.robot_interface_config.setup()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
         # copy only state of joints that didn't get deleted
         dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
@@ -222,6 +231,6 @@ class ProcessWorldUpdate(GiskardBehavior):
         get_middleware().loginfo('Cleared world.')
 
     def register_group(self, req: World_Goal):
-        link_name = msg_converter.link_name_msg_to_prefix_name(req.parent_link, god_map.world)
+        link_name = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
         god_map.world.register_group(name=req.group_name, root_link_name=link_name)
         get_middleware().loginfo(f'Registered new group \'{req.group_name}\'')

@@ -110,10 +110,10 @@ class RobotInterfaceConfig(ABC):
         if not GiskardBlackboard().tree_config.is_standalone():
             raise SetupException(f'Joints only need to be registered in StandAlone mode.')
         for joint_name in joint_names:
-            connection = self.world.get_connection_by_name(joint_name)
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
             if not isinstance(connection, ActiveConnection):
                 raise Exception(f'{joint_name} is not an active connection and cannot be controlled.')
-            self.robot.controlled_connections.add(connection)
+            connection.is_controlled = True
 
     def add_follow_joint_trajectory_server(self,
                                            namespace: str,

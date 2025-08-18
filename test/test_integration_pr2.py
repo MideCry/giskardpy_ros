@@ -2,7 +2,7 @@ from __future__ import division
 
 from copy import deepcopy
 from time import sleep
-from typing import Optional
+from typing import Optional, Set
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
@@ -49,6 +49,7 @@ from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester, compare_points
 from semantic_world.connections import RevoluteConnection
 from semantic_world.spatial_types.math import shortest_angular_distance
+from semantic_world.world_entity import Body
 
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
@@ -160,8 +161,8 @@ class PR2Tester(GiskardTester):
     def __init__(self, giskard: Optional[Giskard] = None):
         self.r_tip = 'r_gripper_tool_frame'
         self.l_tip = 'l_gripper_tool_frame'
-        self.l_gripper_group = 'l_gripper'
-        self.r_gripper_group = 'r_gripper'
+        self.l_gripper_group = 'left_gripper'
+        self.r_gripper_group = 'right_gripper'
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
         # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
         self.odom_root = 'odom_combined'
@@ -170,7 +171,7 @@ class PR2Tester(GiskardTester):
         if giskard is None:
             giskard = Giskard(world_config=WorldWithPR2Config(urdf=robot_desc),
                               robot_interface_config=PR2StandaloneInterface(),
-                              collision_checker_id=CollisionCheckerLib.none,
+                              collision_checker_id=CollisionCheckerLib.bpb,
                               behavior_tree_config=StandAloneBTConfig(debug_mode=True,
                                                                       publish_tf=True),
                               qp_controller_config=PR2QPControllerConfig(mpc_dt=0.05,
@@ -181,11 +182,11 @@ class PR2Tester(GiskardTester):
         super().__init__(giskard)
         self.robot = god_map.world.get_view_by_name(self.api.robot_name)
 
-    def get_l_gripper_links(self):
-        return [str(x) for x in god_map.world.groups[self.l_gripper_group].link_names_with_collisions]
+    def get_l_gripper_links(self) -> Set[Body]:
+        return set(b for b in god_map.world.get_view_by_name(self.l_gripper_group).bodies if b.has_collision())
 
-    def get_r_gripper_links(self):
-        return [str(x) for x in god_map.world.groups[self.r_gripper_group].link_names_with_collisions]
+    def get_r_gripper_links(self) -> Set[Body]:
+        return set(b for b in god_map.world.get_view_by_name(self.r_gripper_group).bodies if b.has_collision())
 
     def get_r_forearm_links(self):
         return ['r_wrist_flex_link', 'r_wrist_roll_link', 'r_forearm_roll_link', 'r_forearm_link',
@@ -3505,8 +3506,8 @@ class TestCollisionAvoidanceGoals:
                                                              root_link='map')
         fake_table_setup.execute()
         fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.05)
-        fake_table_setup.check_cpi_leq(['r_gripper_l_finger_tip_link'], 0.04)
-        fake_table_setup.check_cpi_leq(['r_gripper_r_finger_tip_link'], 0.04)
+        fake_table_setup.check_cpi_leq([god_map.world.get_body_by_name('r_gripper_l_finger_tip_link')], 0.04)
+        fake_table_setup.check_cpi_leq([god_map.world.get_body_by_name('r_gripper_r_finger_tip_link')], 0.04)
 
     def test_allow_collision_drive_into_box(self, box_setup: PR2Tester):
         p = PoseStamped()

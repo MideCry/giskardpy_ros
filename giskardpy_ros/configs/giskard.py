@@ -90,7 +90,8 @@ class Giskard:
         self.robot_interface_config.setup()
         god_map.world._notify_model_change()
 
-        self.collision_scene.sync()
+        if god_map.collision_scene.is_collision_checking_enabled():
+            self.collision_scene.sync()
 
         self.sanity_check()
         GiskardBlackboard().tree.setup(rospy.node)

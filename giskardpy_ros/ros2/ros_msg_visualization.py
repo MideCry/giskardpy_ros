@@ -4,6 +4,7 @@ from typing import Optional, List, Dict, Union
 import numpy as np
 from geometry_msgs.msg import Vector3, Point, Quaternion
 from line_profiler import profile
+from numba.cpython.listobj import list_add
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
@@ -57,7 +58,7 @@ class ROSMsgVisualization:
                                                          10)
         self.marker_ids = {}
         if tf_frame is None:
-            self.tf_root = str(god_map.world.root.name)
+            self.tf_root = str(god_map.world.root.name.name)
         else:
             self.tf_root = tf_frame
         GiskardBlackboard().ros_visualizer = self
@@ -117,7 +118,6 @@ class ROSMsgVisualization:
             return []
         if len(collisions.all_collisions) == 0:
             return []
-        collision_avoidance_configs = god_map.collision_scene.collision_avoidance_configs
         m = Marker()
         m.header.frame_id = self.tf_root
         m.action = Marker.ADD
@@ -128,14 +128,10 @@ class ROSMsgVisualization:
         m.pose.orientation.w = 1.0
         if len(collisions.all_collisions) > 0:
             for collision in collisions.all_collisions:
-                group_name = collision.link_a.prefix
-                config = collision_avoidance_configs[group_name]
-                if collision.is_external:
-                    thresholds = config.external_collision_avoidance[collision.link_a]
-                else:
-                    thresholds = config.self_collision_avoidance[collision.link_a]
-                red_threshold = thresholds.hard_threshold
-                yellow_threshold = thresholds.soft_threshold
+                red_threshold = max(collision.link_a.collision_config.violated_distance or 0.0,
+                                    collision.link_b.collision_config.violated_distance or 0.0)
+                yellow_threshold = max(collision.link_a.collision_config.buffer_zone_distance or 0.0,
+                                       collision.link_b.collision_config.buffer_zone_distance or 0.0)
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
                     map_T_a = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_a)

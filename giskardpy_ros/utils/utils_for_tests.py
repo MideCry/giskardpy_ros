@@ -5,10 +5,11 @@ from collections import defaultdict
 from copy import deepcopy
 from threading import Thread
 from time import time, sleep
-from typing import Tuple, Optional, List, Dict, Union
+from typing import Tuple, Optional, List, Dict, Union, Set
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
+import pytest
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 from giskard_msgs.action._move import Move_Result, Move_Goal
@@ -22,9 +23,10 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.model.collision_detector import Collisions
+from giskardpy.model.collision_detector import Collisions, Collision
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy_ros.utils.utils import is_in_github_workflow
+from semantic_world.exceptions import ViewNotFoundError, DuplicateViewError
 from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import UnknownGroupException, DuplicateNameException, WorldException
 from giskardpy.god_map import god_map
@@ -41,6 +43,7 @@ from semantic_world.degree_of_freedom import DegreeOfFreedom
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_world.world_entity import RootedView, Body
 
 
 def compare_poses(actual_pose: Union[cas.TransformationMatrix, Pose],
@@ -184,7 +187,7 @@ class GiskardTester:
                 pass
             giskard_obj = msg_converter.ros_msg_to_giskard_obj(result_msg, god_map.world)
             target_body = god_map.world.get_body_by_name(target_frame)
-            transformed_giskard_obj = god_map.world.transform(target_body, giskard_obj)
+            transformed_giskard_obj = god_map.world.transform(target_frame=target_body, spatial_object=giskard_obj)
             return msg_converter.to_ros_message(transformed_giskard_obj)
 
     def wait_heartbeats(self, number=5):
@@ -516,40 +519,41 @@ class GiskardTester:
     def check_add_object_result(self,
                                 name: str,
                                 pose: Optional[PoseStamped],
-                                parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
+                                parent_body_name: Optional[Union[str, giskard_msgs.LinkName]] = None,
                                 expected_error_type: Optional[type(Exception)] = None):
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
+        if isinstance(parent_body_name, str):
+            parent_body_name = giskard_msgs.LinkName(name=parent_body_name)
         if expected_error_type is None:
             assert PrefixedName(name) in self.api.world.get_group_names()
             response2 = self.api.world.get_group_info(name)
+            view: RootedView = god_map.world.get_view_by_name(name)
             if pose is not None:  # check if pose is consistent
                 p = self.transform_msg(god_map.world.root.name, pose)
-                o_p = god_map.world.groups[name].base_pose
-                compare_poses(p.pose, o_p)
-                compare_poses(o_p, response2.root_link_pose.pose)
-            if parent_link and parent_link.group_name != '':  # check if parent group is consistent
-                robot = self.api.world.get_group_info(parent_link.group_name)
+                compare_poses(p.pose, view.root.global_pose)
+                compare_poses(view.root.global_pose, response2.root_link_pose.pose)
+            if parent_body_name and parent_body_name.group_name != '':  # check if parent group is consistent
+                robot = self.api.world.get_group_info(parent_body_name.group_name)
                 assert name in robot.child_groups
-                expected_parent_link = msg_converter.link_name_msg_to_prefix_name(parent_link, god_map.world)
-                real_parent_link = god_map.world.get_parent_link_of_link(god_map.world.groups[name].root_link_name)
+                expected_parent_link = msg_converter.link_name_msg_to_body(parent_body_name, god_map.world)
+                real_parent_link = view.root.parent_body
                 assert expected_parent_link == real_parent_link
             else:
-                if parent_link is None or parent_link.name == '':
-                    parent_link = god_map.world.root.name
+                if parent_body_name is None or parent_body_name.name == '':
+                    parent_body = god_map.world.root
                 else:
-                    parent_link = msg_converter.link_name_msg_to_prefix_name(parent_link, god_map.world)
-                if parent_link in god_map.world.robots[0].link_names:
-                    object_links = god_map.world.groups[name].link_names
+                    parent_body = msg_converter.link_name_msg_to_body(parent_body_name, god_map.world)
+                if parent_body in GiskardBlackboard().giskard.robot.bodies:
+                    object_links = view.bodies
                     for link_a, link_b in god_map.collision_scene.self_collision_matrix:
                         if link_a in object_links or link_b in object_links:
                             break
                     else:
                         assert False, f'{name} not in collision matrix'
-                assert parent_link == god_map.world.get_parent_link_of_link(god_map.world.groups[name].root_link_name)
+                assert parent_body == view.root.parent_body
         else:
-            if expected_error_type != DuplicateNameException:
-                assert name not in god_map.world.groups
+            if expected_error_type != DuplicateViewError:
+                with pytest.raises(ViewNotFoundError) as e:
+                    god_map.world.get_view_by_name(name)
                 assert name not in self.api.world.get_group_names()
 
     def add_box_to_world(self,
@@ -569,7 +573,7 @@ class GiskardTester:
             assert type(e) == expected_error_type
         self.check_add_object_result(name=name,
                                      pose=pose,
-                                     parent_link=parent_link,
+                                     parent_body_name=parent_link,
                                      expected_error_type=expected_error_type)
 
     def update_group_pose(self, group_name: str, new_pose: PoseStamped,
@@ -601,7 +605,7 @@ class GiskardTester:
             assert type(e) == expected_error_type
         self.check_add_object_result(name=name,
                                      pose=pose,
-                                     parent_link=parent_link,
+                                     parent_body_name=parent_link,
                                      expected_error_type=expected_error_type)
 
     def add_cylinder_to_world(self,
@@ -623,7 +627,7 @@ class GiskardTester:
             assert type(e) == expected_error_type
         self.check_add_object_result(name=name,
                                      pose=pose,
-                                     parent_link=parent_link,
+                                     parent_body_name=parent_link,
                                      expected_error_type=expected_error_type)
 
     def add_mesh_to_world(self,
@@ -645,7 +649,7 @@ class GiskardTester:
             assert type(e) == expected_error_type
         self.check_add_object_result(name=name,
                                      pose=pose,
-                                     parent_link=parent_link,
+                                     parent_body_name=parent_link,
                                      expected_error_type=expected_error_type)
 
     def add_urdf_to_world(self,
@@ -668,7 +672,7 @@ class GiskardTester:
             assert type(e) == expected_error_type
         self.check_add_object_result(name=name,
                                      pose=pose,
-                                     parent_link=parent_link,
+                                     parent_body_name=parent_link,
                                      expected_error_type=expected_error_type)
         if set_js_topic:
             self.env_joint_state_pubs[name] = rospy.node.create_publisher(JointState,
@@ -690,7 +694,7 @@ class GiskardTester:
             assert r.error.type == GiskardError.SUCCESS
             self.check_add_object_result(name=name,
                                          pose=None,
-                                         parent_link=parent_link,
+                                         parent_body_name=parent_link,
                                          expected_error_type=expected_error_type)
         except Exception as e:
             assert type(e) == expected_error_type
@@ -699,10 +703,10 @@ class GiskardTester:
         collision_goals = []
         for robot_name in self.robot_names:
             collision_goals.append(CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
-                                                        distance=-1.,
+                                                        distance=None,
                                                         view1=robot_name))
             collision_goals.append(CollisionViewRequest(type_=CollisionViewRequest.ALLOW_COLLISION,
-                                                        distance=-1.,
+                                                        distance=None,
                                                         view1=robot_name,
                                                         view2=robot_name))
         return self.compute_collisions(collision_goals)
@@ -711,46 +715,44 @@ class GiskardTester:
         if group_name is None:
             group_name = self.robot_names[0]
         collision_entries = [CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
-                                                  distance=-1.,
+                                                  distance=None,
                                                   view1=group_name,
                                                   view2=group_name)]
         return self.compute_collisions(collision_entries)
 
     def compute_collisions(self, collision_entries: List[CollisionViewRequest]) -> Collisions:
-        god_map.collision_scene.reset_cache()
-        collision_matrix = god_map.collision_scene.create_collision_matrix(collision_entries,
-                                                                           defaultdict(lambda: 0.3))
-        god_map.collision_scene.set_collision_matrix(collision_matrix)
+        god_map.collision_scene.collision_detector.reset_cache()
+        god_map.collision_scene.matrix_manager.parse_collision_requests(collision_entries)
         return god_map.collision_scene.check_collisions()
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [CollisionViewRequest(type_=CollisionViewRequest.AVOID_COLLISION,
-                                                  distance=-1.)]
+                                                  distance=None)]
         return self.compute_collisions(collision_entries)
 
-    def check_cpi_geq(self, links, distance_threshold, check_external=True, check_self=True):
+    def check_cpi_geq(self, bodies: Set[Body], distance_threshold: float, check_external: bool = True,
+                      check_self: bool = True):
         collisions = self.compute_all_collisions()
-        links = [god_map.world.search_for_link_name(link_name) for link_name in links]
         for collision in collisions.all_collisions:
             if not check_external and collision.is_external:
                 continue
             if not check_self and not collision.is_external:
                 continue
-            if collision.original_link_a in links or collision.original_link_b in links:
+            if collision.original_link_a in bodies or collision.original_link_b in bodies:
                 assert collision.contact_distance >= distance_threshold, \
                     f'{collision.contact_distance} < {distance_threshold} ' \
                     f'({collision.original_link_a} with {collision.original_link_b})'
 
-    def check_cpi_leq(self, links, distance_threshold, check_external=True, check_self=True):
+    def check_cpi_leq(self, bodies: Set[Body], distance_threshold: float, check_external: bool = True,
+                      check_self: bool = True):
         collisions = self.compute_all_collisions()
         min_contact: Collision = None
-        links = [god_map.world.search_for_link_name(link_name) for link_name in links]
         for collision in collisions.all_collisions:
             if not check_external and collision.is_external:
                 continue
             if not check_self and not collision.is_external:
                 continue
-            if collision.original_link_a in links or collision.original_link_b in links:
+            if collision.original_link_a in bodies or collision.original_link_b in bodies:
                 if min_contact is None or collision.contact_distance <= min_contact.contact_distance:
                     min_contact = collision
         assert min_contact.contact_distance <= distance_threshold, \

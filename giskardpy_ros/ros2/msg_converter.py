@@ -34,6 +34,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.motion_statechart.goals.goal import Goal
 from semantic_world.connections import ActiveConnection
+from semantic_world.exceptions import ViewNotFoundError
 from semantic_world.geometry import Shape, Box, Cylinder, Sphere, Mesh, Color, Scale, Primitive
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
@@ -329,7 +330,7 @@ def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception
     return Exception(f'{msg.type}: {msg.msg}')
 
 
-def link_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: World) -> Body:
+def link_name_msg_to_body(msg: giskard_msgs.LinkName, world: World) -> Body:
     if msg.group_name == '':
         return world.get_body_by_name(msg.name)
     return world.get_body_by_name(PrefixedName(msg.name, msg.group_name))
@@ -422,10 +423,10 @@ def ros_msg_to_giskard_obj(msg, world: World):
     elif isinstance(msg, geometry_msgs.QuaternionStamped):
         return quaternion_stamped_to_quaternion(msg, world)
     elif isinstance(msg, giskard_msgs.CollisionEntry):
-        return collision_entry_msg_to_giskard(msg)
+        return collision_entry_msg_to_giskard(msg, world=world)
     elif isinstance(msg, giskard_msgs.LinkName):
         try:
-            return link_name_msg_to_prefix_name(msg, world)
+            return link_name_msg_to_body(msg, world)
         except UnknownLinkException as e:
             try:
                 return joint_name_msg_to_prefix_name(msg, world)
@@ -540,8 +541,26 @@ def quaternion_stamped_to_quaternion(msg: geometry_msgs.QuaternionStamped, world
                           reference_frame=world.get_body_by_name(msg.header.frame_id)).to_rotation_matrix()
 
 
-def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry) -> CollisionViewRequest:
-    return CollisionViewRequest(type_=msg.type, distance=msg.distance, view1=msg.group1, view2=msg.group2)
+def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry, world: World) -> CollisionViewRequest:
+    if msg.distance == -1:
+        distance = None
+    else:
+        distance = msg.distance
+
+    try:
+        view1 = world.get_view_by_name(msg.group1)
+    except ViewNotFoundError as e:
+        view1 = None
+
+    try:
+        view2 = world.get_view_by_name(msg.group2)
+    except ViewNotFoundError as e:
+        view2 = None
+
+    return CollisionViewRequest(type_=msg.type,
+                                distance=distance,
+                                view1=view1,
+                                view2=view2)
 
 
 __tf_messages: List[TransformStamped] = None

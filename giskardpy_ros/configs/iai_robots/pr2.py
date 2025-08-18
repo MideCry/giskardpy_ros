@@ -5,11 +5,13 @@ from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
-from semantic_world.connections import OmniDrive, RevoluteConnection
+from semantic_world.connections import OmniDrive, RevoluteConnection, ActiveConnection
 from semantic_world.prefixed_name import PrefixedName
-from semantic_world.robots import PR2, CollisionAvoidanceThreshold
+from semantic_world.robots import PR2
 
 from pkg_resources import resource_filename
+
+from semantic_world.world_entity import CollisionCheckingConfig
 
 
 @dataclass
@@ -20,39 +22,48 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
         super().setup()
         pr2 = PR2.from_world(world=self.world)
         path_to_srdf = resource_filename('giskardpy', '../self_collision_matrices/iai/pr2.srdf')
-        pr2.load_collision_config(path_to_srdf)
-        pr2.collision_config.frozen_connections = {
-            self.world.get_connection_by_name('r_gripper_l_finger_joint'),
-            self.world.get_connection_by_name('l_gripper_l_finger_joint')
-        }
-        pr2.collision_config.default_external_threshold = CollisionAvoidanceThreshold(soft_threshold=0.1,
-                                                                                      hard_threshold=0.0)
+        self.world.load_collision_srdf(path_to_srdf)
+        frozen_joints = ['r_gripper_l_finger_joint',
+                         'l_gripper_l_finger_joint']
+        for joint_name in frozen_joints:
+            c: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            c.frozen_for_collision_avoidance = True
+
+        for body in pr2.bodies_with_collisions:
+            collision_config = CollisionCheckingConfig(buffer_zone_distance=0.1,
+                                                       violated_distance=0.0)
+            body.set_static_collision_config(collision_config)
+
         for joint_name in ['r_wrist_roll_joint', 'l_wrist_roll_joint']:
-            connection = self.world.get_connection_by_name(joint_name)
-            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0,
-                                                    number_of_repeller=4)
-            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
-                                                                       threshold=threshold)
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(buffer_zone_distance=0.05,
+                                                       violated_distance=0.0,
+                                                       max_avoided_bodies=4)
+            connection.set_static_collision_config_for_direct_child_bodies(collision_config)
 
         for joint_name in ['r_wrist_flex_joint', 'l_wrist_flex_joint']:
-            connection = self.world.get_connection_by_name(joint_name)
-            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0,
-                                                    number_of_repeller=2)
-            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
-                                                                       threshold=threshold)
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(buffer_zone_distance=0.05,
+                                                       violated_distance=0.0,
+                                                       max_avoided_bodies=2)
+            connection.set_static_collision_config_for_direct_child_bodies(collision_config)
         for joint_name in ['r_elbow_flex_joint', 'l_elbow_flex_joint']:
-            connection = self.world.get_connection_by_name(joint_name)
-            threshold = CollisionAvoidanceThreshold(soft_threshold=0.05, hard_threshold=0.0)
-            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
-                                                                       threshold=threshold)
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(buffer_zone_distance=0.05,
+                                                       violated_distance=0.0,
+                                                       max_avoided_bodies=1)
+            connection.set_static_collision_config_for_direct_child_bodies(collision_config)
         for joint_name in ['r_forearm_roll_joint', 'l_forearm_roll_joint']:
-            connection = self.world.get_connection_by_name(joint_name)
-            threshold = CollisionAvoidanceThreshold(soft_threshold=0.025, hard_threshold=0.0)
-            pr2.collision_config.set_external_threshold_for_connection(connection=connection,
-                                                                       threshold=threshold)
-        drive_threshold = CollisionAvoidanceThreshold(soft_threshold=0.2, hard_threshold=0.1, number_of_repeller=2)
-        pr2.collision_config.set_external_threshold_for_connection(connection=pr2.drive,
-                                                                   threshold=drive_threshold)
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(buffer_zone_distance=0.025,
+                                                       violated_distance=0.0,
+                                                       max_avoided_bodies=1)
+            connection.set_static_collision_config_for_direct_child_bodies(collision_config)
+
+        collision_config = CollisionCheckingConfig(buffer_zone_distance=0.2,
+                                                   violated_distance=0.1,
+                                                   max_avoided_bodies=2)
+        pr2.drive.set_static_collision_config_for_direct_child_bodies(collision_config)
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
