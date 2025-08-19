@@ -3441,7 +3441,7 @@ class TestCollisionAvoidanceGoals:
     #     base_goal = PoseStamped()
     #     base_goal.header.frame_id = box_setup.default_root
     #     base_goal.pose.position.x = 0.25
-    q = quaternion_from_axis_angle([0, 0, 1], np.pi, )
+    # q = quaternion_from_axis_angle([0, 0, 1], np.pi, )
 
     #     base_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3)
     #     box_setup.teleport_base(base_goal)
