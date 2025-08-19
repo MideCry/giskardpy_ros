@@ -458,8 +458,8 @@ class Application(QMainWindow):
                                behavior_tree_config=StandAloneBTConfig(),
                                qp_controller_config=QPControllerConfig())
         with god_map.world.modify_world():
-            GiskardBlackboard().giskard.world_config.setup()
-        GiskardBlackboard().giskard.collision_avoidance_config.setup()
+            GiskardBlackboard().giskard.world_config.setup_world()
+        GiskardBlackboard().giskard.world_config.setup_collision_config()
         self.timer = QTimer()
         self.timer.start(1000)  # Time in milliseconds
         self.timer.timeout.connect(lambda: None)

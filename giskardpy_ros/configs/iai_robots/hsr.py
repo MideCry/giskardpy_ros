@@ -29,7 +29,7 @@ class WorldWithHSRConfig(WorldConfig):
         self.robot_description_name = description_name
         self.robot_description = urdf
 
-    def setup(self):
+    def setup_world(self):
         self.set_default_color(1, 1, 1, 1)
         self.set_default_limits({Derivatives.velocity: 1,
                                  Derivatives.acceleration: np.inf,

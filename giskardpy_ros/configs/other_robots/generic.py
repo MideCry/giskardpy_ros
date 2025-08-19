@@ -38,7 +38,7 @@ class GenericWorldConfig(WorldConfig):
         return self.world.groups[list(self.world.group_names)[0]].root_link_name.short_name
 
     @profile
-    def setup(self):
+    def setup_world(self):
         self.set_default_limits({Derivatives.velocity: 0.2,
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})

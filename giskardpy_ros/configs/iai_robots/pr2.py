@@ -18,9 +18,11 @@ from semantic_world.world_entity import CollisionCheckingConfig
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
     odom_body_name: PrefixedName = PrefixedName('odom_combined')
 
-    def setup(self):
-        super().setup()
-        pr2 = PR2.from_world(world=self.world)
+    def setup_world(self):
+        super().setup_world()
+        self.pr2 = PR2.from_world(world=self.world)
+
+    def setup_collision_config(self):
         path_to_srdf = resource_filename('giskardpy', '../self_collision_matrices/iai/pr2.srdf')
         self.world.load_collision_srdf(path_to_srdf)
         frozen_joints = ['r_gripper_l_finger_joint',
@@ -29,7 +31,7 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
             c: ActiveConnection = self.world.get_connection_by_name(joint_name)
             c.frozen_for_collision_avoidance = True
 
-        for body in pr2.bodies_with_collisions:
+        for body in self.pr2.bodies_with_collisions:
             collision_config = CollisionCheckingConfig(buffer_zone_distance=0.1,
                                                        violated_distance=0.0)
             body.set_static_collision_config(collision_config)
@@ -63,8 +65,7 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
         collision_config = CollisionCheckingConfig(buffer_zone_distance=0.2,
                                                    violated_distance=0.1,
                                                    max_avoided_bodies=2)
-        pr2.drive.set_static_collision_config_for_direct_child_bodies(collision_config)
-
+        self.pr2.drive.set_static_collision_config_for_direct_child_bodies(collision_config)
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
     def setup(self):

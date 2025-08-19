@@ -11,8 +11,8 @@ from giskardpy.middleware import set_middleware
 
 class WorldWithPR2ConfigBlue(WorldWithPR2Config):
 
-    def setup(self):
-        super().setup()
+    def setup_world(self):
+        super().setup_world()
         # self.set_default_color(20 / 255, 27.1 / 255, 80 / 255, 0.2)
 
 

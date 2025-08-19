@@ -15,7 +15,7 @@ class WorldWithBoxyBaseConfig(WorldConfig):
         self.map_name = map_name
         self.localization_joint_name = localization_joint_name
 
-    def setup(self):
+    def setup_world(self):
         self.set_default_limits({Derivatives.velocity: 0.5,
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})

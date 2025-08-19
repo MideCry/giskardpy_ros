@@ -22,7 +22,7 @@ class WorldWithArmarConfig(WorldConfig):
         self.odom_link_name = odom_link_name
         self.drive_joint_name = drive_joint_name
 
-    def setup(self):
+    def setup_world(self):
         self.set_default_color(1, 1, 1, 1)
         self.set_default_limits({Derivatives.velocity: 1,
                                  Derivatives.acceleration: np.inf,

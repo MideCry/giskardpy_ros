@@ -73,7 +73,7 @@ class Giskard:
         Initialize the behavior tree and world. You usually don't need to call this.
         """
         with self.world_config.world.modify_world():
-            self.world_config.setup()
+            self.world_config.setup_world()
         god_map.world = self.world_config.world
 
         collision_detector = self.create_collision_detector(self.collision_checker_id)
@@ -88,6 +88,7 @@ class Giskard:
         self.behavior_tree_config.setup()
 
         self.robot_interface_config.setup()
+        self.world_config.setup_collision_config()
         god_map.world._notify_model_change()
 
         if god_map.collision_scene.is_collision_checking_enabled():

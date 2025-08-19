@@ -13,8 +13,8 @@ class TracyWorldConfig(WorldWithFixedRobot):
     def __init__(self, map_name: str = 'map'):
         super().__init__(urdf=rospy.get_param('robot_description'), map_name=map_name)
 
-    def setup(self, robot_name: Optional[str] = None) -> None:
-        super().setup(robot_name)
+    def setup_world(self, robot_name: Optional[str] = None) -> None:
+        super().setup_world(robot_name)
         self.set_default_limits({Derivatives.velocity: 0.2,
                                  Derivatives.acceleration: np.inf,
                                  Derivatives.jerk: None})

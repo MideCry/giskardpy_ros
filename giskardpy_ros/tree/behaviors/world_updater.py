@@ -210,7 +210,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         tmp_state = deepcopy(god_map.world.state)
         with god_map.world.modify_world():
             god_map.world.clear()
-            GiskardBlackboard().giskard.world_config.setup()
+            GiskardBlackboard().giskard.world_config.setup_world()
         robots = god_map.world.search_for_views_of_type(AbstractRobot)
         self.collision_scene = CollisionWorldSynchronizer(collision_detector=god_map.collision_scene.collision_detector,
                                                           world=god_map.world,
@@ -219,6 +219,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         self.collision_scene.sync()
         GiskardBlackboard().giskard.robot_interface_config.setup()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
+        GiskardBlackboard().giskard.world_config.setup_collision_config()
         # copy only state of joints that didn't get deleted
         dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
         for v in tmp_state.keys():
