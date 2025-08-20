@@ -191,11 +191,9 @@ class ProcessWorldUpdate(GiskardBehavior):
 
     def update_parent_link(self, req: World_Goal):
         parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
-        if req.group_name not in god_map.world.groups:
-            raise UnknownGroupException(f'Can\'t attach to unknown group: \'{req.group_name}\'')
-        group = god_map.world.groups[req.group_name]
-        if group.root_link_name != parent_link:
-            old_parent_link = group.parent_link_of_root
+        view: RootedView = god_map.world.get_view_by_name(req.group_name)
+        if view.root != parent_link:
+            old_parent_link = view.root.parent_body
             god_map.world.move_group(req.group_name, parent_link)
             get_middleware().loginfo(
                 f'Reattached \'{req.group_name}\' from \'{old_parent_link}\' to \'{req.parent_link}\'.')

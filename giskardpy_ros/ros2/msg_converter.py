@@ -331,6 +331,8 @@ def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception
 
 
 def link_name_msg_to_body(msg: giskard_msgs.LinkName, world: World) -> Body:
+    if msg.group_name == '' and msg.name == '':
+        return world.root
     if msg.group_name == '':
         return world.get_body_by_name(msg.name)
     return world.get_body_by_name(PrefixedName(msg.name, msg.group_name))

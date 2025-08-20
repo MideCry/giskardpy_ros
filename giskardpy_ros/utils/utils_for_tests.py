@@ -150,8 +150,8 @@ class GiskardTester:
         return god_map.world.search_for_connections_of_type(OmniDrive)
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
-        root_T_tip = god_map.world.compute_fk(root_link=god_map.world.search_for_link_name(root_link),
-                                              tip_link=god_map.world.search_for_link_name(tip_link))
+        root_T_tip = god_map.world.compute_forward_kinematics(root=god_map.world.get_body_by_name(root_link),
+                                                              tip=god_map.world.get_body_by_name(tip_link))
         return msg_converter.to_ros_message(root_T_tip)
 
     def compute_fk_point(self, root_link: str, tip_link: str) -> PointStamped:
@@ -366,7 +366,7 @@ class GiskardTester:
         try:
             time_spend_giskarding = time()
             future_goal_accepted = self.api._send_action_goal_async(goal_type)
-            await future_goal_accepted
+            await future_goal_accepted  # FIXME set breakpoint here to avoid long waiting times in debug mode
             if stop_after is not None:
                 await asyncio.sleep(stop_after)
                 cancel_result = await self.api.cancel_goal_async()
