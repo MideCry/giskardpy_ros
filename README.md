@@ -20,7 +20,7 @@ vcs import src < src/giskardpy_ros/$ROS_DISTRO.repos
 rosdep update --rosdistro=$ROS_DISTRO
 sudo apt-get update
 rosdep install --from-paths ./ -i -y --rosdistro ${ROS_DISTRO}
-colcon build --merge-install --symlink-install
+colcon build --merge-install
 source ~/giskard_ws/install/setup.bash
 ```
 ### Tutorials
