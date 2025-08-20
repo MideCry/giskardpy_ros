@@ -18,11 +18,11 @@ class InteractiveMarkerNode:
         self.giskard = GiskardWrapperNode('interactive_cartesian_goals')
         tf.init(self.giskard.node_handle)
 
-        # self.giskard.declare_parameters(namespace='',
-        #                                 parameters=[('root_link', Parameter.Type.STRING),
-        #                                             ('tip_link', Parameter.Type.STRING)])
-        self.root_link = 'map'#self.giskard.get_parameter('root_link').value
-        self.tip_link = 'r_gripper_tool_frame'#self.giskard.get_parameter('tip_link').value
+        self.giskard.declare_parameters(namespace='',
+                                        parameters=[('root_link', Parameter.Type.STRING),
+                                                    ('tip_link', Parameter.Type.STRING)])
+        self.root_link = self.giskard.get_parameter('root_link').value
+        self.tip_link = self.giskard.get_parameter('tip_link').value
 
         # Create an interactive marker server
         self.server = InteractiveMarkerServer(self.giskard.node_handle, 'cartesian_goals')
