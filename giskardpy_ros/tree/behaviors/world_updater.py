@@ -164,17 +164,11 @@ class ProcessWorldUpdate(GiskardBehavior):
                 joint.origin = parent_link_T_group_root_link.to_np()
                 world.add_body(link)
                 world.add_connection(joint)
-                body = link.parent_body
-                while True:
-                    if body.has_collision() and not body.collision_config.disabled and body.collision_config.buffer_zone_distance > 0.0:
-                        link.set_static_collision_config(body._collision_config)
-                        break
-                    if body == god_map.world.root:
-                        break
-                    body = body.parent_body
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
                 world.add_view(view)
-
+        robot = god_map.world.search_for_robot_with_body(link)
+        if robot is not None:
+            link.set_static_collision_config(robot.default_collision_config)
         # SUB-CASE: If it is an articulated object, open up a joint state subscriber
         get_middleware().loginfo(f'Attached object \'{group_name}\' at \'{parent_link}\'.')
         if world_body.joint_state_topic:
