@@ -15,6 +15,7 @@ mkdir -p ~/giskard_ws/src && cd ~/giskard_ws
 colcon build
 cd src
 git clone https://github.com/SemRoCo/giskardpy_ros.git -b ros2-jazzy-main
+pip install -r giskardpy_ros/requirements.txt
 cd ..
 vcs import src < src/giskardpy_ros/$ROS_DISTRO.repos 
 rosdep update --rosdistro=$ROS_DISTRO
