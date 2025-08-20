@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Union
 
 from controller_manager_msgs.msg import ControllerState
-from controller_manager_msgs.srv import ListControllers_Response
+from controller_manager_msgs.srv._list_controllers import ListControllers_Response
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState

@@ -38,10 +38,7 @@ class WorldWithHSRConfig(WorldConfig):
         self.add_6dof_joint(parent_link=self.map_name, child_link=self.odom_link_name,
                             joint_name=self.localization_joint_name)
         self.add_empty_link(PrefixedName(self.odom_link_name))
-        if self.robot_description is None:
-            self.add_robot_urdf(urdf=rospy.get_param(self.robot_description_name))
-        else:
-            self.add_robot_urdf(urdf=self.robot_description)
+        self.add_robot_urdf(urdf=self.robot_description)
         root_link_name = self.get_root_link_of_group(self.robot_group_name)
         self.add_omni_drive_joint(parent_link_name=self.odom_link_name,
                                   child_link_name=root_link_name,

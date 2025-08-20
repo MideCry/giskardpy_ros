@@ -65,14 +65,17 @@ jobs:
   test_standalone:
     needs: to-lowercase
     runs-on: ubuntu-latest
-    container: # Login and start specified container image. Ubuntu20.04 isn't supported on GitHub-Workflow as of 04.2025
-      image: ghcr.io/${{ needs.to-lowercase.outputs.repo_lowercase }}:jazzy
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         qp_solver: [qpSWIFT]
+        container:
+          - jazzy
+          - humble
+    container: # Login and start specified container image. Ubuntu20.04 isn't supported on GitHub-Workflow as of 04.2025
+      image: ghcr.io/${{ needs.to-lowercase.outputs.repo_lowercase }}:${{ matrix.container }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       QP_SOLVER: ${{ matrix.qp_solver }}
       HOME: /root/
@@ -219,7 +222,7 @@ jobs:
         run: |
           cd giskard_ws
           vcs import src < src/giskardpy_ros/jazzy.repos 
-          rosdep update --rosdistro=jazzy
+          rosdep update --rosdistro=${{ matrix.container }}
           sudo apt-get update
           rosdep install --from-paths ./ -i -y --rosdistro ${ROS_DISTRO}
           colcon build

@@ -20,24 +20,17 @@ def generate_launch_description():
             " ",
             PathJoinSubstitution(
                 [
-                    FindPackageShare("iai_pr2_description"),
+                    FindPackageShare("hsr_description"),
                     "robots",
-                    "pr2_with_ft2_cableguide.xacro",
+                    "hsrb4s.urdf.xacro",
                 ]
             ),
         ]
     )
-    #upload_pr2_launch = os.path.join(get_package_share_directory('iai_pr2_description'),
-    #                                 'launch', 'upload_pr2.launch.py')
-    #
     return LaunchDescription([
-        # Static transform publisher (example, modify as needed for your robot)
-        #IncludeLaunchDescription(
-        #    PythonLaunchDescriptionSource(upload_pr2_launch)
-        #),
         Node(
             package='giskardpy_ros',
-            executable='pr2_standalone',
+            executable='hsr_standalone',
             name='giskard',
             parameters=[{'robot_description': robot_description}],
             output='screen',
@@ -47,7 +40,7 @@ def generate_launch_description():
             executable='interactive_marker',
             name='giskard_interactive_marker',
             parameters=[{'root_link': 'map',
-                         'tip_link': 'r_gripper_tool_frame'}],
+                         'tip_link': 'hand_gripper_tool_frame'}],
             output='screen',
         ),
         # RViz node

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from rclpy import Parameter
+
 from giskardpy.middleware import get_middleware
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
@@ -7,11 +9,14 @@ from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, WorldWit
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 
-if __name__ == '__main__':
+def main():
     rospy.init_node('giskard')
-    get_middleware().loginfo('asdf')
+    rospy.node.declare_parameters(namespace='',
+                                  parameters=[('robot_description', Parameter.Type.STRING)])
+    robot_description = rospy.node.get_parameter_or('robot_description').value
     drive_joint_name = 'brumbrum'
-    giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name),
+    giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name,
+                                                      urdf=robot_description),
                       collision_avoidance_config=PR2CollisionAvoidance(drive_joint_name=drive_joint_name),
                       robot_interface_config=StandAloneRobotInterfaceConfig(
                           [
@@ -35,6 +40,9 @@ if __name__ == '__main__':
                               drive_joint_name,
                           ]
                       ),
-                      behavior_tree_config=StandAloneBTConfig(publish_tf=False, publish_js=False, debug_mode=True),
+                      behavior_tree_config=StandAloneBTConfig(publish_tf=True, publish_js=False, debug_mode=True),
                       qp_controller_config=QPControllerConfig())
     giskard.live()
+
+if __name__ == '__main__':
+    main()
