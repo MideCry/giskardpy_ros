@@ -755,8 +755,7 @@ class OldGiskardWrapper(GiskardWrapper):
         :return: WorldResult
         """
         return self.world.register_group(new_group_name=new_group_name,
-                                         root_link_name=root_link_name,
-                                         root_link_group_name=root_link_group_name)
+                                         root_link_name=root_link_name)
 
     def clear_world(self) -> World_Result:
         """
