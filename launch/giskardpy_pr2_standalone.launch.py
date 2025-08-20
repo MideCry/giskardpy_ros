@@ -36,15 +36,8 @@ def generate_launch_description():
         #    PythonLaunchDescriptionSource(upload_pr2_launch)
         #),
         Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='static_transform_publisher',
-            output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'map', 'base_footprint']
-        ),
-        Node(
             package='giskardpy_ros',
-            executable='generic_giskard_standalone',
+            executable='pr2_standalone',
             name='giskard',
             parameters=[{'robot_description': robot_description}],
             output='screen',
