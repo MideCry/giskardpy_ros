@@ -137,7 +137,7 @@ class GiskardTester:
         if 'QP_SOLVER' in os.environ:
             god_map.qp_controller.set_qp_solver(SupportedQPSolver[os.environ['QP_SOLVER']])
         self.robot_names = [v.name for v in god_map.world.search_for_views_of_type(AbstractRobot)]
-        self.default_root = str(god_map.world.root.name)
+        self.default_root = str(god_map.world.root.name.name)
 
         # rospy.sleep(1)
         self.original_number_of_links = len(god_map.world.bodies)
@@ -717,6 +717,8 @@ class GiskardTester:
     def compute_collisions(self, collision_entries: List[CollisionViewRequest]) -> Collisions:
         god_map.collision_scene.collision_detector.reset_cache()
         god_map.collision_scene.matrix_manager.parse_collision_requests(collision_entries)
+        collision_matrix = god_map.collision_scene.matrix_manager.compute_collision_matrix()
+        god_map.collision_scene.set_collision_matrix(collision_matrix)
         return god_map.collision_scene.check_collisions()
 
     def compute_all_collisions(self) -> Collisions:

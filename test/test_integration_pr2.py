@@ -3519,7 +3519,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.allow_collision(group2='box')
 
         box_setup.api.motion_goals.allow_self_collision()
-        box_setup.api.motion_goals.add_cartesian_pose(p, 'base_footprint', box_setup.default_root)
+        box_setup.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link='base_footprint', root_link=box_setup.default_root)
         box_setup.execute()
 
         box_setup.check_cpi_leq(box_setup.get_l_gripper_links(), 0.0)
