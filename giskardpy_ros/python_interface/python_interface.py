@@ -1045,8 +1045,12 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             robot_name = self.robot_name
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
-        collision_entry.group1 = robot_name
-        collision_entry.group2 = robot_name
+        if isinstance(robot_name, PrefixedName):
+            collision_entry.group1 = robot_name.name
+            collision_entry.group2 = robot_name.name
+        else:
+            collision_entry.group1 = robot_name
+            collision_entry.group2 = robot_name
         self._add_collision_avoidance(collisions=[collision_entry],
                                       start_condition=start_condition,
                                       pause_condition=pause_condition,

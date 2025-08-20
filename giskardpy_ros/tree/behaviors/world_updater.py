@@ -128,10 +128,10 @@ class ProcessWorldUpdate(GiskardBehavior):
 
     def add_object(self, req: World_Goal) -> None:
         group_name = PrefixedName(req.group_name)
-        if req.parent_link.name != '' and req.parent_link.group_name != '':
-            parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
-        else:
+        if req.parent_link.name == '' and req.parent_link.group_name == '':
             parent_link = god_map.world.root
+        else:
+            parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
         world_body = req.body
         pose = req.pose
 
@@ -162,6 +162,14 @@ class ProcessWorldUpdate(GiskardBehavior):
                 joint.origin = parent_link_T_group_root_link.to_np()
                 world.add_body(link)
                 world.add_connection(joint)
+                body = link.parent_body
+                while True:
+                    if body.has_collision() and not body.collision_config.disabled and body.collision_config.buffer_zone_distance > 0.0:
+                        link.set_static_collision_config(body._collision_config)
+                        break
+                    if body == god_map.world.root:
+                        break
+                    body = body.parent_body
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
                 world.add_view(view)
 

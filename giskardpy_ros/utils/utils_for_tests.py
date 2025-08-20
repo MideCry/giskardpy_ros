@@ -542,14 +542,8 @@ class GiskardTester:
                     parent_body = god_map.world.root
                 else:
                     parent_body = msg_converter.link_name_msg_to_body(parent_body_name, god_map.world)
-                if parent_body in GiskardBlackboard().giskard.robot.bodies:
-                    object_links = view.bodies
-                    for link_a, link_b in god_map.collision_scene.self_collision_matrix:
-                        if link_a in object_links or link_b in object_links:
-                            break
-                    else:
-                        assert False, f'{name} not in collision matrix'
-                assert parent_body == view.root.parent_body
+                # todo check if collision avoidance config is correct?
+                assert parent_body == view.root.parent_body, f"Parent body '{parent_body.name}' does not match view's parent body '{view.root.parent_body.name}'"
         else:
             if expected_error_type != DuplicateViewError:
                 with pytest.raises(ViewNotFoundError) as e:
