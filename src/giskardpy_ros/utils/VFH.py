@@ -185,8 +185,8 @@ class VectorFieldHistogram:
         for k, g in groupby(enumerate(free_sectors), lambda ix: ix[0] - ix[1]):
             valley = list(map(itemgetter(1), g))
             valleys.append(valley)
-            # print(f"Valley: {valley}")
-            # print(f"Valleys: {valleys}")
+            print(f"Valley: {valley}")
+            print(f"Valleys: {valleys}")
         # Find the valley containing the target sector
         selected_valley = None
 
@@ -200,20 +200,24 @@ class VectorFieldHistogram:
         if selected_valley:
             k_near = min(selected_valley)
             k_far = k_near + self.s_max
+            prob = k_near + self.s_max
             if len(selected_valley) <= self.s_max:
                 # print("Valley is narrow")
+                k_far = max(selected_valley)
+            if len(selected_valley) >= prob:
                 k_far = max(selected_valley)
             theta = (k_near + k_far) / 2
             best_sector = int(theta)
             theta_deg = best_sector * self.sector_angle
-            # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
+            print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
             # print(f"Steering Valley: {selected_valley}")
-            # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
-            # print(f"Steering angle: {theta_deg:.2f}°")
+            print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+            print(f"Steering angle: {theta_deg:.2f}°")
         # Start searching for adjacent free valley
         else:
             total_sectors = len(polar_histogram)
-            # print("Target point is behind obstacle, choosing largest adjacent Valley")
+            # condition triggers even if it is not supposed to, which is likely due to the way the target point is picked/ the search condition is being triggered
+            print("Target point is behind obstacle, choosing largest adjacent Valley")
             # check whether target sector is adjacent to any valleys, then check which of the two is larger
             nearby_sectors = set((target_sector + offset) % total_sectors for offset in range(-2, 2))
             # print(f"Nearby sectors: {nearby_sectors}")

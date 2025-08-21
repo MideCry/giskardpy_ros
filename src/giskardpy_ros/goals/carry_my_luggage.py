@@ -59,7 +59,7 @@ class CarryMyBullshit(Goal):
                  max_rotation_velocity: float = 0.5,
                  max_rotation_velocity_head: float = 1.4,  # how to make that faster??
                  max_translation_velocity: float = 0.38,
-                 traj_tracking_radius: float = 0.5,
+                 traj_tracking_radius: float = 0.7,
                  height_for_camera_target: float = 1,
                  laser_frame_id: str = 'base_range_sensor_link',
                  target_age_threshold: float = 2,
@@ -73,7 +73,7 @@ class CarryMyBullshit(Goal):
         self.vfh = VectorFieldHistogram(max_range=5.0,
                                         grid_size=0.1,
                                         sector_angle=5,
-                                        obstacle_threshold=8,
+                                        obstacle_threshold=16,
                                         s_max=12,
                                         input_topic="/hsrb/base_scan")
         root_V_goal_angle = None
@@ -539,7 +539,8 @@ class CarryMyBullshit(Goal):
         laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
         self.current_target = laser_T_root @ self.current_target
 
-        self.closest_point = np.array([traj[closest_idx, 0], traj[closest_idx, 1], 0, 1])
+        # replace with next idx?
+        self.closest_point = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
         return result
 
     def check_laser_scan_age(self):
