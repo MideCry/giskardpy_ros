@@ -193,7 +193,6 @@ class CarryMyBullshit(Goal):
             self.add_monitor(target_lost)
             target_lost.observation_expression = cas.greater_equal(last_target_age, self.target_age_threshold)
 
-        # todo reference new self attribute instead of function
         next_x = self.current_target[0]
         next_y = self.current_target[1]
         closest_x = self.closest_point[0]
@@ -307,7 +306,6 @@ class CarryMyBullshit(Goal):
             self.add_monitor(arrived_at_target)
             arrived_at_target.observation_expression = cas.less_equal(distance_to_human, self.min_distance_to_target)
 
-        # TODO: if everything VFH related works, test deleting this
         # %% follow next point --tbr
         # follow_next_point = Task(name='follow next')
         # self.add_task(follow_next_point)
@@ -538,7 +536,6 @@ class CarryMyBullshit(Goal):
         laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
         self.current_target = laser_T_root @ self.current_target
 
-        # replace with next idx?
         self.closest_point = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
         return result
 

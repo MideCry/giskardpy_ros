@@ -66,6 +66,8 @@ class VectorFieldHistogram:
         self.plotting = 0
         self.frequency = 50
 
+    # ideas: check whether human_point is behind obstacle; use that as part of condition to start search algo
+    # - make sure there are always more than one valleys in search stage; check which valley is closer to the direction of the human point(??)
     # TODO: Unit testing by checking steering angles
 
     def laser_callback(self, data: LaserScan):
