@@ -52,26 +52,3 @@ class VFHMoveDir(Task):
 
         self.add_point_goal_constraints(frame_P_current=root_P_tip, frame_P_goal=root_P_goal_point,
                                         reference_velocity=self.max_velocity, weight=self.weight)
-
-
-# class RealMoveDir(VFHMoveDir):
-#     def __init__(self,
-#                  tip_link: PrefixName,
-#                  root_link: PrefixName,
-#                  topic_name: str,
-#                  max_velocity: float = 0.3,
-#                  weight: float = WEIGHT_BELOW_CA,
-#                  name: Optional[str] = None):
-#         initial_goal = cas.Vector3((0, 0, 0), reference_frame=god_map.world.search_for_link_name(tip_link))
-#         super().__init__(name=name,
-#                          tip_link=tip_link,
-#                          goal_vector=initial_goal,
-#                          root_link=root_link,
-#                          max_velocity=max_velocity,
-#                          weight=weight)
-#         self.sub = rospy.Subscriber(topic_name, Vector3Stamped, self.cb, queue_size=10)
-#
-#     def cb(self, data: Vector3Stamped):
-#         data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
-#         data = god_map.world.transform(self.root, data).to_np()
-#         self.root_V_goal_angle = data

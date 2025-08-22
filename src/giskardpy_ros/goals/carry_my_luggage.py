@@ -47,7 +47,7 @@ class CarryMyBullshit(Goal):
                  odom_joint_name: str = 'brumbrum',
                  root_link: Optional[str] = None,
                  camera_link: str = 'head_rgbd_sensor_link',
-                 distance_to_target_stop_threshold: float = 0.70,
+                 distance_to_target_stop_threshold: float = 0.60,
                  cone_theta: float = 0.1,
                  laser_scan_age_threshold: float = 2,
                  laser_distance_threshold: float = 0.5,
@@ -59,7 +59,7 @@ class CarryMyBullshit(Goal):
                  max_rotation_velocity: float = 0.5,
                  max_rotation_velocity_head: float = 1.4,  # how to make that faster??
                  max_translation_velocity: float = 0.38,
-                 traj_tracking_radius: float = 0.7,
+                 traj_tracking_radius: float = 0.65,
                  height_for_camera_target: float = 1,
                  laser_frame_id: str = 'base_range_sensor_link',
                  target_age_threshold: float = 2,
@@ -352,8 +352,7 @@ class CarryMyBullshit(Goal):
                                                  weight=self.weight,
                                                  name='stay in circle')
 
-        # %% laser avoidance
-        # todo will be completely replaced with VFH soon
+        # %% navigation task
         print(f'goal angle:{root_V_goal_angle}')
         vfh_move_task = VFHMoveDir(self.root, self.tip, self.laser_frame, root_V_goal_angle, name="vfh_move_task")
         self.add_task(vfh_move_task)

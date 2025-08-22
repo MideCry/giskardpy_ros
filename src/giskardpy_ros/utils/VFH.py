@@ -62,41 +62,15 @@ class VectorFieldHistogram:
         self.sub = rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
         self.rate = rospy.Rate(10)
 
+        # used to limit interval of plot generation
         self.plotting = 0
         self.frequency = 50
 
-    # calculate polar obstacle density, as indicator how many obstacles are within a sector - tbd
-    # Unit testing by checking steering angles - tbd
+    # TODO: Unit testing by checking steering angles
 
     def laser_callback(self, data: LaserScan):
         self.distances = np.array(data.ranges)
         self.angles = data.angle_min + np.arange(len(self.distances)) * data.angle_increment
-
-        # self.laser_points_x = []
-        # self.laser_points_y = []
-        #
-        # for i, r in enumerate(self.distances):
-        #     if np.isnan(r) or np.isinf(r):
-        #         continue
-        #
-        #     angle = self.angles[i]
-        #
-        #     point = PointStamped()
-        #     point.header.frame_id = data.header.frame_id
-        #     point.header.stamp = data.header.stamp
-        #     point.point.x = np.cos(angle)
-        #     point.point.y = np.sin(angle)
-        #     point.point.z = 0.0
-        #
-        #     try:
-        #         transformed_point = self.tf_listener.transformPoint("map", point)
-        #         self.laser_points_x.append(transformed_point.point.x)
-        #         self.laser_points_y.append(transformed_point.point.y)
-        #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-        #         continue
-        #
-        #     self.x_points = np.array(self.laser_points_x)
-        #     self.y_points = np.array(self.laser_points_y)
 
     def target_sim(self,
                    target_point=(1.0, 0.0, 0.0)):
@@ -175,7 +149,7 @@ class VectorFieldHistogram:
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
         # print(polar_histogram)
-
+        # TODO: Look into smoothing the polar histogram
         # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
         free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]
@@ -216,7 +190,7 @@ class VectorFieldHistogram:
         # Start searching for adjacent free valley
         else:
             total_sectors = len(polar_histogram)
-            # condition triggers even if it is not supposed to, which is likely due to the way the target point is picked/ the search condition is being triggered
+            # TODO: look into which cases wrongfully trigger the search algo
             print("Target point is behind obstacle, choosing largest adjacent Valley")
             # check whether target sector is adjacent to any valleys, then check which of the two is larger
             nearby_sectors = set((target_sector + offset) % total_sectors for offset in range(-2, 2))
@@ -295,8 +269,8 @@ class VectorFieldHistogram:
             return direction_vector
         else:
             direction_vector = np.array([0.0, 0.0, 0.0])
-            # print(f"Directional Vector: {direction_vector}")
-            # print("---------------------------------------")
+            print(f"Directional Vector: {direction_vector}")
+            print("---------------------------------------")
             self.direction_vector = direction_vector
             return direction_vector
         # benchmark stuff
@@ -364,15 +338,3 @@ class VectorFieldHistogram:
         ax1.legend(loc='upper right')
         plt.tight_layout()
         plt.savefig('/home/suturo/Documents/vfh.png')
-
-# if __name__ == '__main__':
-#     rospy.init_node('vfh_node')
-#     vfh = VectorFieldHistogram(num_readings=240,
-#                                max_range=5.0,
-#                                grid_size=0.1,
-#                                sector_angle=5,
-#                                obstacle_threshold=8,
-#                                s_max=12,
-#                                input_topic="/hsrb/base_scan")
-#
-#     rospy.spin()

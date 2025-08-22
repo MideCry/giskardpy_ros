@@ -17,7 +17,7 @@ import giskardpy_ros.ros1.tfwrapper as tf
 MARKER_SCALE = 0.3
 
 
-# to run, run following command in terminal first: rosrun tf static_transform_publisher 0 0 0 0 0 0 map base_laser_link 100
+# to run, run following command in terminal first: rosrun tf static_transform_publisher 0 0 0 0 0 0 map base_range_sensor_link 100
 
 def line_circle_intersection(line_point, line_direction, circle_center, circle_radius):
     # Compute the direction vector of the line
@@ -133,7 +133,6 @@ class IMServer(object):
         int_marker.pose.orientation.w = 1
         int_marker.scale = MARKER_SCALE
 
-        #int_marker.name = 'eef_{}_to_{}'.format(root_link, tip_link)
         int_marker.name = self.topic_name + '_marker'
         print(int_marker.name)
 
@@ -220,10 +219,7 @@ class IMServer(object):
             self.timer = Timer(rospy.Duration(0.01), self.timer_cb)
 
         def timer_cb(self, timer_event: TimerEvent):
-            # if self.transformed_target is None:
-            #     return
             self.transformed_target = tf.transform_point(self.frame_id, self.target)
-            # print('asdf')
             scan = LaserScan()
             scan.header.frame_id = self.frame_id
             scan.header.stamp = timer_event.current_real
