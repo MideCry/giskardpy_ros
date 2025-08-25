@@ -87,7 +87,7 @@ class PR2StandaloneInterface(RobotInterfaceConfig):
             'l_elbow_flex_joint',
             'l_wrist_flex_joint',
             'l_wrist_roll_joint',
-            self.world.search_for_connections_of_type(OmniDrive)[0].name,
+            self.world.get_connections_by_type(OmniDrive)[0].name,
         ])
 
 

@@ -1,6 +1,8 @@
 import traceback
 from copy import deepcopy
 from threading import Thread
+from typing import Optional
+
 import semantic_world.spatial_types.spatial_types as cas
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
@@ -27,7 +29,7 @@ from line_profiler import profile
 from semantic_world.connections import Connection6DoF
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
-from semantic_world.world_entity import RootedView
+from semantic_world.world_entity import RootedView, Body
 
 
 class ProcessWorldUpdate(GiskardBehavior):
@@ -61,6 +63,14 @@ class ProcessWorldUpdate(GiskardBehavior):
         self.started = False
         get_middleware().loginfo(f'Finished world goal #{GiskardBlackboard().world_action_server.goal_id}.')
         return Status.SUCCESS
+
+    def search_for_robot_with_body(self, body: Body) -> Optional[AbstractRobot]:
+        robots = [v for v in god_map.world.views if isinstance(v, AbstractRobot) and body in v.bodies]
+        if len(robots) == 1:
+            return robots[0]
+        if len(robots) > 1:
+            raise ValueError(f"Found multiple robots with body {body.name}")
+        return None
 
     def process_goal(self):
         req = self.action_server.goal_msg
@@ -166,7 +176,7 @@ class ProcessWorldUpdate(GiskardBehavior):
                 world.add_connection(joint)
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
                 world.add_view(view)
-        robot = god_map.world.search_for_robot_with_body(link)
+        robot = self.search_for_robot_with_body(link)
         if robot is not None:
             link.set_static_collision_config(robot.default_collision_config)
         # SUB-CASE: If it is an articulated object, open up a joint state subscriber
@@ -213,7 +223,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         with god_map.world.modify_world():
             god_map.world.clear()
             GiskardBlackboard().giskard.world_config.setup_world()
-        robots = god_map.world.search_for_views_of_type(AbstractRobot)
+        robots = god_map.world.get_views_by_type(AbstractRobot)
         self.collision_scene = CollisionWorldSynchronizer(collision_detector=god_map.collision_scene.collision_detector,
                                                           world=god_map.world,
                                                           robots=robots)

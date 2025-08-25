@@ -167,7 +167,7 @@ class Table(QTableWidget):
         color_msg = ColorRGBA(r=color[0] / 255., g=color[1] / 255., b=color[2] / 255., a=1.0)
         god_map.world.links[link1].dye_collisions(color_msg)
         god_map.world.links[link2].dye_collisions(color_msg)
-        god_map.world.reset_cache()
+        god_map.world.clear_all_lru_caches()
         self.ros_visualizer.clear_marker_cache()
         self.ros_visualizer.publish_markers()
 
@@ -181,7 +181,7 @@ class Table(QTableWidget):
                 god_map.world.links[link_name].dye_collisions(god_map.world.default_link_color)
             else:
                 god_map.world.links[link_name].dye_collisions(disabled_color)
-        god_map.world.reset_cache()
+        god_map.world.clear_all_lru_caches()
         self.ros_visualizer.publish_markers()
 
     @property

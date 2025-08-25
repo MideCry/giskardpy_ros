@@ -38,7 +38,7 @@ class RobotInterfaceConfig(ABC):
 
     @property
     def robot(self) -> AbstractRobot:
-        return self.world.search_for_views_of_type(AbstractRobot)[0]
+        return self.world.get_views_by_type(AbstractRobot)[0]
 
     @property
     def tree(self) -> GiskardBT:

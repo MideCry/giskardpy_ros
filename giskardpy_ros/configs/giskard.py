@@ -78,7 +78,7 @@ class Giskard:
 
         collision_detector = self.create_collision_detector(self.collision_checker_id)
 
-        robots = self.world_config.world.search_for_views_of_type(AbstractRobot)
+        robots = self.world_config.world.get_views_by_type(AbstractRobot)
         self.collision_scene = CollisionWorldSynchronizer(collision_detector=collision_detector,
                                                           world=self.world_config.world,
                                                           robots=robots)
@@ -106,11 +106,11 @@ class Giskard:
 
     @property
     def robots(self) -> List[AbstractRobot]:
-        return self.world_config.world.search_for_views_of_type(AbstractRobot)
+        return self.world_config.world.get_views_by_type(AbstractRobot)
 
     def _controlled_joints_sanity_check(self):
         world = god_map.world
-        movable_joints = world.search_for_connections_of_type(ActiveConnection)
+        movable_joints = world.get_connections_by_type(ActiveConnection)
         controlled_joints = self.robot.controlled_connections
         non_controlled_joints = set(movable_joints).difference(set(controlled_joints))
         if len(controlled_joints) == 0 and len(world.connections) > 0:

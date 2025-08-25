@@ -136,7 +136,7 @@ class GiskardTester:
             GiskardBlackboard().tree.turn_off_visualization()
         if 'QP_SOLVER' in os.environ:
             god_map.qp_controller.set_qp_solver(SupportedQPSolver[os.environ['QP_SOLVER']])
-        self.robot_names = [v.name for v in god_map.world.search_for_views_of_type(AbstractRobot)]
+        self.robot_names = [v.name for v in god_map.world.get_views_by_type(AbstractRobot)]
         self.default_root = str(god_map.world.root.name.name)
 
         # rospy.sleep(1)
@@ -147,7 +147,7 @@ class GiskardTester:
         self.api = GiskardWrapperNode(node_name='tests')
 
     def get_odometry_joint(self) -> OmniDrive:
-        return god_map.world.search_for_connections_of_type(OmniDrive)
+        return god_map.world.get_connections_by_type(OmniDrive)
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
         root_T_tip = god_map.world.compute_forward_kinematics(root=god_map.world.get_body_by_name(root_link),
