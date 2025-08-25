@@ -194,7 +194,7 @@ class ProcessWorldUpdate(GiskardBehavior):
         view: RootedView = god_map.world.get_view_by_name(req.group_name)
         if view.root != parent_link:
             old_parent_link = view.root.parent_body
-            god_map.world.move_group(req.group_name, parent_link)
+            god_map.world.move_branch(view.root, parent_link)
             get_middleware().loginfo(
                 f'Reattached \'{req.group_name}\' from \'{old_parent_link}\' to \'{req.parent_link}\'.')
         else:
