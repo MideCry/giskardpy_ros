@@ -5,7 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 from threading import Thread
 from time import time, sleep
-from typing import Tuple, Optional, List, Dict, Union, Set
+from typing import Tuple, Optional, List, Dict, Union, Set, Iterable
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
@@ -726,7 +726,7 @@ class GiskardTester:
                                                   distance=None)]
         return self.compute_collisions(collision_entries)
 
-    def check_cpi_geq(self, bodies: Set[Body], distance_threshold: float, check_external: bool = True,
+    def check_cpi_geq(self, bodies: Iterable[Body], distance_threshold: float, check_external: bool = True,
                       check_self: bool = True):
         collisions = self.compute_all_collisions()
         for collision in collisions.all_collisions:
@@ -739,7 +739,7 @@ class GiskardTester:
                     f'{collision.contact_distance} < {distance_threshold} ' \
                     f'({collision.original_link_a} with {collision.original_link_b})'
 
-    def check_cpi_leq(self, bodies: Set[Body], distance_threshold: float, check_external: bool = True,
+    def check_cpi_leq(self, bodies: Iterable[Body], distance_threshold: float, check_external: bool = True,
                       check_self: bool = True):
         collisions = self.compute_all_collisions()
         min_contact: Collision = None
