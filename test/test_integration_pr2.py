@@ -3720,7 +3720,6 @@ class TestCollisionAvoidanceGoals:
         box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.048)
 
     def test_attached_get_below_soft_threshold(self, box_setup: PR2Tester):
-        # fixme must recompute collision matrix
         attached_link_name = 'pocky'
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
@@ -3786,7 +3785,6 @@ class TestCollisionAvoidanceGoals:
         box_setup.detach_group(attached_link_name)
 
     def test_attached_get_out_of_collision_and_stay_in_hard_threshold(self, box_setup: PR2Tester):
-        # fixme must recompute collision matrix
         attached_link_name = 'pocky'
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
