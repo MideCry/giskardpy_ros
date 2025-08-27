@@ -172,7 +172,7 @@ class ProcessWorldUpdate(GiskardBehavior):
                                        child=link,
                                        _world=god_map.world)
                 joint.origin = parent_link_T_group_root_link.to_np()
-                world.add_body(link)
+                world.add_kinematic_structure_entity(link)
                 world.add_connection(joint)
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
                 world.add_view(view)

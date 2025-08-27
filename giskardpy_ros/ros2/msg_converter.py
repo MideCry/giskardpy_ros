@@ -39,7 +39,7 @@ from semantic_world.geometry import Shape, Box, Cylinder, Sphere, Mesh, Color, S
 from semantic_world.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world import World
-from semantic_world.world_entity import Body
+from semantic_world.world_entity import Body, KinematicStructureEntity
 from semantic_world.world_state import WorldState
 
 
@@ -330,12 +330,12 @@ def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception
     return Exception(f'{msg.type}: {msg.msg}')
 
 
-def link_name_msg_to_body(msg: giskard_msgs.LinkName, world: World) -> Body:
+def link_name_msg_to_body(msg: giskard_msgs.LinkName, world: World) -> KinematicStructureEntity:
     if msg.group_name == '' and msg.name == '':
         return world.root
     if msg.group_name == '':
-        return world.get_body_by_name(msg.name)
-    return world.get_body_by_name(PrefixedName(msg.name, msg.group_name))
+        return world.get_kinematic_structure_entity_by_name(msg.name)
+    return world.get_kinematic_structure_entity_by_name(PrefixedName(msg.name, msg.group_name))
 
 
 def joint_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: World) -> PrefixedName:
@@ -514,7 +514,7 @@ def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: World) -
     result = cas.TransformationMatrix.from_point_rotation_matrix(
         point=p,
         rotation_matrix=R,
-        reference_frame=world.get_body_by_name(msg.header.frame_id))
+        reference_frame=world.get_kinematic_structure_entity_by_name(msg.header.frame_id))
     return result
 
 
@@ -530,17 +530,17 @@ def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
 
 def point_stamped_to_point3(msg: geometry_msgs.PointStamped, world: World) -> cas.Point3:
     return cas.Point3(msg.point.x, msg.point.y, msg.point.z,
-                               reference_frame=world.get_body_by_name(msg.header.frame_id))
+                               reference_frame=world.get_kinematic_structure_entity_by_name(msg.header.frame_id))
 
 
 def vector_stamped_to_vector3(msg: geometry_msgs.Vector3Stamped, world: World) -> cas.Vector3:
     return cas.Vector3(msg.vector.x, msg.vector.y, msg.vector.z,
-                                reference_frame=world.get_body_by_name(msg.header.frame_id))
+                                reference_frame=world.get_kinematic_structure_entity_by_name(msg.header.frame_id))
 
 
 def quaternion_stamped_to_quaternion(msg: geometry_msgs.QuaternionStamped, world: World) -> cas.RotationMatrix:
     return cas.Quaternion(msg.quaternion.x, msg.quaternion.y, msg.quaternion.z, msg.quaternion.w,
-                          reference_frame=world.get_body_by_name(msg.header.frame_id)).to_rotation_matrix()
+                          reference_frame=world.get_kinematic_structure_entity_by_name(msg.header.frame_id)).to_rotation_matrix()
 
 
 def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry, world: World) -> CollisionViewRequest:

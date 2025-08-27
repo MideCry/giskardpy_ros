@@ -150,8 +150,8 @@ class GiskardTester:
         return god_map.world.get_connections_by_type(OmniDrive)
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
-        root_T_tip = god_map.world.compute_forward_kinematics(root=god_map.world.get_body_by_name(root_link),
-                                                              tip=god_map.world.get_body_by_name(tip_link))
+        root_T_tip = god_map.world.compute_forward_kinematics(root=god_map.world.get_kinematic_structure_entity_by_name(root_link),
+                                                              tip=god_map.world.get_kinematic_structure_entity_by_name(tip_link))
         return msg_converter.to_ros_message(root_T_tip)
 
     def compute_fk_point(self, root_link: str, tip_link: str) -> PointStamped:
@@ -180,13 +180,13 @@ class GiskardTester:
             else:
                 raise LookupException('just to trigger except block')
         except (LookupException, ExtrapolationException) as e:
-            target_frame = god_map.world.get_body_by_name(target_frame).name
+            target_frame = god_map.world.get_kinematic_structure_entity_by_name(target_frame).name
             try:
-                result_msg.header.frame_id = str(god_map.world.get_body_by_name(result_msg.header.frame_id).name.name)
+                result_msg.header.frame_id = str(god_map.world.get_kinematic_structure_entity_by_name(result_msg.header.frame_id).name.name)
             except UnknownGroupException:
                 pass
             giskard_obj = msg_converter.ros_msg_to_giskard_obj(result_msg, god_map.world)
-            target_body = god_map.world.get_body_by_name(target_frame)
+            target_body = god_map.world.get_kinematic_structure_entity_by_name(target_frame)
             transformed_giskard_obj = god_map.world.transform(target_frame=target_body, spatial_object=giskard_obj)
             return msg_converter.to_ros_message(transformed_giskard_obj)
 
@@ -535,7 +535,7 @@ class GiskardTester:
                 robot = self.api.world.get_group_info(parent_body_name.group_name)
                 assert name in robot.child_groups
                 expected_parent_link = msg_converter.link_name_msg_to_body(parent_body_name, god_map.world)
-                real_parent_link = view.root.parent_body
+                real_parent_link = view.root.parent_kinematic_structure_entity
                 assert expected_parent_link == real_parent_link
             else:
                 if parent_body_name is None or parent_body_name.name == '':
@@ -543,7 +543,7 @@ class GiskardTester:
                 else:
                     parent_body = msg_converter.link_name_msg_to_body(parent_body_name, god_map.world)
                 # todo check if collision avoidance config is correct?
-                assert parent_body == view.root.parent_body, f"Parent body '{parent_body.name}' does not match view's parent body '{view.root.parent_body.name}'"
+                assert parent_body == view.root.parent_kinematic_structure_entity, f"Parent body '{parent_body.name}' does not match view's parent body '{view.root.parent_kinematic_structure_entity.name}'"
         else:
             if expected_error_type != DuplicateViewError:
                 with pytest.raises(ViewNotFoundError) as e:

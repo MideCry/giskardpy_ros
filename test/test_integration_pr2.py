@@ -1957,8 +1957,8 @@ class TestConstraints:
         kitchen_setup.api.motion_goals.allow_collision(group1=door_obj, group2=kitchen_setup.r_gripper_group)
         kitchen_setup.execute()
 
-        kitchen_setup.check_cpi_leq([god_map.world.get_body_by_name("pr2/r_gripper_tool_frame"),
-                                     god_map.world.get_body_by_name("iai_kitchen/sink_area_dish_washer_door")],
+        kitchen_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name("pr2/r_gripper_tool_frame"),
+                                     god_map.world.get_kinematic_structure_entity_by_name("iai_kitchen/sink_area_dish_washer_door")],
                                     distance_threshold=0.001,
                                     check_self=False)
 
@@ -3130,7 +3130,7 @@ class TestSelfCollisionAvoidance:
         zero_pose.execute()
 
         zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
-        zero_pose.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        zero_pose.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
         zero_pose.detach_group(attached_link_name)
 
     def test_box_overlapping_with_gripper(self, better_pose: PR2Tester):
@@ -3176,7 +3176,7 @@ class TestSelfCollisionAvoidance:
         zero_pose.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=zero_pose.l_tip, root_link='base_footprint')
         zero_pose.execute()
         zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), 0.01)
-        zero_pose.check_cpi_leq([god_map.world.get_body_by_name('r_forearm_link')], 0.01)
+        zero_pose.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name('r_forearm_link')], 0.01)
         zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), 0.05)
 
     def test_avoid_self_collision_with_r_arm(self, zero_pose: PR2Tester):
@@ -3465,8 +3465,8 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.avoid_collision(min_distance=0.05, group1=box_setup.api.robot_name)
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name('base_link')], 0.048)
-        box_setup.check_cpi_leq([god_map.world.get_body_by_name('base_link')], 0.07)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name('base_link')], 0.048)
+        box_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name('base_link')], 0.07)
 
     def test_collision_override(self, box_setup: PR2Tester):
         p = PoseStamped()
@@ -3478,7 +3478,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.api.motion_goals.avoid_collision(min_distance=0.25, group1=box_setup.api.robot_name, group2='box')
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name('base_link')], distance_threshold=0.25,
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name('base_link')], distance_threshold=0.25,
                                 check_self=False)
 
     def test_ignore_all_collisions_of_links(self, box_setup: PR2Tester):
@@ -3488,14 +3488,14 @@ class TestCollisionAvoidanceGoals:
         q = quaternion_from_axis_angle([0, 0, 1], np.pi, )
         p.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         box_setup.teleport_base(p)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name('bl_caster_l_wheel_link'),
-                                 god_map.world.get_body_by_name('bl_caster_r_wheel_link'),
-                                 god_map.world.get_body_by_name('fl_caster_l_wheel_link'),
-                                 god_map.world.get_body_by_name('fl_caster_r_wheel_link'),
-                                 god_map.world.get_body_by_name('br_caster_l_wheel_link'),
-                                 god_map.world.get_body_by_name('br_caster_r_wheel_link'),
-                                 god_map.world.get_body_by_name('fr_caster_l_wheel_link'),
-                                 god_map.world.get_body_by_name('fr_caster_r_wheel_link')],
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name('bl_caster_l_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('bl_caster_r_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('fl_caster_l_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('fl_caster_r_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('br_caster_l_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('br_caster_r_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('fr_caster_l_wheel_link'),
+                                 god_map.world.get_kinematic_structure_entity_by_name('fr_caster_r_wheel_link')],
                                 distance_threshold=0.25,
                                 check_self=False)
 
@@ -3512,8 +3512,8 @@ class TestCollisionAvoidanceGoals:
                                                              root_link='map')
         fake_table_setup.execute()
         fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.05)
-        fake_table_setup.check_cpi_leq([god_map.world.get_body_by_name('r_gripper_l_finger_tip_link')], 0.04)
-        fake_table_setup.check_cpi_leq([god_map.world.get_body_by_name('r_gripper_r_finger_tip_link')], 0.04)
+        fake_table_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name('r_gripper_l_finger_tip_link')], 0.04)
+        fake_table_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name('r_gripper_r_finger_tip_link')], 0.04)
 
     def test_allow_collision_drive_into_box(self, box_setup: PR2Tester):
         p = PoseStamped()
@@ -3565,7 +3565,7 @@ class TestCollisionAvoidanceGoals:
         pocky_pose_setup.api.motion_goals.allow_self_collision()
 
         pocky_pose_setup.execute()
-        pocky_pose_setup.check_cpi_geq([god_map.world.get_body_by_name('box')], 0.048)
+        pocky_pose_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name('box')], 0.048)
 
     def test_avoid_collision_box_between_3_boxes(self, pocky_pose_setup: PR2Tester):
         p = PoseStamped()
@@ -3738,7 +3738,7 @@ class TestCollisionAvoidanceGoals:
                                                       root_link=box_setup.default_root)
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
 
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
@@ -3748,8 +3748,8 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.add_cartesian_pose(goal_pose=p, tip_link=box_setup.r_tip,
                                                       root_link=box_setup.default_root)
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], -0.008)
-        box_setup.check_cpi_leq([god_map.world.get_body_by_name(attached_link_name)], 0.01)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], -0.008)
+        box_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.01)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_get_out_of_collision_below(self, box_setup: PR2Tester):
@@ -3770,7 +3770,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
 
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
@@ -3781,7 +3781,7 @@ class TestCollisionAvoidanceGoals:
                                                       weight=WEIGHT_BELOW_CA)
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_get_out_of_collision_and_stay_in_hard_threshold(self, box_setup: PR2Tester):
@@ -3808,7 +3808,7 @@ class TestCollisionAvoidanceGoals:
         p.pose.orientation.w = 1.
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], -0.003)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], -0.003)
 
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
@@ -3818,8 +3818,8 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.api.monitors.add_check_trajectory_length(10.)
         box_setup.execute(local_min_end=False, expected_error_type=MaxTrajectoryLengthException)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], -0.005)
-        box_setup.check_cpi_leq([god_map.world.get_body_by_name(attached_link_name)], 0.01)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], -0.005)
+        box_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.01)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_get_out_of_collision_stay_in(self, box_setup: PR2Tester):
@@ -3839,7 +3839,7 @@ class TestCollisionAvoidanceGoals:
         p.pose.orientation.w = 1.
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], -0.082)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], -0.082)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_get_out_of_collision_passive(self, box_setup: PR2Tester):
@@ -3853,7 +3853,7 @@ class TestCollisionAvoidanceGoals:
                                    parent_link=box_setup.r_tip,
                                    pose=p)
         box_setup.execute()
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_collision_with_box(self, box_setup: PR2Tester):
@@ -3869,7 +3869,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([god_map.world.get_body_by_name(attached_link_name)], 0.048)
+        box_setup.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)], 0.048)
         box_setup.detach_group(attached_link_name)
 
     def test_attached_collision_allow(self, box_setup: PR2Tester):
@@ -3893,7 +3893,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.add_cartesian_pose(p, box_setup.r_tip, box_setup.default_root)
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_leq([god_map.world.get_body_by_name(pocky)], 0.0)
+        box_setup.check_cpi_leq([god_map.world.get_kinematic_structure_entity_by_name(pocky)], 0.0)
 
     def test_attached_two_items(self, zero_pose: PR2Tester):
         box1_name = 'box1'
@@ -3938,8 +3938,8 @@ class TestCollisionAvoidanceGoals:
 
         zero_pose.execute()
 
-        zero_pose.check_cpi_geq([god_map.world.get_body_by_name(box1_name),
-                                 god_map.world.get_body_by_name(box2_name)], 0.049)
+        zero_pose.check_cpi_geq([god_map.world.get_kinematic_structure_entity_by_name(box1_name),
+                                 god_map.world.get_kinematic_structure_entity_by_name(box2_name)], 0.049)
 
         zero_pose.detach_group(box1_name)
         zero_pose.detach_group(box2_name)
