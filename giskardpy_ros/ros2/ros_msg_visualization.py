@@ -128,10 +128,10 @@ class ROSMsgVisualization:
         m.pose.orientation.w = 1.0
         if len(collisions.all_collisions) > 0:
             for collision in collisions.all_collisions:
-                red_threshold = max(collision.link_a.collision_config.violated_distance or 0.0,
-                                    collision.link_b.collision_config.violated_distance or 0.0)
-                yellow_threshold = max(collision.link_a.collision_config.buffer_zone_distance or 0.0,
-                                       collision.link_b.collision_config.buffer_zone_distance or 0.0)
+                red_threshold = max(collision.link_a.get_collision_config().violated_distance or 0.0,
+                                    collision.link_b.get_collision_config().violated_distance or 0.0)
+                yellow_threshold = max(collision.link_a.get_collision_config().buffer_zone_distance or 0.0,
+                                       collision.link_b.get_collision_config().buffer_zone_distance or 0.0)
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
                     map_T_a = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_a)
