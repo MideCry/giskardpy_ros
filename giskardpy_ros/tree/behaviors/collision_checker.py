@@ -26,8 +26,8 @@ class CollisionChecker(GiskardBehavior):
                     continue  # Fixme figure out why there are sometimes two default collision entries
                 distance = self_collision.contact_distance
                 if distance < 0.0:
-                    raise SelfCollisionViolatedException(f'{self_collision.original_link_a} and '
-                                                         f'{self_collision.original_link_b} violate distance threshold:'
+                    raise SelfCollisionViolatedException(f'{self_collision.original_body_a} and '
+                                                         f'{self_collision.original_body_b} violate distance threshold:'
                                                          f'{self_collision.contact_distance} < {0}')
 
     @catch_and_raise_to_blackboard(skip_on_exception=False)

@@ -128,19 +128,19 @@ class ROSMsgVisualization:
         m.pose.orientation.w = 1.0
         if len(collisions.all_collisions) > 0:
             for collision in collisions.all_collisions:
-                red_threshold = max(collision.link_a.get_collision_config().violated_distance or 0.0,
-                                    collision.link_b.get_collision_config().violated_distance or 0.0)
-                yellow_threshold = max(collision.link_a.get_collision_config().buffer_zone_distance or 0.0,
-                                       collision.link_b.get_collision_config().buffer_zone_distance or 0.0)
+                red_threshold = max(collision.body_a.get_collision_config().violated_distance or 0.0,
+                                    collision.body_b.get_collision_config().violated_distance or 0.0)
+                yellow_threshold = max(collision.body_a.get_collision_config().buffer_zone_distance or 0.0,
+                                       collision.body_b.get_collision_config().buffer_zone_distance or 0.0)
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
-                    map_T_a = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_a)
+                    map_T_a = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_body_a)
                     map_P_pa = np.dot(map_T_a, collision.a_P_pa)
                 else:
                     map_P_pa = collision.map_P_pa
 
                 if collision.map_P_pb is None:
-                    map_T_b = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_link_b)
+                    map_T_b = god_map.world.compute_fk_np(god_map.world.root.name, collision.original_body_b)
                     map_P_pb = np.dot(map_T_b, collision.b_P_pb)
                 else:
                     map_P_pb = collision.map_P_pb

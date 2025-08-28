@@ -23,8 +23,8 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.model.collision_detector import Collisions, Collision
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_world.exceptions import ViewNotFoundError, DuplicateViewError
 from semantic_world.prefixed_name import PrefixedName
@@ -734,26 +734,26 @@ class GiskardTester:
                 continue
             if not check_self and not collision.is_external:
                 continue
-            if collision.original_link_a in bodies or collision.original_link_b in bodies:
+            if collision.original_body_a in bodies or collision.original_body_b in bodies:
                 assert collision.contact_distance >= distance_threshold, \
                     f'{collision.contact_distance} < {distance_threshold} ' \
-                    f'({collision.original_link_a} with {collision.original_link_b})'
+                    f'({collision.original_body_a} with {collision.original_body_b})'
 
     def check_cpi_leq(self, bodies: Iterable[Body], distance_threshold: float, check_external: bool = True,
                       check_self: bool = True):
         collisions = self.compute_all_collisions()
-        min_contact: Collision = None
+        min_contact: GiskardCollision = None
         for collision in collisions.all_collisions:
             if not check_external and collision.is_external:
                 continue
             if not check_self and not collision.is_external:
                 continue
-            if collision.original_link_a in bodies or collision.original_link_b in bodies:
+            if collision.original_body_a in bodies or collision.original_body_b in bodies:
                 if min_contact is None or collision.contact_distance <= min_contact.contact_distance:
                     min_contact = collision
         assert min_contact.contact_distance <= distance_threshold, \
             f'{min_contact.contact_distance} > {distance_threshold} ' \
-            f'({min_contact.original_link_a} with {min_contact.original_link_b})'
+            f'({min_contact.original_body_a} with {min_contact.original_body_b})'
 
     def move_base(self, goal_pose) -> None:
         tip = self.get_odometry_joint().child_link_name

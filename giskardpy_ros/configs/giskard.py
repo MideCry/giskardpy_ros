@@ -9,8 +9,8 @@ import rclpy
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_detector import NullCollisionDetector
 from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer, CollisionCheckerLib
+from giskardpy.model.collisions import NullCollisionDetector
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.monitors.monitors import Monitor
@@ -61,12 +61,12 @@ class Giskard:
             get_middleware().loginfo('Using betterpybullet for collision checking.')
             try:
                 from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
-                return BulletCollisionDetector()
+                return BulletCollisionDetector(_world=self.world_config.world)
             except ImportError as e:
                 get_middleware().logerr(f'{e}; turning off collision avoidance.')
                 self._collision_checker = CollisionCheckerLib.none
         get_middleware().logwarn('Using no collision checking.')
-        return NullCollisionDetector()
+        return NullCollisionDetector(_world=self.world_config.world)
 
     def setup(self):
         """
