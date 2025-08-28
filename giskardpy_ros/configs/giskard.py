@@ -74,22 +74,21 @@ class Giskard:
         """
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
-        god_map.world = self.world_config.world
+            god_map.world = self.world_config.world
 
-        collision_detector = self.create_collision_detector(self.collision_checker_id)
+            collision_detector = self.create_collision_detector(self.collision_checker_id)
 
-        robots = self.world_config.world.get_views_by_type(AbstractRobot)
-        self.collision_scene = CollisionWorldSynchronizer(collision_detector=collision_detector,
-                                                          world=self.world_config.world,
-                                                          robots=robots)
-        god_map.collision_scene = self.collision_scene
-        self.qp_controller_config.setup()
+            robots = self.world_config.world.get_views_by_type(AbstractRobot)
+            self.collision_scene = CollisionWorldSynchronizer(collision_detector=collision_detector,
+                                                              world=self.world_config.world,
+                                                              robots=robots)
+            god_map.collision_scene = self.collision_scene
+            self.qp_controller_config.setup()
 
-        self.behavior_tree_config.setup()
+            self.behavior_tree_config.setup()
 
-        self.robot_interface_config.setup()
-        self.world_config.setup_collision_config()
-        god_map.world._notify_model_change()
+            self.robot_interface_config.setup()
+            self.world_config.setup_collision_config()
 
         if god_map.collision_scene.is_collision_checking_enabled():
             self.collision_scene.sync()

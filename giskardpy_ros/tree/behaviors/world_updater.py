@@ -223,13 +223,13 @@ class ProcessWorldUpdate(GiskardBehavior):
         with god_map.world.modify_world():
             god_map.world.clear()
             GiskardBlackboard().giskard.world_config.setup_world()
-        robots = god_map.world.get_views_by_type(AbstractRobot)
+            robots = god_map.world.get_views_by_type(AbstractRobot)
+            GiskardBlackboard().giskard.robot_interface_config.setup()
         self.collision_scene = CollisionWorldSynchronizer(collision_detector=god_map.collision_scene.collision_detector,
                                                           world=god_map.world,
                                                           robots=robots)
         god_map.collision_scene = self.collision_scene
         self.collision_scene.sync()
-        GiskardBlackboard().giskard.robot_interface_config.setup()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
         GiskardBlackboard().giskard.world_config.setup_collision_config()
         # copy only state of joints that didn't get deleted

@@ -365,8 +365,8 @@ class GiskardTester:
                         wait: bool = True) -> Optional[Move_Result]:
         try:
             time_spend_giskarding = time()
-            future_goal_accepted = self.api._send_action_goal_async(goal_type)
-            await future_goal_accepted  # FIXME set breakpoint here to avoid long waiting times in debug mode
+            future_goal_accepted = self.api._send_action_goal_async(goal_type) # FIXME set breakpoint here to avoid long waiting times in debug mode
+            await future_goal_accepted
             if stop_after is not None:
                 await asyncio.sleep(stop_after)
                 cancel_result = await self.api.cancel_goal_async()
