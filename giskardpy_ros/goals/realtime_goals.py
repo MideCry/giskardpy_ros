@@ -254,7 +254,7 @@ class CarryMyBullshit(Goal):
             map_P_human = map_P_human + root_V_goal_axis2 * 1.5
         else:
             root_V_goal_axis = map_P_human_projected - root_P_bf
-        distance_to_human = cas.norm(root_V_goal_axis)
+        distance_to_human = root_V_goal_axis.norm()
         root_V_goal_axis.scale(1)
         root_V_pointing_axis = root_T_bf.dot(tip_V_pointing_axis)
         root_V_pointing_axis.vis_frame = self.tip
@@ -326,7 +326,7 @@ class CarryMyBullshit(Goal):
         stay_in_circle = Task(name='in circle')
         self.add_task(stay_in_circle)
         buffer = self.traj_tracking_radius
-        distance_to_closest_point = cas.norm(root_P_closest_point - root_P_bf)
+        distance_to_closest_point = (root_P_closest_point - root_P_bf).norm()
         stay_in_circle.add_inequality_constraint(task_expression=distance_to_closest_point,
                                                  lower_error=-distance_to_closest_point - buffer,
                                                  upper_error=-distance_to_closest_point + buffer,
