@@ -59,7 +59,7 @@ class CarryMyBullshit(Goal):
                  max_rotation_velocity: float = 0.5,
                  max_rotation_velocity_head: float = 1.4,  # how to make that faster??
                  max_translation_velocity: float = 0.38,
-                 traj_tracking_radius: float = 0.65,
+                 traj_tracking_radius: float = 1.5,
                  height_for_camera_target: float = 1,
                  laser_frame_id: str = 'base_range_sensor_link',
                  target_age_threshold: float = 2,
@@ -74,8 +74,9 @@ class CarryMyBullshit(Goal):
                                         grid_size=0.1,
                                         sector_angle=5,
                                         obstacle_threshold=16,
-                                        s_max=12,
+                                        s_max=10,
                                         input_topic="/hsrb/base_scan")
+        # tuple_human_point = None
         root_V_goal_angle = None
         if drive_back:
             get_middleware().loginfo('driving back')
@@ -193,10 +194,10 @@ class CarryMyBullshit(Goal):
             self.add_monitor(target_lost)
             target_lost.observation_expression = cas.greater_equal(last_target_age, self.target_age_threshold)
 
-        next_x = self.current_target[0]
-        next_y = self.current_target[1]
-        closest_x = self.closest_point[0]
-        closest_y = self.closest_point[1]
+        # next_x = self.current_target[0]
+        # next_y = self.current_target[1]
+        # closest_x = self.closest_point[0]
+        # closest_y = self.closest_point[1]
         # next_x = symbol_manager.get_symbol(self.ref_str + '.get_current_target()[\'next_x\']') --tbr
         # next_y = symbol_manager.get_symbol(self.ref_str + '.get_current_target()[\'next_y\']') --tbr
         # closest_x = symbol_manager.get_symbol(self.ref_str + '.get_current_target()[\'closest_x\']')
@@ -357,6 +358,10 @@ class CarryMyBullshit(Goal):
 
         if not self.drive_back:
             vfh_move_task.pause_condition = arrived_at_target
+
+            # bf_V_human_point = root_P_bf - self.human_point
+            # tuple_human_point = (self.human_point.point.x, self.human_point.point.y, self.human_point.point.z)
+            # self.vfh.human_point = tuple_human_point
         # if self.enable_laser_avoidance: --tbr
         #     laser_avoidance_task = Task(name='laser avoidance')
         #     self.add_task(laser_avoidance_task)
@@ -532,11 +537,11 @@ class CarryMyBullshit(Goal):
             'closest_y': traj[closest_idx, 1],
         }
 
-        self.current_target = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
+        current_target = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
         laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
-        self.current_target = laser_T_root @ self.current_target
+        self.current_target = laser_T_root @ current_target
 
-        self.closest_point = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
+        self.closest_point = np.array([traj[closest_idx, 0], traj[closest_idx, 1], 0, 1])
         return result
 
     def check_laser_scan_age(self):

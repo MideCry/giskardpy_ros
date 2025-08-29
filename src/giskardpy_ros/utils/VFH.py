@@ -47,6 +47,7 @@ class VectorFieldHistogram:
         self.sector_angle = sector_angle
         self.obstacle_threshold = obstacle_threshold
         self.s_max = s_max
+        # self.human_point = human_point
         self.direction_vector = None
 
         self.topic = input_topic  # "/hsrb/base_scan"
@@ -72,19 +73,24 @@ class VectorFieldHistogram:
 
     def laser_callback(self, data: LaserScan):
         self.distances = np.array(data.ranges)
-        self.angles = data.angle_min + np.arange(len(self.distances)) * data.angle_increment
+        self.angles = np.arange(len(self.distances)) * data.angle_increment
 
     def target_sim(self,
                    target_point=(1.0, 0.0, 0.0)):
         # start_time = time.perf_counter() - benchmark stuff
         # calculating sector that target is in
+        target_point[2] = 0
         target_angle = angle_between_vector(v1=np.array([1, 0, 0]), v2=target_point) + 2.0944
+        if target_point[1] > 0:
+            target_angle = -target_angle
 
         # print('target_angle:', target_angle)
         target_angle_deg = np.rad2deg(target_angle) % 240
         # print('target_angle_deg:', target_angle_deg)
         target_sector = int(target_angle_deg // self.sector_angle)
         print(f"Target Sector:{target_sector}")
+        # calculate sector that human_point is in and pass it to update to use as req for search algo
+
         # end_time = time.perf_counter()  # End timing
         # elapsed_time_ms = (end_time - start_time) * 1000
         # rospy.loginfo(f"target_sim took {elapsed_time_ms:.3f} ms") - benchmark stuff
@@ -167,13 +173,13 @@ class VectorFieldHistogram:
         selected_valley = None
 
         for valley in valleys:
-            if min(valley) <= target_sector <= max(valley) and len(
-                    valley) >= 4:  # check condition and how the valley is picked
+            # check condition and how the valley is picked
+            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:
                 selected_valley = valley
                 print(f"Selected Valley: {selected_valley}")
                 break
 
-        if selected_valley:
+        if selected_valley:##
             k_near = min(selected_valley)
             k_far = k_near + self.s_max
             prob = k_near + self.s_max
@@ -183,6 +189,8 @@ class VectorFieldHistogram:
             if len(selected_valley) >= prob:
                 k_far = max(selected_valley)
             theta = (k_near + k_far) / 2
+            if len(selected_valley) >= prob and target_sector in selected_valley:
+                theta = target_sector
             best_sector = int(theta)
             theta_deg = best_sector * self.sector_angle
             print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
@@ -202,9 +210,10 @@ class VectorFieldHistogram:
                 if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                     candidate_valleys.append(valley)
             # candidate valley has been found in first iteration
-            if candidate_valleys:
+            # check in what sector human_point is and pick valley dependent on which has the human_sector
+            if candidate_valleys and len(candidate_valleys) >= 2:
                 selected_valley = max(candidate_valleys, key=len)
-                # print(f"Selected adjacent Valley: {selected_valley}")
+                print(f"Selected adjacent Valley: {selected_valley}")
                 k_near = min(selected_valley)
                 k_far = k_near + self.s_max
                 if len(selected_valley) <= self.s_max:
@@ -263,8 +272,9 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            theta_rad = np.radians(-(theta_deg - 120.0))  # -- maybe np. instead of .math?
+            theta_rad = np.radians(120.0 - theta_deg)  # -- maybe np. instead of .math?
             direction_vector = np.array([np.cos(theta_rad), np.sin(theta_rad), 0])
+            print(theta_rad)
             print(f"Directional Vector: {direction_vector}")
             print("---------------------------------------")
             self.direction_vector = direction_vector
