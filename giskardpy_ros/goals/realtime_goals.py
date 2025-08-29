@@ -242,7 +242,7 @@ class CarryMyBullshit(Goal):
         # %% orient to goal
         orient_to_goal = Task(name='orient to goal')
         self.add_task(orient_to_goal)
-        _, _, map_odom_angle = root_T_odom.to_rotation().to_rpy()
+        _, _, map_odom_angle = root_T_odom.to_rotation_matrix().to_rpy()
         odom_current_angle = self.odom_joint.yaw.get_symbol(Derivatives.position)
         map_current_angle = map_odom_angle + odom_current_angle
         if self.drive_back:

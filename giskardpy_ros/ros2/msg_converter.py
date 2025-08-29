@@ -148,7 +148,7 @@ def trans_matrix_to_pose_stamped(data: cas.TransformationMatrix) -> geometry_msg
     pose_stamped = geometry_msgs.PoseStamped()
     pose_stamped.header.frame_id = str(data.reference_frame)
     position = data.to_position().to_np()
-    orientation = data.to_rotation().to_quaternion().to_np()
+    orientation = data.to_rotation_matrix().to_quaternion().to_np()
     pose_stamped.pose.position = geometry_msgs.Point(x=position[0],
                                                      y=position[1],
                                                      z=position[2])
@@ -186,7 +186,7 @@ def trans_matrix_to_transform_stamped(data: cas.TransformationMatrix) -> geometr
     transform_stamped.header.frame_id = data.reference_frame
     transform_stamped.child_frame_id = data.child_frame
     position = data.to_position().to_np()
-    orientation = data.to_rotation().to_quaternion().to_np()
+    orientation = data.to_rotation_matrix().to_quaternion().to_np()
     transform_stamped.transform.translation = geometry_msgs.Vector3(x=position[0], y=position[1], z=position[2])
     transform_stamped.transform.rotation = geometry_msgs.Quaternion(x=orientation[0], y=orientation[1],
                                                                     z=orientation[2], w=orientation[3])
