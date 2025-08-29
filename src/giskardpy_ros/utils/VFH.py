@@ -1,4 +1,5 @@
 import math
+import os
 import time
 from itertools import groupby
 from operator import itemgetter
@@ -14,7 +15,8 @@ import tf
 
 from giskardpy.utils.math import angle_between_vector
 
-matplotlib.use('Qt5Agg')
+if 'GITHUB_WORKFLOW' not in os.environ:
+    matplotlib.use('Qt5Agg')
 
 
 class VectorFieldHistogram:
