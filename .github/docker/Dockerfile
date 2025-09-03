@@ -59,8 +59,4 @@ RUN cd ~ && \
     python3 setup.py install
 
 # Install betterpybullet
-RUN mkdir -p ~/bpb && \
-    cd ~/bpb && \
-    git clone https://github.com/SemRoCo/bullet3.git && \
-    cd bullet3 && \
-    ./build_better_pybullet.sh
+RUN pip install --index-url https://test.pypi.org/simple/ betterpybullet
