@@ -18,7 +18,7 @@ MARKER_SCALE = 0.3
 
 
 # to run, run following command in terminal first: rosrun tf static_transform_publisher 0 0 0 0 0 0 map base_range_sensor_link 100
-
+# command can be stopped after cml has been executed/after the script started, since it only needs a tf tree as reference to properly start
 def line_circle_intersection(line_point, line_direction, circle_center, circle_radius):
     # Compute the direction vector of the line
     line_direction = line_direction / np.linalg.norm(line_direction)
@@ -385,7 +385,8 @@ sphere_configs = [
     {'name': 'sphere_1', 'topic': 'scan/sphere_1'},
     {'name': 'sphere_2', 'topic': 'scan/sphere_2'},
     {'name': 'sphere_3', 'topic': 'scan/sphere_3'},
-    {'name': 'sphere_4', 'topic': 'scan/sphere_4'}]
+    {'name': 'sphere_4', 'topic': 'scan/sphere_4'},
+    {'name': 'sphere_5', 'topic': 'scan/sphere_5'}]
 
 servers = []
 

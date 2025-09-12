@@ -67,16 +67,46 @@ class CarryMyBullshit(Goal):
                  clear_path: bool = False,
                  drive_back: bool = False,
                  enable_laser_avoidance: bool = True):
+        """
+
+        :param name: name of the goal
+        :param patrick_topic_name: name of the topic the human_pose is being published on
+        :param laser_topic_name: name of the topic the Lidar Data is being published on
+        :param point_cloud_laser_topic_name: name of the topic the point_cloud is being published on
+        :param odom_joint_name: name of the odometry joint
+        :param root_link: name of the root link
+        :param camera_link: name of the camera link
+        :param distance_to_target_stop_threshold:distance threshold that decides how close the robot stops to the human
+        :param cone_theta: the field of view of the camera for following a human with the head
+        :param laser_scan_age_threshold: threshold which decides when a laser scan is considered too old
+        :param laser_distance_threshold:
+        :param laser_distance_threshold_width:
+        :param laser_avoidance_angle_cutout:
+        :param laser_avoidance_sideways_buffer:
+        :param base_orientation_threshold:
+        :param wait_for_patrick_timeout:
+        :param max_rotation_velocity: maximum possible rotation velocity for the robots base
+        :param max_rotation_velocity_head: maximum possible rotation velocity for the robots head
+        :param max_translation_velocity: maximum moving velocity for robot
+        :param traj_tracking_radius:
+        :param height_for_camera_target:
+        :param laser_frame_id: frame id o the laser scanner
+        :param target_age_threshold:
+        :param target_age_exception_threshold: threshold at which an exception for the age of the target point should be thrown
+        :param clear_path: clear drawn path for navigation
+        :param drive_back: parameter to switch from cml challenge stage 1(follow human) to stage 2(drive back to start)
+        :param enable_laser_avoidance: parameter to enable disable laser avoidance
+        """
         super().__init__(name=name)
         self.current_target = np.array([0, 0, 0, 1])
         self.closest_point = np.array([0, 0, 0, 1])
+        self.next_point = np.array([0, 0, 0, 1])
         self.vfh = VectorFieldHistogram(max_range=5.0,
                                         grid_size=0.1,
                                         sector_angle=5,
-                                        obstacle_threshold=16,
-                                        s_max=10,
+                                        obstacle_threshold=17,  # Orig 16; 17 seems to work nicely too
+                                        s_max=12,
                                         input_topic="/hsrb/base_scan")
-        # tuple_human_point = None
         root_V_goal_angle = None
         if drive_back:
             get_middleware().loginfo('driving back')
@@ -214,6 +244,9 @@ class CarryMyBullshit(Goal):
                                                        '.closest_point',
                                                        input_type_hint=np.ndarray,
                                                        output_type_hint=cas.Point3)
+        root_P_next_point = symbol_manager.get_expr(self.ref_str + '.next_point',
+                                                    input_type_hint=np.ndarray,
+                                                    output_type_hint=cas.Point3)
         while self.vfh.direction_vector is None:
             sleep(0.5)
         root_V_goal_angle = symbol_manager.get_expr(self.ref_str + '.vfh.direction_vector',
@@ -334,19 +367,47 @@ class CarryMyBullshit(Goal):
         #                                              weight=self.weight,
         #                                              name='min dist to next')
         god_map.debug_expression_manager.add_debug_expression('root_P_goal_point_original', root_P_goal_point)
-        # ask whether this is actually necessary for first half of cml challenge (maybe needs an update ??)
         # %% keep the closest point in footprint radius
+        # stay_in_ellipse = Task(name='in ellipse')
+        # self.add_task(stay_in_ellipse)
         stay_in_circle = Task(name='in circle')
         self.add_task(stay_in_circle)
         buffer = self.traj_tracking_radius
         eps = 0.00001
-        distance_to_closest_point = cas.norm(root_P_closest_point - root_P_bf + cas.Point3([eps, eps, 0]))
+        # eps = 1e-5
+        # a = 2.0
+        # b = 1.0
+        # delta = cas.Point3(root_P_closest_point - root_P_bf + cas.Point3([eps, eps, 0]))
+        # print(f'delta:{delta}')
+        # elliptical_dist = cas.norm((delta.x / a) ** 2 + (delta.y / b) ** 2)
+        # print(type(elliptical_dist))
+        # print(f'ell_dist{elliptical_dist}')
+
+        # distance_to_closest_point = cas.norm(root_P_closest_point - root_P_bf + cas.Point3([eps, eps, 0])) # shape is implicitly defined through this line
+        distance_to_next_point = cas.norm(root_P_next_point - root_P_bf + cas.Point3([eps, eps, 0]))
+
         god_map.debug_expression_manager.add_debug_expression('root_P_closest_point', root_P_closest_point)
+        god_map.debug_expression_manager.add_debug_expression('root_P_next_point', root_P_next_point)
         god_map.debug_expression_manager.add_debug_expression('root_P_bf', root_P_bf)
-        god_map.debug_expression_manager.add_debug_expression('distance_to_closest_point', distance_to_closest_point)
-        stay_in_circle.add_inequality_constraint(task_expression=distance_to_closest_point,
-                                                 lower_error=-distance_to_closest_point - buffer,
-                                                 upper_error=-distance_to_closest_point + buffer,
+        # god_map.debug_expression_manager.add_debug_expression('elliptical_dist', elliptical_dist)
+        # god_map.debug_expression_manager.add_debug_expression('distance_to_next_point', distance_to_next_point)
+        #
+        # stay_in_ellipse.add_inequality_constraint(task_expression=elliptical_dist,
+        #                                           lower_error=0.0,
+        #                                           upper_error=1.0,
+        #                                           reference_velocity=self.max_translation_velocity,
+        #                                           weight=self.weight,
+        #                                           name='stay in ellipse')
+        # stay_in_circle.add_inequality_constraint(task_expression=distance_to_closest_point,
+        #                                          lower_error=-distance_to_closest_point - buffer,
+        #                                          upper_error=-distance_to_closest_point + buffer,
+        #                                          reference_velocity=self.max_translation_velocity,
+        #                                          weight=self.weight,
+        #                                          name='stay in circle') # ellipse??
+
+        stay_in_circle.add_inequality_constraint(task_expression=distance_to_next_point,
+                                                 lower_error=-distance_to_next_point - buffer,
+                                                 upper_error=-distance_to_next_point + buffer,
                                                  reference_velocity=self.max_translation_velocity,
                                                  weight=self.weight,
                                                  name='stay in circle')
@@ -359,9 +420,6 @@ class CarryMyBullshit(Goal):
         if not self.drive_back:
             vfh_move_task.pause_condition = arrived_at_target
 
-            # bf_V_human_point = root_P_bf - self.human_point
-            # tuple_human_point = (self.human_point.point.x, self.human_point.point.y, self.human_point.point.z)
-            # self.vfh.human_point = tuple_human_point
         # if self.enable_laser_avoidance: --tbr
         #     laser_avoidance_task = Task(name='laser avoidance')
         #     self.add_task(laser_avoidance_task)
@@ -427,12 +485,12 @@ class CarryMyBullshit(Goal):
         for angle in angles:
             if angle < 0:
                 y = -self.laser_distance_threshold_width
-                length = y / np.sin((angle))
+                length = y / np.sin(angle)
                 x = np.cos(angle) * length
                 thresholds.append((x, y, length, angle))
             else:
                 y = self.laser_distance_threshold_width
-                length = y / np.sin((angle))
+                length = y / np.sin(angle)
                 x = np.cos(angle) * length
                 thresholds.append((x, y, length, angle))
             if length > self.laser_distance_threshold:
@@ -517,10 +575,12 @@ class CarryMyBullshit(Goal):
         in_radius = np.where(distances < self.traj_tracking_radius)[0]
         if len(in_radius) > 0:
             next_idx = max(in_radius)
+            far_idx = max(in_radius) * 2
             offset = max(0, next_idx - self.max_temp_distance)
             closest_idx = np.argmin(distances[offset:]) + offset
         else:
             next_idx = closest_idx = np.argmin(distances)
+            far_idx = next_idx = np.argmin(distances)
         # CarryMyBullshit.traj_data = CarryMyBullshit.traj_data[closest_idx:]
         if not self.drive_back:
             self.last_target_age = rospy.get_rostime().to_sec() - self.human_point.header.stamp.to_sec()
@@ -535,12 +595,14 @@ class CarryMyBullshit(Goal):
             'next_y': traj[next_idx, 1],
             'closest_x': traj[closest_idx, 0],
             'closest_y': traj[closest_idx, 1],
+            'far_x': traj[far_idx, 0],
+            'far_y': traj[far_idx, 1]
         }
 
         current_target = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
         laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
         self.current_target = laser_T_root @ current_target
-
+        self.next_point = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])  #
         self.closest_point = np.array([traj[closest_idx, 0], traj[closest_idx, 1], 0, 1])
         return result
 
@@ -654,6 +716,24 @@ class CarryMyBullshit(Goal):
         m_line.frame_locked = True
         ms.markers.append(m_line)
         self.pub.publish(ms)
+
+    # def publish_ell_tracking_radius(self):
+    #     ms = MarkerArray()
+    #     m_line = Marker()
+    #     m_line.action = m_line.ADD
+    #     m_line.ns = 'traj_ell_tracking_radius'
+    #     m_line.id = 140
+    #     m_line.type = m_line.CYLINDER
+    #     m_line.header.frame_id = str(self.tip.short_name)
+    #     m_line.scale.x = (self.traj_tracking_radius / 2.0) ** 2
+    #     m_line.scale.y = (self.traj_tracking_radius / 1.0) ** 2
+    #     m_line.scale.z = 0.05
+    #     m_line.color.a = 0.5
+    #     m_line.color.b = 1
+    #     m_line.pose.orientation.w = 1
+    #     m_line.frame_locked = True
+    #     ms.markers.append(m_line)
+    #     self.pub.publish(ms)
 
     def publish_distance_to_target(self):
         ms = MarkerArray()

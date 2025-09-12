@@ -61,6 +61,8 @@ class VectorFieldHistogram:
         self.theta_deg = None
         self.d_max = self.max_range
         self.obstacle_density = None
+        self.best_sector = None
+        self.last_sector = self.best_sector
 
         self.sub = rospy.Subscriber(self.topic, LaserScan, self.laser_callback)
         self.rate = rospy.Rate(10)
@@ -71,6 +73,9 @@ class VectorFieldHistogram:
 
     # ideas: check whether human_point is behind obstacle; use that as part of condition to start search algo
     # - make sure there are always more than one valleys in search stage; check which valley is closer to the direction of the human point(??)
+    # use starting point of first half of cml challenge as human point; keep current target point logic but
+    # add for checks to take into account position of the human point too to eliminate the "indecisiveness" problem
+
     # TODO: Unit testing by checking steering angles
 
     def laser_callback(self, data: LaserScan):
@@ -164,6 +169,8 @@ class VectorFieldHistogram:
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
         free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]
         print(free_sectors)
+        self.last_sector = self.best_sector
+        print(f'last sector:{self.last_sector}')
         # valley calculation
         valleys = []
         for k, g in groupby(enumerate(free_sectors), lambda ix: ix[0] - ix[1]):
@@ -176,25 +183,25 @@ class VectorFieldHistogram:
 
         for valley in valleys:
             # check condition and how the valley is picked
-            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:
+            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # change if statement to work for oscillation case
                 selected_valley = valley
                 print(f"Selected Valley: {selected_valley}")
                 break
 
-        if selected_valley:##
+        if selected_valley:
             k_near = min(selected_valley)
             k_far = k_near + self.s_max
             prob = k_near + self.s_max
             if len(selected_valley) <= self.s_max:
-                # print("Valley is narrow")
+                print("Valley is narrow")
                 k_far = max(selected_valley)
             if len(selected_valley) >= prob:
                 k_far = max(selected_valley)
             theta = (k_near + k_far) / 2
             if len(selected_valley) >= prob and target_sector in selected_valley:
                 theta = target_sector
-            best_sector = int(theta)
-            theta_deg = best_sector * self.sector_angle
+            self.best_sector = int(theta)
+            theta_deg = self.best_sector * self.sector_angle
             print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
             # print(f"Steering Valley: {selected_valley}")
             print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
@@ -206,15 +213,16 @@ class VectorFieldHistogram:
             print("Target point is behind obstacle, choosing largest adjacent Valley")
             # check whether target sector is adjacent to any valleys, then check which of the two is larger
             nearby_sectors = set((target_sector + offset) % total_sectors for offset in range(-2, 2))
-            # print(f"Nearby sectors: {nearby_sectors}")
+            print(f"Nearby sectors: {sorted(nearby_sectors)}")
             candidate_valleys = []
             for valley in valleys:
                 if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                     candidate_valleys.append(valley)
+                    print(candidate_valleys)
             # candidate valley has been found in first iteration
-            # check in what sector human_point is and pick valley dependent on which has the human_sector
-            if candidate_valleys and len(candidate_valleys) >= 2:
-                selected_valley = max(candidate_valleys, key=len)
+            # check in what sector human_point is and pick valley dependent on which has the human_sector?
+            if candidate_valleys:
+                selected_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
                 print(f"Selected adjacent Valley: {selected_valley}")
                 k_near = min(selected_valley)
                 k_far = k_near + self.s_max
@@ -222,12 +230,12 @@ class VectorFieldHistogram:
                     # print("Valley is narrow")
                     k_far = max(selected_valley)
                 theta = (k_near + k_far) / 2
-                best_sector = int(theta)
-                theta_deg = best_sector * self.sector_angle
+                self.best_sector = int(theta)
+                theta_deg = self.best_sector * self.sector_angle
                 # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
                 # print(f"Steering Valley: {selected_valley}")
-                # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
-                # print(f"Steering angle: {theta_deg:.2f}°")
+                print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+                print(f"Steering angle: {theta_deg:.2f}°")
             # Dynamically expand search radius if no candidate is found in first iteration
             else:
                 # print("No immediately adjacent Valleys found, expanding search radius")
@@ -239,7 +247,7 @@ class VectorFieldHistogram:
                         candidate_sector = target_sector + offset
                         if 0 <= candidate_sector < total_sectors:
                             nearby_sectors.add(candidate_sector)
-                    # print(f"Trying nearby sectors with radius {radius}: {sorted(nearby_sectors)}")
+                    print(f"Trying nearby sectors with radius {radius}: {sorted(nearby_sectors)}")
 
                     # check whether target sector is adjacent to any valleys, then check which of the two is larger
                     candidate_valleys = []
@@ -247,9 +255,15 @@ class VectorFieldHistogram:
                         if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                             candidate_valleys.append(valley)
                             # TODO: replace choosing bigger valley with minimum valley size
-                    if candidate_valleys:
-                        found_valley = max(candidate_valleys, key=len)
-                        # print(f"Found valley at radius {radius}: {found_valley}")
+                    if candidate_valleys and len(candidate_valleys) >= 2 and radius != 24:
+                        # found_valley = max(candidate_valleys, key=len)
+                        found_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
+                        print(f"Found valley at radius {radius}: {found_valley}")
+                        break
+                    elif len(candidate_valleys) == 1 and radius == 24:
+                        # found_valley = max(candidate_valleys, key=len)
+                        found_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
+                        print(f"exhausted search radius {radius} but only found one candidate; continuing with candidate: {found_valley}")
                         break
                 # calculate directional vector
                 if found_valley:
@@ -260,11 +274,11 @@ class VectorFieldHistogram:
                         # print("Valley is narrow")
                         k_far = max(selected_valley)
                     theta = (k_near + k_far) / 2
-                    best_sector = int(theta)
-                    theta_deg = best_sector * self.sector_angle
+                    self.best_sector = int(theta)
+                    theta_deg = self.best_sector * self.sector_angle
                     # print(f"Target angle: {target_angle_deg:.2f}° => Sector {target_sector}")
                     # print(f"Steering Valley: {selected_valley}")
-                    # print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
+                    print(f"k_near: {k_near}, k_far: {k_far}, Steering direction sector: {theta}")
                     # print(f"Steering angle: {theta_deg:.2f}°")
 
         self.polar_histogram = polar_histogram
@@ -274,7 +288,7 @@ class VectorFieldHistogram:
 
         # calculation of directional vector
         if theta_deg is not None:
-            theta_rad = np.radians(120.0 - theta_deg)  # -- maybe np. instead of .math?
+            theta_rad = np.radians(120.0 - theta_deg)
             direction_vector = np.array([np.cos(theta_rad), np.sin(theta_rad), 0])
             print(theta_rad)
             print(f"Directional Vector: {direction_vector}")
@@ -324,9 +338,9 @@ class VectorFieldHistogram:
 
         # LIDAR PointCloud
         ax0.set_title('LIDAR Map')
-        ax0.scatter(-self.y_points, self.x_points, c='blue', s=1, label='LIDAR points')
+        ax0.scatter(-self.y_points, -self.x_points, c='blue', s=1, label='LIDAR points')  # FIXME: Graph Pointcloud doesn't align with actual pointcloud
         ax0.plot(-target_point[1], target_point[0], 'mx', markersize=10)
-        ax0.plot(-self.robot_position[1], self.robot_position[0], 'go', markersize=10, label='Robot Position')
+        ax0.plot(self.robot_position[1], -self.robot_position[0], 'go', markersize=10, label='Robot Position')
         ax0.set_xlim(-self.max_range, self.max_range)
         ax0.set_ylim(-self.max_range, self.max_range)
         ax0.set_aspect('equal')
