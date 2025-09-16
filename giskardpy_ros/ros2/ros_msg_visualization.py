@@ -3,14 +3,11 @@ from typing import Optional, List, Dict, Union
 
 import numpy as np
 from geometry_msgs.msg import Vector3, Point, Quaternion
-from line_profiler import profile
-from numba.cpython.listobj import list_add
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
-import semantic_world.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from semantic_world.prefixed_name import PrefixedName
+import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy.model.trajectory import Trajectory
@@ -19,6 +16,7 @@ from giskardpy.utils.math import rotation_matrix_from_axis_angle, quaternion_fro
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_world.prefixed_name import PrefixedName
 from semantic_world.world_entity import Body
 
 
