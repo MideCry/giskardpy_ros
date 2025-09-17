@@ -181,12 +181,16 @@ class VectorFieldHistogram:
         # Find the valley containing the target sector
         selected_valley = None
 
-        for valley in valleys:
-            # check condition and how the valley is picked
-            if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # change if statement to work for oscillation case
-                selected_valley = valley
-                print(f"Selected Valley: {selected_valley}")
-                break
+        if self.last_sector is not None and abs(self.last_sector - target_sector) >= 24:
+            selected_valley = min(valleys, key=lambda v: abs(self.last_sector - np.average(v)))
+
+        else:
+            for valley in valleys:
+                # check condition and how the valley is picked
+                if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # change if statement to work for oscillation case
+                    selected_valley = valley
+                    print(f"Selected Valley: {selected_valley}")
+                    break
 
         if selected_valley:
             k_near = min(selected_valley)
