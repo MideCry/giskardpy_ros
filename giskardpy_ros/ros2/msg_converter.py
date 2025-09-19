@@ -575,12 +575,16 @@ def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: Color) -> Shape:
 def pose_stamped_to_trans_matrix(
     msg: geometry_msgs.PoseStamped, world: World
 ) -> cas.TransformationMatrix:
-    p = cas.Point3(x=msg.pose.position.x, y=msg.pose.position.y, z=msg.pose.position.z)
+    p = cas.Point3(
+        x_init=msg.pose.position.x,
+        y_init=msg.pose.position.y,
+        z_init=msg.pose.position.z,
+    )
     R = cas.Quaternion(
-        x=msg.pose.orientation.x,
-        y=msg.pose.orientation.y,
-        z=msg.pose.orientation.z,
-        w=msg.pose.orientation.w,
+        x_init=msg.pose.orientation.x,
+        y_init=msg.pose.orientation.y,
+        z_init=msg.pose.orientation.z,
+        w_init=msg.pose.orientation.w,
     ).to_rotation_matrix()
     result = cas.TransformationMatrix.from_point_rotation_matrix(
         point=p,
