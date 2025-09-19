@@ -7,13 +7,15 @@ from giskardpy.data_types.exceptions import *
 from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.middleware import get_middleware
-from giskardpy_ros.tree.behaviors.publish_feedback import giskard_state_to_execution_state
+from giskardpy_ros.tree.behaviors.publish_feedback import (
+    giskard_state_to_execution_state,
+)
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy.utils.decorators import record_time
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from line_profiler import profile
 
-from semantic_world.connections import ActiveConnection
+from semantic_world.world_description.connections import ActiveConnection
 
 
 class SetMoveResult(GiskardBehavior):
@@ -36,18 +38,19 @@ class SetMoveResult(GiskardBehavior):
         trajectory = god_map.trajectory
         joints = god_map.world.get_connections_by_type(ActiveConnection)
         sample_period = god_map.qp_controller.config.mpc_dt
-        move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(trajectory,
-                                                                            sample_period=sample_period,
-                                                                            start_time=0,
-                                                                            joints=joints)
+        move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
+            trajectory, sample_period=sample_period, start_time=0, joints=joints
+        )
         if isinstance(e, PreemptedException):
-            get_middleware().logwarn(f'Goal preempted: \'{move_result.error.msg}\'.')
+            get_middleware().logwarn(f"Goal preempted: '{move_result.error.msg}'.")
         else:
             if self.print:
                 if move_result.error.type == GiskardError.SUCCESS:
-                    get_middleware().loginfo(f'{self.context} succeeded.')
+                    get_middleware().loginfo(f"{self.context} succeeded.")
                 else:
-                    get_middleware().logwarn(f'{self.context} failed: {move_result.error.msg}.')
+                    get_middleware().logwarn(
+                        f"{self.context} failed: {move_result.error.msg}."
+                    )
 
         move_result.execution_state = giskard_state_to_execution_state()
         GiskardBlackboard().move_action_server.result_msg = move_result

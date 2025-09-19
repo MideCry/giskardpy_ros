@@ -7,8 +7,8 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
-from semantic_world.prefixed_name import PrefixedName
-from semantic_world.world_state import WorldState
+from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_world.world_description.world_state import WorldState
 
 plot_lock = Lock()
 
@@ -16,10 +16,9 @@ plot_lock = Lock()
 class PlotDebugExpressions(PlotTrajectory):
 
     def __init__(self, name, wait=True, normalize_position: bool = False, **kwargs):
-        super().__init__(name=name,
-                         normalize_position=normalize_position,
-                         wait=wait,
-                         **kwargs)
+        super().__init__(
+            name=name, normalize_position=normalize_position, wait=wait, **kwargs
+        )
         # self.path_to_data_folder += 'debug_expressions/'
         # create_path(self.path_to_data_folder)
 
@@ -34,13 +33,13 @@ class PlotDebugExpressions(PlotTrajectory):
                 if isinstance(js_[0], np.ndarray):
                     if len(js_.position.shape) == 1:
                         for x in range(js_.position.shape[0]):
-                            tmp_name = PrefixedName(f'{name}|{x}')
+                            tmp_name = PrefixedName(f"{name}|{x}")
                             new_js[tmp_name].position = js_.position[x]
                             new_js[tmp_name].velocity = js_.velocity[x]
                     else:
                         for x in range(js_.position.shape[0]):
                             for y in range(js_.position.shape[1]):
-                                tmp_name = PrefixedName(f'{name}|{x}_{y}')
+                                tmp_name = PrefixedName(f"{name}|{x}_{y}")
                                 new_js[tmp_name].position = js_.position[x, y]
                                 new_js[tmp_name].velocity = js_.velocity[x, y]
                 else:
@@ -50,16 +49,20 @@ class PlotDebugExpressions(PlotTrajectory):
         return new_traj
 
     def plot(self):
-        trajectory = god_map.debug_expression_manager.raw_traj_to_traj(god_map.qp_controller.config.control_dt)
+        trajectory = god_map.debug_expression_manager.raw_traj_to_traj(
+            god_map.qp_controller.config.control_dt
+        )
         if trajectory and len(trajectory) > 0:
             sample_period = god_map.qp_controller.config.mpc_dt
             traj = self.split_traj(trajectory)
             try:
-                traj.plot_trajectory(path_to_data_folder=self.path_to_data_folder,
-                                     sample_period=sample_period,
-                                     file_name=f'debug.pdf',
-                                     filter_0_vel=False,
-                                     **self.kwargs)
+                traj.plot_trajectory(
+                    path_to_data_folder=self.path_to_data_folder,
+                    sample_period=sample_period,
+                    file_name=f"debug.pdf",
+                    filter_0_vel=False,
+                    **self.kwargs,
+                )
             except Exception:
                 traceback.print_exc()
-                get_middleware().logwarn('failed to save debug.pdf')
+                get_middleware().logwarn("failed to save debug.pdf")

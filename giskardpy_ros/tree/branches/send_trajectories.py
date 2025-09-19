@@ -2,7 +2,7 @@ from typing import Dict
 
 from py_trees.composites import Sequence
 
-from semantic_world.prefixed_name import PrefixedName
+from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.send_trajectory import SendFollowJointTrajectory
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -17,25 +17,40 @@ class ExecuteTraj(Sequence):
     prepare_base_control: PrepareBaseTrajControlLoop
     move_robots: Parallel
 
-    def __init__(self, name: str = 'execute traj'):
+    def __init__(self, name: str = "execute traj"):
         super().__init__(name, memory=True)
-        self.move_robots = Parallel(name='move robot', policy=ParallelPolicy.SuccessOnAll(synchronise=True))
+        self.move_robots = Parallel(
+            name="move robot", policy=ParallelPolicy.SuccessOnAll(synchronise=True)
+        )
         self.add_child(self.move_robots)
 
-    def add_follow_joint_traj_action_server(self, namespace: str, group_name: str,
-                                            fill_velocity_values: bool,
-                                            path_tolerance: Dict[Derivatives, float] = None):
-        behavior = SendFollowJointTrajectory(namespace=namespace, group_name=group_name,
-                                             fill_velocity_values=fill_velocity_values, path_tolerance=path_tolerance)
+    def add_follow_joint_traj_action_server(
+        self,
+        namespace: str,
+        group_name: str,
+        fill_velocity_values: bool,
+        path_tolerance: Dict[Derivatives, float] = None,
+    ):
+        behavior = SendFollowJointTrajectory(
+            namespace=namespace,
+            group_name=group_name,
+            fill_velocity_values=fill_velocity_values,
+            path_tolerance=path_tolerance,
+        )
         self.move_robots.add_child(behavior)
 
-    def add_base_traj_action_server(self, cmd_vel_topic: str, track_only_velocity: bool = False,
-                                    joint_name: PrefixedName = None):
-        if not hasattr(self, 'prepare_base_control'):
+    def add_base_traj_action_server(
+        self,
+        cmd_vel_topic: str,
+        track_only_velocity: bool = False,
+        joint_name: PrefixedName = None,
+    ):
+        if not hasattr(self, "prepare_base_control"):
             self.prepare_base_control = PrepareBaseTrajControlLoop()
             self.insert_child(self.prepare_base_control, 0)
             self.base_closed_loop = ControlLoop(log_traj=False)
             self.base_closed_loop.add_closed_loop_behaviors()
             self.move_robots.add_child(self.base_closed_loop)
-        self.base_closed_loop.send_controls.add_send_cmd_velocity(cmd_vel_topic=cmd_vel_topic,
-                                                                  joint_name=joint_name)
+        self.base_closed_loop.send_controls.add_send_cmd_velocity(
+            cmd_vel_topic=cmd_vel_topic, joint_name=joint_name
+        )

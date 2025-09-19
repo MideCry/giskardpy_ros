@@ -6,14 +6,26 @@ from typing import Optional
 import semantic_world.spatial_types.spatial_types as cas
 from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
-from giskard_msgs.srv._get_group_info import GetGroupInfo, GetGroupInfo_Response, GetGroupInfo_Request
-from giskard_msgs.srv._get_group_names import GetGroupNames, GetGroupNames_Response, GetGroupNames_Request
+from giskard_msgs.srv._get_group_info import (
+    GetGroupInfo,
+    GetGroupInfo_Response,
+    GetGroupInfo_Request,
+)
+from giskard_msgs.srv._get_group_names import (
+    GetGroupNames,
+    GetGroupNames_Response,
+    GetGroupNames_Request,
+)
 from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray
 
-from giskardpy.data_types.exceptions import UnknownGroupException, \
-    TransformException, DuplicateNameException, InvalidWorldOperationException
+from giskardpy.data_types.exceptions import (
+    UnknownGroupException,
+    TransformException,
+    DuplicateNameException,
+    InvalidWorldOperationException,
+)
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
 from giskardpy_ros.ros2 import rospy
@@ -26,46 +38,62 @@ from giskardpy_ros.ros2.tfwrapper import transform_pose
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from line_profiler import profile
 
-from semantic_world.connections import Connection6DoF
-from semantic_world.prefixed_name import PrefixedName
+from semantic_world.world_description.connections import Connection6DoF
+from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.robots import AbstractRobot
-from semantic_world.world_entity import RootedView, Body
+from semantic_world.world_description.world_entity import RootedView, Body
 
 
 class ProcessWorldUpdate(GiskardBehavior):
 
     def __init__(self, action_server: ActionServerHandler):
         self.action_server = action_server
-        name = f'Processing \'{self.action_server.name}\''
+        name = f"Processing '{self.action_server.name}'"
         self.started = False
         super().__init__(name)
 
     @record_time
     def setup(self, **kwargs):
-        self.marker_publisher = rospy.node.create_publisher(MarkerArray,
-                                                            f'{rospy.node.get_name()}/visualization_marker_array', 10)
-        self.get_group_names = rospy.node.create_service(GetGroupNames,
-                                                         f'{rospy.node.get_name()}/get_group_names',
-                                                         self.get_group_names_cb)
-        self.get_group_info = rospy.node.create_service(GetGroupInfo, f'{rospy.node.get_name()}/get_group_info',
-                                                        self.get_group_info_cb)
-        self.dye_group = rospy.node.create_service(DyeGroup, f'{rospy.node.get_name()}/dye_group', self.dye_group)
+        self.marker_publisher = rospy.node.create_publisher(
+            MarkerArray, f"{rospy.node.get_name()}/visualization_marker_array", 10
+        )
+        self.get_group_names = rospy.node.create_service(
+            GetGroupNames,
+            f"{rospy.node.get_name()}/get_group_names",
+            self.get_group_names_cb,
+        )
+        self.get_group_info = rospy.node.create_service(
+            GetGroupInfo,
+            f"{rospy.node.get_name()}/get_group_info",
+            self.get_group_info_cb,
+        )
+        self.dye_group = rospy.node.create_service(
+            DyeGroup, f"{rospy.node.get_name()}/dye_group", self.dye_group
+        )
         return super().setup(**kwargs)
 
     def update(self) -> Status:
         if not self.started:
-            get_middleware().loginfo(f'Processing world goal #{GiskardBlackboard().world_action_server.goal_id}.')
+            get_middleware().loginfo(
+                f"Processing world goal #{GiskardBlackboard().world_action_server.goal_id}."
+            )
             self.worker_thread = Thread(target=self.process_goal, name=self.name)
             self.worker_thread.start()
             self.started = True
         if self.worker_thread.is_alive():
             return Status.RUNNING
         self.started = False
-        get_middleware().loginfo(f'Finished world goal #{GiskardBlackboard().world_action_server.goal_id}.')
+        get_middleware().loginfo(
+            f"Finished world goal #{GiskardBlackboard().world_action_server.goal_id}."
+        )
         return Status.SUCCESS
 
     def search_for_robot_with_body(self, body: Body) -> Optional[AbstractRobot]:
-        robots = [v for v in god_map.world.views if isinstance(v, AbstractRobot) and body in v.bodies]
+        robots = [
+            v
+            for v in god_map.world.views
+            if isinstance(v, AbstractRobot) and body in v.bodies
+        ]
         if len(robots) == 1:
             return robots[0]
         if len(robots) > 1:
@@ -89,7 +117,9 @@ class ProcessWorldUpdate(GiskardBehavior):
             elif req.operation == World_Goal.REMOVE_ALL:
                 self.clear_world()
             else:
-                raise InvalidWorldOperationException(f'Received invalid operation code: {req.operation}')
+                raise InvalidWorldOperationException(
+                    f"Received invalid operation code: {req.operation}"
+                )
             GiskardBlackboard().world_action_server.set_succeeded()
         except Exception as e:
             traceback.print_exc()
@@ -103,74 +133,97 @@ class ProcessWorldUpdate(GiskardBehavior):
             res.error_codes = DyeGroup_Response.SUCCESS
             GiskardBlackboard().ros_visualizer.clear_marker_cache()
             get_middleware().loginfo(
-                f'dyed group \'{req.group_name}\' to r:{req.color.r} g:{req.color.g} b:{req.color.b} a:{req.color.a}')
+                f"dyed group '{req.group_name}' to r:{req.color.r} g:{req.color.g} b:{req.color.b} a:{req.color.a}"
+            )
         except UnknownGroupException:
             res.error_codes = DyeGroup_Response.GROUP_NOT_FOUND_ERROR
         return res
 
-    def get_group_names_cb(self, req: GetGroupNames_Request, res: GetGroupNames_Response) -> GetGroupNames_Response:
+    def get_group_names_cb(
+        self, req: GetGroupNames_Request, res: GetGroupNames_Response
+    ) -> GetGroupNames_Response:
         group_names = [str(v.name) for v in god_map.world.views]
-        robot_names = [str(v.name) for v in god_map.world.views if isinstance(v, AbstractRobot)]
+        robot_names = [
+            str(v.name) for v in god_map.world.views if isinstance(v, AbstractRobot)
+        ]
         groups = list(sorted(group_names))
         # make sure robots are at the front
         groups = list(sorted(groups, key=lambda elem: elem not in robot_names))
         res.group_names = groups
         return res
 
-    def get_group_info_cb(self, req: GetGroupInfo_Request, res: GetGroupInfo_Response) -> GetGroupInfo_Response:
+    def get_group_info_cb(
+        self, req: GetGroupInfo_Request, res: GetGroupInfo_Response
+    ) -> GetGroupInfo_Response:
         res.error_codes = GetGroupInfo_Response.SUCCESS
         try:
             group = god_map.world.get_view_by_name(req.group_name)  # type: RootedView
             if isinstance(group, AbstractRobot):
-                res.controlled_joints = [str(j.name) for j in group.controlled_connections.connections]
+                res.controlled_joints = [
+                    str(j.name) for j in group.controlled_connections.connections
+                ]
             # res.links = list(sorted(str(x.name) for x in group.link_names_as_set)) todo
             # res.child_groups = list(sorted(str(x) for x in group.groups.keys())) todo
             res.root_link_pose = msg_converter.trans_matrix_to_pose_stamped(
-                cas.TransformationMatrix(data=group.root.global_pose,
-                                         reference_frame=god_map.world.root))
+                cas.TransformationMatrix(
+                    data=group.root.global_pose, reference_frame=god_map.world.root
+                )
+            )
             # for v in group.free_variables: todo
             #     res.joint_state.name.append(str(v.name))
             #     res.joint_state.position.append(god_map.world.state[v.name].position)
             #     res.joint_state.velocity.append(god_map.world.state[v.name].velocity)
         except KeyError as e:
-            get_middleware().logerr(f'no object with the name {req.group_name} was found')
+            get_middleware().logerr(
+                f"no object with the name {req.group_name} was found"
+            )
             res.error_codes = GetGroupInfo_Response.GROUP_NOT_FOUND_ERROR
 
         return res
 
     def add_object(self, req: World_Goal) -> None:
         group_name = PrefixedName(req.group_name)
-        if req.parent_link.name == '' and req.parent_link.group_name == '':
+        if req.parent_link.name == "" and req.parent_link.group_name == "":
             parent_link = god_map.world.root
         else:
-            parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
+            parent_link = msg_converter.link_name_msg_to_body(
+                req.parent_link, god_map.world
+            )
         world_body = req.body
         pose = req.pose
 
-        if req.pose.header.frame_id == '':
-            raise TransformException('Frame_id in pose is not set.')
+        if req.pose.header.frame_id == "":
+            raise TransformException("Frame_id in pose is not set.")
         try:
             # first try to transform to map using tf to deal with time stamps
-            pose = transform_pose(target_frame=god_map.world.root.name, pose=req.pose, timeout=0.5)
+            pose = transform_pose(
+                target_frame=god_map.world.root.name, pose=req.pose, timeout=0.5
+            )
         except:
             # tf is not available, just ignore this step
             pass
         with god_map.world.modify_world() as world:
             pose = msg_converter.pose_stamped_to_trans_matrix(pose, world)
-            parent_link_T_group_root_link = world.transform(target_frame=parent_link, spatial_object=pose)
+            parent_link_T_group_root_link = world.transform(
+                target_frame=parent_link, spatial_object=pose
+            )
             link_name = PrefixedName(req.group_name, req.group_name)
             if world_body.type == world_body.URDF_BODY:
-                world.add_urdf(urdf=world_body.urdf,
-                               parent_link_name=parent_link,
-                               group_name=group_name,
-                               pose=parent_link_T_group_root_link)
+                world.add_urdf(
+                    urdf=world_body.urdf,
+                    parent_link_name=parent_link,
+                    group_name=group_name,
+                    pose=parent_link_T_group_root_link,
+                )
             else:
-                link = msg_converter.world_body_to_link(link_name=link_name,
-                                                        msg=world_body,
-                                                        color=GiskardBlackboard().giskard.world_config.default_color)
-                joint = Connection6DoF(parent=parent_link,
-                                       child=link,
-                                       _world=god_map.world)
+                link = msg_converter.world_body_to_link(
+                    link_name=link_name,
+                    msg=world_body,
+                    color=GiskardBlackboard().giskard.world_config.default_color,
+                )
+                joint = Connection6DoF(
+                    parent=parent_link, child=link, _world=god_map.world
+                )
                 joint.origin = parent_link_T_group_root_link.to_np()
                 world.add_kinematic_structure_entity(link)
                 world.add_connection(joint)
@@ -180,43 +233,53 @@ class ProcessWorldUpdate(GiskardBehavior):
         if robot is not None:
             link.set_static_collision_config(robot.default_collision_config)
         # SUB-CASE: If it is an articulated object, open up a joint state subscriber
-        get_middleware().loginfo(f'Attached object \'{group_name}\' at \'{parent_link}\'.')
+        get_middleware().loginfo(f"Attached object '{group_name}' at '{parent_link}'.")
         if world_body.joint_state_topic:
             GiskardBlackboard().tree.wait_for_goal.synchronization.sync_joint_state_topic(
-                group_name=group_name,
-                topic_name=world_body.joint_state_topic)
+                group_name=group_name, topic_name=world_body.joint_state_topic
+            )
         # FIXME also keep track of base pose
         if world_body.tf_root_link_name:
-            raise NotImplementedError('tf_root_link_name is not implemented')
+            raise NotImplementedError("tf_root_link_name is not implemented")
 
     def update_group_pose(self, req: World_Goal):
         if req.group_name not in god_map.world.groups:
-            raise UnknownGroupException(f'Can\'t update pose of unknown group: \'{req.group_name}\'')
+            raise UnknownGroupException(
+                f"Can't update pose of unknown group: '{req.group_name}'"
+            )
         group: RootedView = god_map.world.get_view_by_name(req.group_name)
         connection: Connection6DoF = group.root.parent_connection
         pose = msg_converter.ros_msg_to_giskard_obj(req.pose, god_map.world)
-        pose = god_map.world.transform(target_frame=connection.parent, spatial_object=pose)
+        pose = god_map.world.transform(
+            target_frame=connection.parent, spatial_object=pose
+        )
         connection.origin = pose
         god_map.world.notify_state_change()
 
     def update_parent_link(self, req: World_Goal):
-        parent_link = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
+        parent_link = msg_converter.link_name_msg_to_body(
+            req.parent_link, god_map.world
+        )
         view: RootedView = god_map.world.get_view_by_name(req.group_name)
         if view.root != parent_link:
             old_parent_link = view.root.parent_body
             god_map.world.move_branch(view.root, parent_link)
             get_middleware().loginfo(
-                f'Reattached \'{req.group_name}\' from \'{old_parent_link}\' to \'{req.parent_link}\'.')
+                f"Reattached '{req.group_name}' from '{old_parent_link}' to '{req.parent_link}'."
+            )
         else:
             get_middleware().logwarn(
-                f'Didn\'t update world. \'{req.group_name}\' is already attached to \'{req.parent_link}\'.')
+                f"Didn't update world. '{req.group_name}' is already attached to '{req.parent_link}'."
+            )
 
     def remove_object(self, name: str):
         if name not in god_map.world.groups:
-            raise UnknownGroupException(f'Can not remove unknown group: {name}.')
+            raise UnknownGroupException(f"Can not remove unknown group: {name}.")
         god_map.world.delete_group(name)
-        GiskardBlackboard().tree.wait_for_goal.synchronization.remove_group_behaviors(name)
-        get_middleware().loginfo(f'Deleted \'{name}\'.')
+        GiskardBlackboard().tree.wait_for_goal.synchronization.remove_group_behaviors(
+            name
+        )
+        get_middleware().loginfo(f"Deleted '{name}'.")
 
     def clear_world(self):
         tmp_state = deepcopy(god_map.world.state)
@@ -225,9 +288,11 @@ class ProcessWorldUpdate(GiskardBehavior):
             GiskardBlackboard().giskard.world_config.setup_world()
             robots = god_map.world.get_views_by_type(AbstractRobot)
             GiskardBlackboard().giskard.robot_interface_config.setup()
-        self.collision_scene = CollisionWorldSynchronizer(collision_detector=god_map.collision_scene.collision_detector,
-                                                          world=god_map.world,
-                                                          robots=robots)
+        self.collision_scene = CollisionWorldSynchronizer(
+            collision_detector=god_map.collision_scene.collision_detector,
+            world=god_map.world,
+            robots=robots,
+        )
         god_map.collision_scene = self.collision_scene
         self.collision_scene.sync()
         GiskardBlackboard().tree.wait_for_goal.synchronization.remove_added_behaviors()
@@ -241,9 +306,9 @@ class ProcessWorldUpdate(GiskardBehavior):
         god_map.collision_scene.sync()
         # GiskardBlackboard().giskard.collision_scene.setup()
         # self.clear_markers()
-        get_middleware().loginfo('Cleared world.')
+        get_middleware().loginfo("Cleared world.")
 
     def register_group(self, req: World_Goal):
         link_name = msg_converter.link_name_msg_to_body(req.parent_link, god_map.world)
         god_map.world.register_group(name=req.group_name, root_link_name=link_name)
-        get_middleware().loginfo(f'Registered new group \'{req.group_name}\'')
+        get_middleware().loginfo(f"Registered new group '{req.group_name}'")

@@ -4,7 +4,7 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
-from semantic_world.prefixed_name import PrefixedName
+from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
@@ -24,7 +24,7 @@ class SendCmdVelTwist(GiskardBehavior):
 
         self.joint = god_map.world.get_drive_joint(joint_name=joint_name)
         god_map.world.register_controlled_joints([self.joint.name])
-        get_middleware().loginfo(f'Created publisher for {self.cmd_topic}.')
+        get_middleware().loginfo(f"Created publisher for {self.cmd_topic}.")
 
     def solver_cmd_to_twist(self, cmd) -> Twist:
         twist = Twist()

@@ -5,7 +5,7 @@ from line_profiler import profile
 from py_trees.common import Status
 from std_msgs.msg import Float64MultiArray
 
-from semantic_world.prefixed_name import PrefixedName
+from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
@@ -21,17 +21,20 @@ class JointGroupVelController(GiskardBehavior):
         super().__init__()
         self.cmd_topic = cmd_topic
         # self.cmd_topic = self.search_for_subscriber_with_type(Float64MultiArray)
-        self.cmd_pub = rospy.node.create_publisher(Float64MultiArray, self.cmd_topic, 10)
+        self.cmd_pub = rospy.node.create_publisher(
+            Float64MultiArray, self.cmd_topic, 10
+        )
 
         # self.joint_names = self.get_joints()
         self.joint_names = joints
         god_map.world.register_controlled_joints(self.joint_names)
         self.msg = None
-        get_middleware().loginfo(f'Created publisher for {self.cmd_topic} for {self.joint_names}')
+        get_middleware().loginfo(
+            f"Created publisher for {self.cmd_topic} for {self.joint_names}"
+        )
 
     @catch_and_raise_to_blackboard
     @record_time
-
     def update(self):
         msg = Float64MultiArray()
         for i, joint_name in enumerate(self.joint_names):
