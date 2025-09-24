@@ -1057,6 +1057,7 @@ class TestSUTURO:
 
         zero_pose.close_gripper()
 
+    # TODO: add the check of a definitive grasping positon so the test actually has something to check
     def test_grasp_tray(self, zero_pose: HSRTestWrapper):
 
         # configuration of mesh bounds, so grasping goals can be properly executed
