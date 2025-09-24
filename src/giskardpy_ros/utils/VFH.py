@@ -71,11 +71,6 @@ class VectorFieldHistogram:
         self.plotting = 0
         self.frequency = 50
 
-    # ideas: check whether human_point is behind obstacle; use that as part of condition to start search algo
-    # - make sure there are always more than one valleys in search stage; check which valley is closer to the direction of the human point(??)
-    # use starting point of first half of cml challenge as human point; keep current target point logic but
-    # add for checks to take into account position of the human point too to eliminate the "indecisiveness" problem
-
     # TODO: Unit testing by checking steering angles
 
     def laser_callback(self, data: LaserScan):
@@ -96,7 +91,6 @@ class VectorFieldHistogram:
         # print('target_angle_deg:', target_angle_deg)
         target_sector = int(target_angle_deg // self.sector_angle)
         print(f"Target Sector:{target_sector}")
-        # calculate sector that human_point is in and pass it to update to use as req for search algo
 
         # end_time = time.perf_counter()  # End timing
         # elapsed_time_ms = (end_time - start_time) * 1000
