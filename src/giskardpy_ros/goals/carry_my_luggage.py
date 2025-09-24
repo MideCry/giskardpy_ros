@@ -218,6 +218,7 @@ class CarryMyBullshit(Goal):
         closest_laser_right = cas.max(min_right_violation1, min_right_violation2)
         closest_laser_reading = cas.min(closest_laser_reading1, closest_laser_reading2)
 
+        # check whether target has been lost
         if not self.drive_back:
             last_target_age = symbol_manager.get_symbol(self.ref_str + '.last_target_age')
             target_lost = Monitor(name='target out of sight')
@@ -247,6 +248,7 @@ class CarryMyBullshit(Goal):
         root_P_next_point = symbol_manager.get_expr(self.ref_str + '.next_point',
                                                     input_type_hint=np.ndarray,
                                                     output_type_hint=cas.Point3)
+        # the vfh starts calculating directions immediately, so we need to wait until we actually get a valid goal_angle
         while self.vfh.direction_vector is None:
             sleep(0.5)
         root_V_goal_angle = symbol_manager.get_expr(self.ref_str + '.vfh.direction_vector',
@@ -335,6 +337,7 @@ class CarryMyBullshit(Goal):
                                                    weight=self.weight,
                                                    name='move camera')
 
+        # checks distance between perceived human and robot and stops robot if human is too close
         if not self.drive_back:
             arrived_at_target = Monitor(name='arrived at target')
             self.add_monitor(arrived_at_target)
@@ -367,21 +370,13 @@ class CarryMyBullshit(Goal):
         #                                              weight=self.weight,
         #                                              name='min dist to next')
         god_map.debug_expression_manager.add_debug_expression('root_P_goal_point_original', root_P_goal_point)
-        # %% keep the closest point in footprint radius
+        # %% keep the closest point in footprint radius TODO: change shape of footprint radius from circle to a more fitting shape e.g an ellipse
         # stay_in_ellipse = Task(name='in ellipse')
         # self.add_task(stay_in_ellipse)
         stay_in_circle = Task(name='in circle')
         self.add_task(stay_in_circle)
         buffer = self.traj_tracking_radius
         eps = 0.00001
-        # eps = 1e-5
-        # a = 2.0
-        # b = 1.0
-        # delta = cas.Point3(root_P_closest_point - root_P_bf + cas.Point3([eps, eps, 0]))
-        # print(f'delta:{delta}')
-        # elliptical_dist = cas.norm((delta.x / a) ** 2 + (delta.y / b) ** 2)
-        # print(type(elliptical_dist))
-        # print(f'ell_dist{elliptical_dist}')
 
         # distance_to_closest_point = cas.norm(root_P_closest_point - root_P_bf + cas.Point3([eps, eps, 0])) # shape is implicitly defined through this line
         distance_to_next_point = cas.norm(root_P_next_point - root_P_bf + cas.Point3([eps, eps, 0]))
@@ -391,13 +386,6 @@ class CarryMyBullshit(Goal):
         god_map.debug_expression_manager.add_debug_expression('root_P_bf', root_P_bf)
         # god_map.debug_expression_manager.add_debug_expression('elliptical_dist', elliptical_dist)
         # god_map.debug_expression_manager.add_debug_expression('distance_to_next_point', distance_to_next_point)
-        #
-        # stay_in_ellipse.add_inequality_constraint(task_expression=elliptical_dist,
-        #                                           lower_error=0.0,
-        #                                           upper_error=1.0,
-        #                                           reference_velocity=self.max_translation_velocity,
-        #                                           weight=self.weight,
-        #                                           name='stay in ellipse')
         # stay_in_circle.add_inequality_constraint(task_expression=distance_to_closest_point,
         #                                          lower_error=-distance_to_closest_point - buffer,
         #                                          upper_error=-distance_to_closest_point + buffer,
@@ -460,6 +448,7 @@ class CarryMyBullshit(Goal):
             end.start_condition = goal_reached.name
             self.add_monitor(end)
 
+    # resets/clears topics, so that giskard doesn't have to be restarted each time the challenge needs to be restarted
     def clean_up(self):
         if CarryMyBullshit.target_sub is not None:
             CarryMyBullshit.target_sub.unregister()
@@ -471,7 +460,7 @@ class CarryMyBullshit(Goal):
             CarryMyBullshit.point_cloud_laser_sub.unregister()
             CarryMyBullshit.point_cloud_laser_sub = None
 
-    def init_laser_stuff(self, laser_scan: LaserScan):
+    def init_laser_stuff(self, laser_scan: LaserScan): # -tbr TODO: check whether cml laser scanner stuff is now deprecated, since vfh handles laser scanner stuff
         thresholds = []
         if len(laser_scan.ranges) % 2 == 0:
             print('laser range is even')
@@ -502,7 +491,7 @@ class CarryMyBullshit(Goal):
         assert len(thresholds) == len(laser_scan.ranges)
         return thresholds
 
-    def muddle_laser_scan(self, scan: LaserScan, thresholds: np.ndarray):
+    def muddle_laser_scan(self, scan: LaserScan, thresholds: np.ndarray): # -tbr TODO: check whether cml laser scanner stuff is now deprecated, since vfh handles laser scanner stuff
         data = np.array(scan.ranges)
         xs = np.cos(thresholds[:, 3]) * data
         ys = np.sin(thresholds[:, 3]) * data
@@ -536,19 +525,18 @@ class CarryMyBullshit(Goal):
             closest_laser_reading = 0
         return closest_laser_reading, closest_laser_left, closest_laser_right
 
-    def laser_cb(self, scan: LaserScan):
+    def laser_cb(self, scan: LaserScan): # -tbr TODO: check whether cml laser scanner stuff is now deprecated, since vfh handles laser scanner stuff
         self.last_scan = scan
         if self.thresholds is None:
             self.thresholds = self.init_laser_stuff(scan)
             self.publish_laser_thresholds()
         self.closest_laser_reading, self.closest_laser_left, self.closest_laser_right = self.muddle_laser_scan(scan,
                                                                                                                self.thresholds)
+        # get current target and hand it to vfh for path planning & navigation
         self.get_current_target()
-        # print(f'TAR:{self.current_target}')
-
         self.vfh.run(target_point=self.current_target[:3].copy())
 
-    def point_cloud_laser_cb(self, scan: LaserScan):
+    def point_cloud_laser_cb(self, scan: LaserScan): # -tbr TODO: check whether cml laser scanner stuff is now deprecated, since vfh handles laser scanner stuff
         self.last_scan_pc = scan
         if self.thresholds_pc is None:
             self.thresholds_pc = self.init_laser_stuff(scan)
@@ -598,7 +586,7 @@ class CarryMyBullshit(Goal):
             'far_x': traj[far_idx, 0],
             'far_y': traj[far_idx, 1]
         }
-
+        # calculates target point into laser scanner frame
         current_target = np.array([traj[next_idx, 0], traj[next_idx, 1], 0, 1])
         laser_T_root = god_map.world.compute_fk_np(self.laser_frame, self.root)
         self.current_target = laser_T_root @ current_target
