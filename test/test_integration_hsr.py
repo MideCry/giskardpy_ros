@@ -7,10 +7,6 @@ import pytest
 import rospy
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, PointStamped, Vector3Stamped, Pose, Vector3, \
     QuaternionStamped
-from numpy import pi
-from tf.transformations import quaternion_from_matrix, quaternion_about_axis
-
-import giskardpy_ros.ros1.tfwrapper as tf
 from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.data_types.exceptions import ObjectForceTorqueThresholdException
@@ -23,6 +19,10 @@ from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import quaternion_from_axis_angle
+from numpy import pi
+from tf.transformations import quaternion_from_matrix, quaternion_about_axis
+
+import giskardpy_ros.ros1.tfwrapper as tf
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import HSRCollisionAvoidanceConfig, WorldWithHSRConfig, HSRStandaloneInterface
@@ -173,40 +173,6 @@ def box_setup(zero_pose: HSRTestWrapper) -> HSRTestWrapper:
 #         zero_pose.motion_goals.allow_all_collisions()
 #         zero_pose.set_max_traj_length(100)
 #         zero_pose.execute(add_local_minimum_reached=False)
-
-
-class TestLidarMonitor:
-
-    # Zur Zeit kein automatisch ausführbarer Test
-    def test_lidar_monitor(self, zero_pose: HSRTestWrapper):
-        lidar = zero_pose.monitors.add_monitor(class_name=LidarPayloadMonitor.__name__,
-                                               name=LidarPayloadMonitor.__name__ + 'Test',
-                                               start_condition='',
-                                               topic='/hokuyo_back/most_intense',
-                                               frame_id='laser_reference_back',
-                                               laser_distance_threshold_width=0.5,
-                                               laser_distance_threshold=0.8)
-
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = 'map'
-        base_goal.pose.position.x = 1
-        base_goal.pose.orientation.w = 1
-        goal_reached = zero_pose.monitors.add_cartesian_pose(goal_pose=base_goal,
-                                                             tip_link='base_footprint',
-                                                             root_link='map',
-                                                             name='goal reached')
-
-        zero_pose.motion_goals.add_cartesian_pose(goal_pose=base_goal,
-                                                  tip_link='base_footprint',
-                                                  root_link='map',
-                                                  pause_condition=lidar,
-                                                  end_condition=f'{goal_reached}')
-
-        local_min = zero_pose.monitors.add_local_minimum_reached(start_condition=goal_reached)
-
-        zero_pose.monitors.add_end_motion(start_condition=f'{local_min}')
-        zero_pose.motion_goals.allow_all_collisions()
-        zero_pose.execute(add_local_minimum_reached=False)
 
 
 class TestJointGoals:
@@ -2077,3 +2043,37 @@ class TestArenaActions:
 
         kitchen_setup.motion_goals.allow_collision(env_name, gripper_group)
         kitchen_setup.execute(add_local_minimum_reached=False)
+
+
+class TestLidarMonitor:
+
+    # Zur Zeit kein automatisch ausführbarer Test
+    def test_lidar_monitor(self, zero_pose: HSRTestWrapper):
+        lidar = zero_pose.monitors.add_monitor(class_name=LidarPayloadMonitor.__name__,
+                                               name=LidarPayloadMonitor.__name__ + 'Test',
+                                               start_condition='',
+                                               topic='/hokuyo_back/most_intense',
+                                               frame_id='laser_reference_back',
+                                               laser_distance_threshold_width=0.5,
+                                               laser_distance_threshold=0.8)
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'map'
+        base_goal.pose.position.x = 1
+        base_goal.pose.orientation.w = 1
+        goal_reached = zero_pose.monitors.add_cartesian_pose(goal_pose=base_goal,
+                                                             tip_link='base_footprint',
+                                                             root_link='map',
+                                                             name='goal reached')
+
+        zero_pose.motion_goals.add_cartesian_pose(goal_pose=base_goal,
+                                                  tip_link='base_footprint',
+                                                  root_link='map',
+                                                  pause_condition=lidar,
+                                                  end_condition=f'{goal_reached}')
+
+        local_min = zero_pose.monitors.add_local_minimum_reached(start_condition=goal_reached)
+
+        zero_pose.monitors.add_end_motion(start_condition=f'{local_min}')
+        zero_pose.motion_goals.allow_all_collisions()
+        zero_pose.execute(add_local_minimum_reached=False)
