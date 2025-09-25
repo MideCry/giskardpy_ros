@@ -553,6 +553,7 @@ class CarryMyBullshit(Goal):
         return CarryMyBullshit.traj_data[0]
 
     # @memoize_with_counter(4)
+    # TODO: rework how points are being picked if robot has navigated halfway around a larger object
     def get_current_target(self) -> Dict[str, float]:
         self.check_laser_scan_age()
         traj = CarryMyBullshit.trajectory.copy()
@@ -561,6 +562,7 @@ class CarryMyBullshit(Goal):
         distances = np.linalg.norm(error, axis=1)
         # cut off old points
         in_radius = np.where(distances < self.traj_tracking_radius)[0]
+        # logic what trajectory points are being picked
         if len(in_radius) > 0:
             next_idx = max(in_radius)
             far_idx = max(in_radius) * 2

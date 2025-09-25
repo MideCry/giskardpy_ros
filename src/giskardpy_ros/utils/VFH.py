@@ -49,7 +49,6 @@ class VectorFieldHistogram:
         self.sector_angle = sector_angle
         self.obstacle_threshold = obstacle_threshold
         self.s_max = s_max
-        # self.human_point = human_point
         self.direction_vector = None
 
         self.topic = input_topic  # "/hsrb/base_scan"
@@ -158,8 +157,7 @@ class VectorFieldHistogram:
             polar_histogram[sector] = np.sum(magnitudes)
         polar_histogram = polar_histogram[::-1]  # flips histogram, because we have a right hand coord system
         # print(polar_histogram)
-        # TODO: Look into smoothing the polar histogram
-        # polar_histogram = self.smooth_polar_histogram(polar_histogram, l=5)
+        # TODO: Look into smoothing the polar histogram (only if regular calculation are lackluster)
         # print(f'Magnitude Sum for Sector {sector}:{np.sum(magnitudes)}')
         free_sectors = np.where(polar_histogram < self.obstacle_threshold)[0]
         print(free_sectors)
@@ -180,12 +178,11 @@ class VectorFieldHistogram:
 
         else:
             for valley in valleys:
-                # check condition and how the valley is picked
-                if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:  # change if statement to work for oscillation case
+                if min(valley) <= target_sector <= max(valley) and len(valley) >= 4:
                     selected_valley = valley
                     print(f"Selected Valley: {selected_valley}")
                     break
-
+        # calculate steering angle
         if selected_valley:
             k_near = min(selected_valley)
             k_far = k_near + self.s_max
@@ -218,7 +215,6 @@ class VectorFieldHistogram:
                     candidate_valleys.append(valley)
                     print(candidate_valleys)
             # candidate valley has been found in first iteration
-            # check in what sector human_point is and pick valley dependent on which has the human_sector?
             if candidate_valleys:
                 selected_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
                 print(f"Selected adjacent Valley: {selected_valley}")
@@ -252,18 +248,18 @@ class VectorFieldHistogram:
                     for valley in valleys:
                         if not set(valley).isdisjoint(nearby_sectors) and len(valley) >= 4:
                             candidate_valleys.append(valley)
-                            # TODO: replace choosing bigger valley with minimum valley size
                     if candidate_valleys and len(candidate_valleys) >= 2 and radius != 24:
                         # found_valley = max(candidate_valleys, key=len)
                         found_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
                         print(f"Found valley at radius {radius}: {found_valley}")
                         break
+                    # if search radius has been exhausted and only one valley has been found, use that valley
                     elif len(candidate_valleys) == 1 and radius == 24:
                         # found_valley = max(candidate_valleys, key=len)
                         found_valley = min(candidate_valleys, key=lambda v: abs(self.last_sector - np.average(v)))
                         print(f"exhausted search radius {radius} but only found one candidate; continuing with candidate: {found_valley}")
                         break
-                # calculate directional vector
+                # calculate steering direction
                 if found_valley:
                     selected_valley = found_valley
                     k_near = min(selected_valley)
@@ -307,26 +303,6 @@ class VectorFieldHistogram:
         # with open(log_file_path, "a") as f:
         #     f.write(f"update_histogram took {elapsed_time_ms:.4f}ms\n")
 
-    # def smooth_polar_histogram(self, polar_histogram, l=5):
-    #
-    #     smoothed = np.zeros_like(polar_histogram)
-    #     length = len(polar_histogram)
-    #     print(f"[DEBUG] Smoothing histogram with {length} sectors")
-    #     for k in range(length):
-    #         value = 0
-    #         weight_sum = 0
-    #         for offset in range(-l, l+1):
-    #             idx = k + offset % length # wrap around
-    #             weight = 2 if offset != -l and offset !=l else 1
-    #
-    #             value += weight * polar_histogram[idx]
-    #             weight_sum += weight
-    #             smoothed[k] = value / weight_sum
-    #             print(f'V:{value}')
-    #             print(f'WS:{weight_sum}')
-    #             print(f'IDX:{idx}')
-    #
-    #     return smoothed
     # ------------------- ONLY USE THE PLOT FOR TESTING ---------------------
     def histogram_plot(self, target_point):
         # Start of plot gen
