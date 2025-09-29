@@ -3814,7 +3814,7 @@ class GiskardWrapper:
     def hsrb_dishwasher_test(self, handle_frame_id: str, hinge_joint: str, door_hinge_frame_id: str):
         """
         Opening motion of dishwasher
-        Specific implementation used for robocup without grasping handle
+        Specific implementation used for robocup with grasping handle
         """
         # TODO: make parameters better available
         root_link = 'map'
