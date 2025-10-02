@@ -339,14 +339,14 @@ class GiskardTester:
             self.api.add_default_end_motion_conditions()
         last_js = god_map.world.state.to_position_dict()
         for key, value in list(last_js.items()):
-            if key not in god_map.world.controlled_joints:
+            if key not in god_map.world.controlled_connections:
                 del last_js[key]
         result = self.async_loop.run_until_complete(self.send_goal(expected_error_type=expected_error_type,
                                                                    goal_type=Move_Goal.PROJECTION,
                                                                    wait=wait))
         new_js = god_map.world.state.to_position_dict()
         for key, value in list(new_js.items()):
-            if key not in god_map.world.controlled_joints:
+            if key not in god_map.world.controlled_connections:
                 del new_js[key]
         self.compare_joint_state(new_js, last_js)
         return result

@@ -3,8 +3,6 @@ from typing import Optional, List, Dict, Union
 
 import numpy as np
 from geometry_msgs.msg import Vector3, Point, Quaternion
-from line_profiler import profile
-from numba.cpython.listobj import list_add
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
