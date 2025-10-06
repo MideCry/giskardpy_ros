@@ -1,6 +1,7 @@
 from line_profiler import profile
 from py_trees.common import Status
 
+from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.middleware import get_middleware
@@ -17,5 +18,7 @@ class GoalReceived(GiskardBehavior):
     def update(self):
         if self.action_server.has_goal():
             self.action_server.accept_goal()
+            god_map.state_synchronizer.pause()
+            god_map.model_synchronizer.pause()
             return Status.SUCCESS
         return Status.FAILURE

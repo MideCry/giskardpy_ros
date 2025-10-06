@@ -27,6 +27,9 @@ from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from semantic_world.world_description.connections import ActiveConnection
 from semantic_world.robots import AbstractRobot
 
+from semantic_world.adapters.ros.world_synchronizer import ModelReloadSynchronizer, ModelSynchronizer, StateSynchronizer
+from semantic_world.orm.ormatic_interface import *
+
 
 @dataclass
 class Giskard:
@@ -83,6 +86,8 @@ class Giskard:
         """
         Initialize the behavior tree and world. You usually don't need to call this.
         """
+        god_map.model_synchronizer = ModelSynchronizer(world=self.world_config.world, node=rospy.node)
+        god_map.state_synchronizer = StateSynchronizer(world=self.world_config.world, node=rospy.node)
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
             god_map.world = self.world_config.world
@@ -110,6 +115,14 @@ class Giskard:
 
         self.sanity_check()
         GiskardBlackboard().tree.setup(rospy.node)
+        # semantic_world_database_uri = os.environ.get("SEMANTIC_WORLD_DATABASE_URI")
+        # # set up an in memory database
+        # engine = create_engine(f"mysql+pymysql://{semantic_world_database_uri}")
+        # session = Session(engine)
+        # Base.metadata.create_all(engine)
+        #
+        # mrs = ModelReloadSynchronizer(node=rospy.node, world=god_map.world, session=session)
+        # mrs.publish_reload_model()
 
     def sanity_check(self):
         self._controlled_joints_sanity_check()
