@@ -14,7 +14,7 @@ try:
 except ImportError:
     pass
 import py_trees
-from actionlib_msgs.msg import GoalStatus
+from action_msgs.msg import GoalStatus
 from py_trees_ros.actions import ActionClient
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
