@@ -448,7 +448,7 @@ class GiskardTester:
             self.api.add_default_end_motion_conditions()
         last_js = god_map.world.state.to_position_dict()
         for key, value in list(last_js.items()):
-            if key not in god_map.world.controlled_joints:
+            if key not in god_map.world.controlled_connections:
                 del last_js[key]
         result = self.async_loop.run_until_complete(
             self.send_goal(
@@ -459,7 +459,7 @@ class GiskardTester:
         )
         new_js = god_map.world.state.to_position_dict()
         for key, value in list(new_js.items()):
-            if key not in god_map.world.controlled_joints:
+            if key not in god_map.world.controlled_connections:
                 del new_js[key]
         self.compare_joint_state(new_js, last_js)
         return result
@@ -570,7 +570,7 @@ class GiskardTester:
     def are_joint_limits_in_traj_violated(self):
         trajectory_vel = self.get_result_trajectory_velocity()
         trajectory_pos = self.get_result_trajectory_position()
-        controlled_joints = god_map.world.controlled_joints
+        controlled_joints = god_map.world.controlled_connections
         for joint_name in controlled_joints:
             if isinstance(
                 god_map.world.joints[joint_name],
