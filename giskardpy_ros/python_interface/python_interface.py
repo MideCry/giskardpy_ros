@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from dataclasses import dataclass, field
 from threading import Thread
 from time import sleep
 from typing import Dict, Tuple, Optional, List, Union
@@ -15,9 +16,8 @@ from geometry_msgs.msg import (
     PointStamped,
     QuaternionStamped,
 )
-from giskard_msgs.action import World, Move
+from giskard_msgs.action import Move
 from giskard_msgs.action._move import Move_Result
-from giskard_msgs.action._world import World_Result, World_Goal
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
 from giskard_msgs.msg import WorldBody, CollisionEntry, GiskardError, LinkName
 from giskard_msgs.srv._get_group_names import (
@@ -133,304 +133,19 @@ from semantic_world.adapters.ros.world_synchronizer import (
 )
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.robots import RobotView
+from semantic_world.world import World
 
 
-class WorldWrapper:
-    _get_group_info_srv: Client
-    _get_group_names_srv: Client
-    _dye_group_srv: Client
-
-    def __init__(self, giskard_node_name: str, node_handle: Node):
-        self.node_handle = node_handle
-        self._get_group_info_srv = node_handle.create_client(
-            GetGroupInfo, f"{giskard_node_name}/get_group_info"
-        )
-        self._get_group_names_srv = node_handle.create_client(
-            GetGroupNames, f"{giskard_node_name}/get_group_names"
-        )
-        self._dye_group_srv = node_handle.create_client(
-            DyeGroup, f"{giskard_node_name}/dye_group"
-        )
-        self._client = MyActionClient(
-            node_handle, World, f"{giskard_node_name}/update_world"
-        )
-        self._get_group_names_srv.wait_for_service()
-        self.robot_name = self.get_group_names()[0]
-
-    def _send_goal(self, goal: World_Goal) -> World_Result:
-        result: World_Result = self._client.send_goal(goal)
-        if result.error.type != GiskardError.SUCCESS:
-            raise msg_converter.error_msg_to_exception(result.error)
-        return result
-
-    def clear(self) -> World_Result:
-        """
-        Resets the world to what it was when Giskard was launched.
-        """
-        req = World_Goal()
-        req.operation = World_Goal.REMOVE_ALL
-        return self._send_goal(req)
-
-    def remove_group(self, name: str) -> World_Result:
-        """
-        Removes a group and all links and joints it contains from the world.
-        Be careful, you can remove parts of the robot like that.
-        """
-        world_body = WorldBody()
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.REMOVE
-        req.body = world_body
-        return self._send_goal(req)
-
-    def add_box(
-        self,
-        name: str,
-        size: Tuple[float, float, float],
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-    ) -> World_Result:
-        """
-        Adds a new box to the world tree and attaches it to parent_link.
-        If parent_link_group and parent_link are empty, the box will be attached to the world root link, e.g., map.
-        :param name: How the new group will be called
-        :param size: X, Y and Z dimensions of the box, respectively
-        :param pose: Where the root link of the new object will be positioned
-        :param parent_link: Name of the link, the object will get attached to. None = root link of world
-        :return: Response message of the service call
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = make_world_body_box(float(size[0]), float(size[1]), float(size[2]))
-        req.parent_link = parent_link or giskard_msgs.LinkName()
-        req.pose = pose
-        return self._send_goal(req)
-
-    def add_sphere(
-        self,
-        name: str,
-        radius: float,
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-    ) -> World_Result:
-        """
-        See add_box.
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.PRIMITIVE_BODY
-        world_body.shape.type = SolidPrimitive.SPHERE
-        world_body.shape.dimensions.append(float(radius))
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def add_mesh(
-        self,
-        name: str,
-        mesh: str,
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-        scale: Tuple[float, float, float] = (1.0, 1.0, 1.0),
-    ) -> World_Result:
-        """
-        See add_box.
-        :param mesh: path to the mesh location, can be ros package path, e.g.,
-                        package://giskardpy/test/urdfs/meshes/bowl_21.obj
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.MESH_BODY
-        world_body.mesh = mesh
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.body.scale.x = float(scale[0])
-        req.body.scale.y = float(scale[1])
-        req.body.scale.z = float(scale[2])
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def add_cylinder(
-        self,
-        name: str,
-        height: float,
-        radius: float,
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-    ) -> World_Result:
-        """
-        See add_box.
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.PRIMITIVE_BODY
-        world_body.shape.type = SolidPrimitive.CYLINDER
-        world_body.shape.dimensions = [0.0, 0.0]
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = float(height)
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = float(radius)
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def update_parent_link_of_group(
-        self, name: str, parent_link: Union[str, giskard_msgs.LinkName]
-    ) -> World_Result:
-        """
-        Removes the joint connecting the root link of a group and attaches it to a parent_link.
-        The object will not move relative to the world's root link in this process.
-        :param name: name of the group
-        :param parent_link: name of the new parent link
-        :return: result message
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        req = World_Goal()
-        req.operation = World_Goal.UPDATE_PARENT_LINK
-        req.group_name = str(name)
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def detach_group(self, object_name: str) -> World_Result:
-        """
-        A wrapper for update_parent_link_of_group which set parent_link to the root link of the world.
-        """
-        req = World_Goal()
-        req.group_name = str(object_name)
-        req.operation = World_Goal.UPDATE_PARENT_LINK
-        return self._send_goal(req)
-
-    def add_urdf(
-        self,
-        name: str,
-        urdf: str,
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-        js_topic: Optional[str] = "",
-    ) -> World_Result:
-        """
-        Adds a urdf to the world.
-        :param name: name the group containing the urdf will have.
-        :param urdf: urdf as string, no path!
-        :param pose: pose of the root link of the new object
-        :param parent_link: to which link the urdf will be attached
-        :param js_topic: Giskard will listen on that topic for joint states and update the urdf accordingly
-        :return: response message
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        js_topic = str(js_topic)
-        urdf_body = WorldBody()
-        urdf_body.type = WorldBody.URDF_BODY
-        urdf_body.urdf = str(urdf)
-        urdf_body.joint_state_topic = js_topic
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = urdf_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def dye_group(
-        self, group_name: str, rgba: Tuple[float, float, float, float]
-    ) -> DyeGroup_Response:
-        """
-        Change the color of the ghost for this particular group.
-        """
-        req = DyeGroup_Request()
-        req.group_name = group_name
-        req.color.r = rgba[0]
-        req.color.g = rgba[1]
-        req.color.b = rgba[2]
-        req.color.a = rgba[3]
-        return self._dye_group_srv.call(req)
-
-    def get_group_names(self) -> List[PrefixedName]:
-        """
-        Returns the names of every group in the world.
-        """
-        req = GetGroupNames_Request()
-        resp: GetGroupNames_Response = self._get_group_names_srv.call(req)
-        return [PrefixedName(*reversed(name.split("/"))) for name in resp.group_names]
-
-    def get_group_info(self, group_name: str) -> GetGroupInfo_Response:
-        """
-        Returns the joint state, joint state topic and pose of a group.
-        """
-        req = GetGroupInfo_Request()
-        req.group_name = group_name
-        return self._get_group_info_srv.call(req)
-
-    def get_controlled_joints(self, group_name: str) -> List[str]:
-        """
-        Returns all joints of a group that are flagged as controlled.
-        """
-        return self.get_group_info(group_name).controlled_joints
-
-    def update_group_pose(self, group_name: str, new_pose: PoseStamped) -> World_Result:
-        """
-        Overwrites the pose specified in the joint that connects the two groups.
-        :param group_name: Name of the group that will move
-        :param new_pose: New pose of the group
-        :return: Giskard's reply
-        """
-        req = World_Goal()
-        req.operation = World_Goal.UPDATE_POSE
-        req.group_name = group_name
-        req.pose = new_pose
-        return self._send_goal(req)
-
-    def register_group(
-        self, new_group_name: str, root_link_name: Union[str, giskard_msgs.LinkName]
-    ) -> World_Result:
-        """
-        Register a new group for reference in collision checking. All child links of root_link_name will belong to it.
-        :param new_group_name: Name of the new group.
-        :param root_link_name: root link of the new group
-        :return: World_Result
-        """
-        if isinstance(root_link_name, str):
-            root_link_name = LinkName(name=root_link_name)
-        req = World_Goal()
-        req.operation = World_Goal.REGISTER_GROUP
-        req.group_name = new_group_name
-        req.parent_link = root_link_name
-        return self._send_goal(req)
-
-
+@dataclass
 class MotionStatechartNodeWrapper:
-    _motion_graph_nodes: Dict[str, MotionStatechartNode]
-    _name_prefix = ""
     giskard_wrapper: GiskardWrapper
-
-    def __init__(self, giskard_wrapper: GiskardWrapper):
-        self.giskard_wrapper = giskard_wrapper
-        self.reset()
+    _motion_graph_nodes: Dict[str, MotionStatechartNode] = field(
+        default_factory=ImmutableDict
+    )
+    _name_prefix: str = ""
 
     @property
-    def robot_name(self) -> str:
+    def robot_name(self) -> PrefixedName:
         return self.giskard_wrapper.robot_name
 
     @property
@@ -514,13 +229,12 @@ class MotionStatechartNodeWrapper:
         self._motion_graph_nodes[node_name].end_condition = condition
 
 
+@dataclass
 class MotionGoalWrapper(MotionStatechartNodeWrapper):
-    _name_prefix = "G"
-    _collision_entries: Dict[Tuple[str, str, str], List[CollisionEntry]]
-
-    def reset(self):
-        super().reset()
-        self._collision_entries = defaultdict(list)
+    _name_prefix: str = "G"
+    _collision_entries: Dict[Tuple[str, str, str], List[CollisionEntry]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
     def add_motion_goal(
         self,
@@ -1976,12 +1690,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         )
 
 
+@dataclass
 class MonitorWrapper(MotionStatechartNodeWrapper):
-    _name_prefix = "M"
-
-    def reset(self):
-        super().reset()
-        self.max_trajectory_length_set = False
+    _name_prefix: str = "M"
+    max_trajectory_length_set: bool = False
 
     def add_monitor(
         self,
@@ -2657,31 +2369,34 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         )
 
 
+@dataclass
 class GiskardWrapper:
-    last_feedback: Move.Feedback = None
-    _goal_handle: Optional[ClientGoalHandle]
-    _goal_result: Optional[Move_Result]
-    _result_future: Optional[Future]
-    last_execution_state: ExecutionState = None
+    """
+    Python wrapper for the ROS interface of Giskard.
+    :param giskard_node_name: node name of Giskard
+    """
 
-    def __init__(self, node_handle: Node, giskard_node_name: str = "giskard"):
-        """
-        Python wrapper for the ROS interface of Giskard.
-        :param giskard_node_name: node name of Giskard
-        """
-        self._goal_handle = None
-        self._goal_result = None
-        self._result_future = None
-        self.node_handle = node_handle
+    node_handle: Node
+    giskard_node_name: str = "giskard"
+    last_feedback: Move.Feedback = None
+    _goal_handle: Optional[ClientGoalHandle] = None
+    _goal_result: Optional[Move_Result] = None
+    _result_future: Optional[Future] = None
+    last_execution_state: ExecutionState = None
+    world: World = None
+    _client: MyActionClient = None
+    monitors: MonitorWrapper = field(init=False)
+    motion_goals: MotionGoalWrapper = field(init=False)
+
+    def __post_init__(self):
         self.world = god_map.world  # TODO needs view modification pr merge
         # self.world = fetch_world_from_service(node_handle)
         # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
         # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
         self.monitors = MonitorWrapper(self)
         self.motion_goals = MotionGoalWrapper(self)
-        self.clear_motion_goals_and_monitors()
-        giskard_topic = f"{giskard_node_name}/command"
-        self._client = MyActionClient(node_handle, Move, giskard_topic)
+        giskard_topic = f"{self.giskard_node_name}/command"
+        self._client = MyActionClient(self.node_handle, Move, giskard_topic)
         self.clear_motion_goals_and_monitors()
         sleep(0.3)
 
@@ -2941,50 +2656,48 @@ class GiskardWrapper:
         return result
 
 
-class GiskardWrapperNode(Node, GiskardWrapper):
-    is_spinning: bool
+@dataclass
+class GiskardWrapperNode(GiskardWrapper):
+    is_spinning: bool = False
+    node_name: str = "giskard_client"
+    giskard_node_name: str = "giskard"
+    avoid_name_conflict: bool = True
+    context: Optional[Context] = field(kw_only=True, default=None)
+    cli_args: Optional[List[str]] = field(kw_only=True, default=None)
+    namespace: Optional[str] = field(kw_only=True, default=None)
+    use_global_arguments: bool = field(kw_only=True, default=True)
+    enable_rosout: bool = field(kw_only=True, default=True)
+    start_parameter_services: bool = field(kw_only=True, default=True)
+    parameter_overrides: Optional[List[Parameter]] = field(kw_only=True, default=None)
+    allow_undeclared_parameters: bool = field(kw_only=True, default=False)
+    automatically_declare_parameters_from_overrides: bool = field(
+        kw_only=True, default=False
+    )
+    enable_logger_service: bool = field(kw_only=True, default=False)
+    node_handle: Node = field(init=False)
 
-    def __init__(
-        self,
-        node_name: str = "giskard_client",
-        giskard_node_name: str = "giskard",
-        avoid_name_conflict: bool = True,
-        *,
-        context: Optional[Context] = None,
-        cli_args: Optional[List[str]] = None,
-        namespace: Optional[str] = None,
-        use_global_arguments: bool = True,
-        enable_rosout: bool = True,
-        start_parameter_services: bool = True,
-        parameter_overrides: Optional[List[Parameter]] = None,
-        allow_undeclared_parameters: bool = False,
-        automatically_declare_parameters_from_overrides: bool = False,
-        enable_logger_service: bool = False,
-    ) -> None:
-        Node.__init__(
-            self,
-            node_name,
-            context=context,
-            cli_args=cli_args,
-            namespace=namespace,
-            use_global_arguments=use_global_arguments,
-            enable_rosout=enable_rosout,
-            start_parameter_services=start_parameter_services,
-            parameter_overrides=parameter_overrides,
-            allow_undeclared_parameters=allow_undeclared_parameters,
-            automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides,
+    def __post_init__(self):
+        self.node_handle = Node(
+            self.node_name,
+            context=self.context,
+            cli_args=self.cli_args,
+            namespace=self.namespace,
+            use_global_arguments=self.use_global_arguments,
+            enable_rosout=self.enable_rosout,
+            start_parameter_services=self.start_parameter_services,
+            parameter_overrides=self.parameter_overrides,
+            allow_undeclared_parameters=self.allow_undeclared_parameters,
+            automatically_declare_parameters_from_overrides=self.automatically_declare_parameters_from_overrides,
         )
-        rospy.executor.add_node(self)
-        GiskardWrapper.__init__(
-            self, node_handle=self, giskard_node_name=giskard_node_name
-        )
+        rospy.executor.add_node(self.node_handle)
         self.is_spinning = False
+        super().__post_init__()
 
     def __spin(self):
         self.my_executor = MyMultiThreadedExecutor(
             thread_name_prefix="python interface"
         )
-        self.my_executor.add_node(self)
+        self.my_executor.add_node(self.node_handle)
         self.is_spinning = True
         while rclpy.ok():
             self.my_executor.spin_once(timeout_sec=1)
