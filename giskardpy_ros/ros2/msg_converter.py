@@ -516,9 +516,10 @@ def convert_prefixed_name(
     for field in fields(node_class):
         if field.name in kwargs:
             value = kwargs[field.name]
-            replace_connection_and_kinematic_structure_entity_in_kwargs(
+            new_value = replace_connection_and_kinematic_structure_entity_in_kwargs(
                 field.type, value, world
             )
+            kwargs[field.name] = new_value
     return kwargs
 
 
@@ -539,12 +540,12 @@ def replace_connection_and_kinematic_structure_entity_in_kwargs(
     if isinstance(kwargs_value, list):
         type_args = get_args(type_hint)
         for index, value in enumerate(kwargs_value):
-            replaced_value = replace_str_prefixed_name(type_args[1], value, world)
+            replaced_value = replace_str_prefixed_name(type_args[0], value, world)
             if replaced_value is not None:
                 kwargs_value[index] = replaced_value
         return kwargs_value
     replaced_value = replace_str_prefixed_name(
-        get_origin(type_hint), kwargs_value, world
+        get_origin(type_hint) or type_hint, kwargs_value, world
     )
     if replaced_value is not None:
         return replaced_value

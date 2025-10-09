@@ -46,7 +46,6 @@ def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(start_condition=done)
         giskard.execute()
-    # giskard.api.world.clear()
     giskard.reset()
     return giskard
 

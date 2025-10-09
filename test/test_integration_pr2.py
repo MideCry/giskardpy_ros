@@ -24,7 +24,10 @@ from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import ColorRGBA
 
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from giskardpy.model.collision_world_syncer import (
+    CollisionCheckerLib,
+    CollisionWorldSynchronizer,
+)
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     GiskardException,
@@ -90,6 +93,7 @@ from giskardpy_ros.utils.utils_for_tests import (
     GiskardTester,
     compare_points,
 )
+from semantic_world.robots import AbstractRobot
 from semantic_world.world_description.connections import RevoluteConnection
 from semantic_world.world_description.world_entity import Body
 
@@ -270,6 +274,7 @@ class PR2Tester(GiskardTester):
         return
 
     def reset(self):
+        self.clear_world()
         self.open_l_gripper()
         self.open_r_gripper()
         # self.register_group('l_gripper',
@@ -296,6 +301,32 @@ class PR2Tester(GiskardTester):
         #                     root_link_group_name=self.robot_name,
         #                     root_link_name='br_caster_l_wheel_link')
         # self.dye_group('br_l', rgba=(1, 0, 0, 1))
+
+    def clear_world(self):
+        tmp_state = deepcopy(god_map.world.state)
+        with god_map.world.modify_world():
+            god_map.world.clear()
+            GiskardBlackboard().giskard.world_config.setup_world()
+            robots = god_map.world.get_views_by_type(AbstractRobot)
+            GiskardBlackboard().giskard.robot_interface_config.setup()
+        self.collision_scene = CollisionWorldSynchronizer(
+            collision_detector=god_map.collision_scene.collision_detector,
+            world=god_map.world,
+            robots=robots,
+        )
+        god_map.collision_scene = self.collision_scene
+        self.collision_scene.sync()
+        GiskardBlackboard().giskard.world_config.setup_collision_config()
+        # copy only state of joints that didn't get deleted
+        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
+        for v in tmp_state.keys():
+            if v not in dof_names:
+                del god_map.world.state[v]
+        god_map.world.notify_state_change()
+        god_map.collision_scene.sync()
+        # GiskardBlackboard().giskard.collision_scene.setup()
+        # self.clear_markers()
+        get_middleware().loginfo("Cleared world.")
 
 
 @pytest.fixture(scope="module")
@@ -473,13 +504,10 @@ class TestJointGoals:
         zero_pose.execute()
 
     def test_unlimited_joint_goal(self, zero_pose: PR2Tester):
-        connection = god_map.world.get_connection_by_name(
-            PrefixedName(name="r_elbow_flex_joint")
-        )
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.motion_goals.add_motion_goal(
             class_name=UnlimitedJointGoal.__name__,
-            joint_name="r_elbow_flex_joint",
+            connection="r_elbow_flex_joint",
             name="goal",
             goal_position=-3.0,
         )
