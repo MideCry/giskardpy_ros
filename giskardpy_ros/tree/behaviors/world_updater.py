@@ -202,14 +202,14 @@ class ProcessWorldUpdate(GiskardBehavior):
         except:
             # tf is not available, just ignore this step
             pass
-        with god_map.world.modify_world() as world:
-            pose = msg_converter.pose_stamped_to_trans_matrix(pose, world)
-            parent_link_T_group_root_link = world.transform(
+        with god_map.world.modify_world():
+            pose = msg_converter.pose_stamped_to_trans_matrix(pose, god_map.world)
+            parent_link_T_group_root_link = god_map.world.transform(
                 target_frame=parent_link, spatial_object=pose
             )
             link_name = PrefixedName(req.group_name, req.group_name)
             if world_body.type == world_body.URDF_BODY:
-                world.add_urdf(
+                god_map.world.add_urdf(
                     urdf=world_body.urdf,
                     parent_link_name=parent_link,
                     group_name=group_name,
@@ -225,10 +225,10 @@ class ProcessWorldUpdate(GiskardBehavior):
                     parent=parent_link, child=link, _world=god_map.world
                 )
                 joint.origin = parent_link_T_group_root_link.to_np()
-                world.add_kinematic_structure_entity(link)
-                world.add_connection(joint)
+                god_map.world.add_kinematic_structure_entity(link)
+                god_map.world.add_connection(joint)
                 view = RootedView(root=link, name=group_name, _world=god_map.world)
-                world.add_view(view)
+                god_map.world.add_view(view)
         robot = self.search_for_robot_with_body(link)
         if robot is not None:
             link.set_static_collision_config(robot.default_collision_config)

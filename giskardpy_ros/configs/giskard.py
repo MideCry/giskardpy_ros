@@ -24,10 +24,15 @@ from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_world.adapters.ros.world_fetcher import FetchWorldServer
 from semantic_world.world_description.connections import ActiveConnection
 from semantic_world.robots import AbstractRobot
 
-from semantic_world.adapters.ros.world_synchronizer import ModelReloadSynchronizer, ModelSynchronizer, StateSynchronizer
+from semantic_world.adapters.ros.world_synchronizer import (
+    ModelReloadSynchronizer,
+    ModelSynchronizer,
+    StateSynchronizer,
+)
 from semantic_world.orm.ormatic_interface import *
 
 
@@ -86,8 +91,15 @@ class Giskard:
         """
         Initialize the behavior tree and world. You usually don't need to call this.
         """
-        god_map.model_synchronizer = ModelSynchronizer(world=self.world_config.world, node=rospy.node)
-        god_map.state_synchronizer = StateSynchronizer(world=self.world_config.world, node=rospy.node)
+        god_map.model_synchronizer = ModelSynchronizer(
+            world=self.world_config.world, node=rospy.node
+        )
+        god_map.state_synchronizer = StateSynchronizer(
+            world=self.world_config.world, node=rospy.node
+        )
+        god_map.world_fetcher = FetchWorldServer(
+            node=rospy.node, world=self.world_config.world
+        )
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
             god_map.world = self.world_config.world

@@ -138,7 +138,7 @@ class RobotInterfaceConfig(ABC):
                 raise Exception(
                     f"{joint_name} is not an active connection and cannot be controlled."
                 )
-            connection.is_controlled = True
+            connection.has_hardware_interface = True
 
     def add_follow_joint_trajectory_server(
         self,

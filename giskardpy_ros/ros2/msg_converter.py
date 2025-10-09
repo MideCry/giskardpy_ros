@@ -49,7 +49,6 @@ from semantic_world.world_description.geometry import (
     Mesh,
     Color,
     Scale,
-    Primitive,
 )
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
@@ -76,7 +75,7 @@ def to_ros_message(data):
 
 
 def to_visualization_marker(data):
-    if isinstance(data, Primitive):
+    if isinstance(data, Shape):
         return link_geometry_to_visualization_marker(data)
 
 
@@ -108,7 +107,7 @@ def link_to_visualization_marker(
     return markers
 
 
-def link_geometry_to_visualization_marker(data: Primitive) -> visualization_msgs.Marker:
+def link_geometry_to_visualization_marker(data: Shape) -> visualization_msgs.Marker:
     marker = visualization_msgs.Marker()
     marker.color = color_rgba_to_ros_msg(data.color)
     marker.pose = to_ros_message(data.origin).pose

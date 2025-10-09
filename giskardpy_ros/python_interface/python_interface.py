@@ -38,6 +38,7 @@ from rclpy.client import Client
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
 
+from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
@@ -125,7 +126,13 @@ from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from giskardpy_ros.utils.utils import make_world_body_box
+from semantic_world.adapters.ros.world_fetcher import fetch_world_from_service
+from semantic_world.adapters.ros.world_synchronizer import (
+    ModelSynchronizer,
+    StateSynchronizer,
+)
 from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_world.robots import RobotView
 
 
 class WorldWrapper:
@@ -2666,9 +2673,10 @@ class GiskardWrapper:
         self._goal_result = None
         self._result_future = None
         self.node_handle = node_handle
-        self.world = WorldWrapper(
-            node_handle=node_handle, giskard_node_name=giskard_node_name
-        )
+        self.world = god_map.world  # TODO needs view modification pr merge
+        # self.world = fetch_world_from_service(node_handle)
+        # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
+        # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
         self.monitors = MonitorWrapper(self)
         self.motion_goals = MotionGoalWrapper(self)
         self.clear_motion_goals_and_monitors()
@@ -2782,8 +2790,8 @@ class GiskardWrapper:
         self.monitors.add_end_motion(start_condition=local_min_reached_monitor_name)
 
     @property
-    def robot_name(self):
-        return self.world.robot_name
+    def robot_name(self) -> PrefixedName:
+        return self.world.get_views_by_type(RobotView)[0].name
 
     def clear_motion_goals_and_monitors(self):
         """
