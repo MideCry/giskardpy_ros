@@ -112,7 +112,7 @@ from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import BaseArmWeightScaling
 from giskardpy.motion_statechart.tasks.weight_scaling_goals import (
-    MaxManipulabilityAsEq3,
+    MaxManipulability,
 )
 from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
@@ -439,7 +439,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         if isinstance(tip_link, str):
             tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
-            class_name=MaxManipulabilityAsEq3.__name__,
+            class_name=MaxManipulability.__name__,
             name=name,
             tip_link=tip_link,
             root_link=root_link,

@@ -471,6 +471,9 @@ class TestJointGoals:
         zero_pose.execute()
 
     def test_unlimited_joint_goal(self, zero_pose: PR2Tester):
+        connection = god_map.world.get_connection_by_name(
+            PrefixedName(name="r_elbow_flex_joint")
+        )
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.motion_goals.add_motion_goal(
             class_name=UnlimitedJointGoal.__name__,
@@ -503,7 +506,7 @@ class TestJointGoals:
         zero_pose.api.motion_goals.add_joint_position(goal_js)
         zero_pose.execute()
         js = {"torso_lift_joint": 0.32}
-        zero_pose.api.motion_goals.add_joint_position(js)
+        zero_pose.api.motion_goals.add_joint_position(js, name='g2')
         zero_pose.execute()
 
         goal_js = {
@@ -512,7 +515,7 @@ class TestJointGoals:
             "head_pan_joint": head_pan_joint_limits_upper + 0.2,
         }
 
-        zero_pose.api.motion_goals.add_joint_position(goal_js)
+        zero_pose.api.motion_goals.add_joint_position(goal_js, name='g3')
         zero_pose.execute()
 
 
@@ -565,7 +568,7 @@ class TestMonitors:
         g1 = "g1"
         zero_pose.api.motion_goals.add_joint_position(
             name=g1, goal_state=zero_pose.better_pose, end_condition=g1
-        )
+        ,)
         end_monitor = zero_pose.api.monitors.add_local_minimum_reached(
             name="local min", start_condition=g1
         )
@@ -1748,8 +1751,8 @@ class TestConstraints:
 
         zero_pose.api.motion_goals.allow_all_collisions()
         zero_pose.api.motion_goals.add_cartesian_position(
-            root_link=LinkName(name=tip, group_name=zero_pose.api.robot_name),
-            tip_link=LinkName(name=pocky, group_name="box"),
+            root_link=PrefixedName(name=tip, group_name=zero_pose.api.robot_name),
+            tip_link=PrefixedName(name=pocky, group_name="box"),
             goal_point=p,
         )
         zero_pose.execute()

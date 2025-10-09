@@ -1,5 +1,7 @@
 from __future__ import division
 
+from dataclasses import dataclass
+
 from time import sleep
 
 import numpy as np
@@ -38,34 +40,21 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
 
 
+@dataclass
 class RealTimePointing(Pointing):
 
-    def __init__(
-        self,
-        tip_link: PrefixedName,
-        root_link: PrefixedName,
-        pointing_axis: cas.Vector3,
-        max_velocity: float = 0.3,
-        weight: float = WEIGHT_BELOW_CA,
-    ):
-        initial_goal = cas.Point3(
+    def __post_init__(self):
+        self.goal_point = cas.Point3(
             (1, 0, 1),
             reference_frame=god_map.world.search_for_link_name("base_footprint"),
         )
-        super().__init__(
-            tip_link=tip_link,
-            goal_point=initial_goal,
-            root_link=root_link,
-            pointing_axis=pointing_axis,
-            max_velocity=max_velocity,
-            weight=weight,
-        )
+        super().__post_init__()
         self.sub = rospy.node.create_subscription(PointStamped, "muh", self.cb, 10)
 
     def cb(self, data: PointStamped):
         data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
         data = god_map.world.transform(
-            target_frame=self.root, spatial_object=data
+            target_frame=self.root_link, spatial_object=data
         ).to_np()
         self.root_P_goal_point = data
 
