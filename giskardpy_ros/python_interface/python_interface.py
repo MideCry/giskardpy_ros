@@ -2091,9 +2091,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_set_seed_configuration(
         self,
-        seed_configuration: Dict[str, float],
+        seed_configuration: Dict[Union[str, PrefixedName], float],
         name: Optional[str] = None,
-        group_name: Optional[str] = None,
         start_condition: str = "",
     ) -> str:
         """
@@ -2103,7 +2102,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         return self.add_monitor(
             class_name=SetSeedConfiguration.__name__,
             seed_configuration=seed_configuration,
-            group_name=group_name,
             name=name,
             start_condition=start_condition,
             pause_condition="",

@@ -366,7 +366,9 @@ class TestJointGoals:
         }
         zero_pose.api.motion_goals.add_joint_position(goal_state=js)
         zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
+        done = zero_pose.api.monitors.add_joint_position(goal_state=js)
+        zero_pose.api.monitors.add_end_motion(start_condition=done)
+        zero_pose.execute(local_min_end=False)
         for joint, goal in js.items():
             connection = god_map.world.get_connection_by_name(joint)
             if (
@@ -489,14 +491,23 @@ class TestJointGoals:
         zero_pose.api.motion_goals.allow_self_collision()
 
         r_elbow_flex_joint_limits_lower = god_map.world.get_connection_by_name(
-            "r_elbow_flex_joint").dof.lower_limits.position
+            "r_elbow_flex_joint"
+        ).dof.lower_limits.position
         r_elbow_flex_joint_limits_upper = god_map.world.get_connection_by_name(
-            "r_elbow_flex_joint").dof.upper_limits.position
-        torso_lift_joint_limits_lower = god_map.world.get_connection_by_name("torso_lift_joint").dof.lower_limits.position
+            "r_elbow_flex_joint"
+        ).dof.upper_limits.position
+        torso_lift_joint_limits_lower = god_map.world.get_connection_by_name(
+            "torso_lift_joint"
+        ).dof.lower_limits.position
         torso_lift_joint_limits_upper = god_map.world.get_connection_by_name(
-            "torso_lift_joint").dof.upper_limits.position
-        head_pan_joint_limits_lower = god_map.world.get_connection_by_name("head_pan_joint").dof.lower_limits.position
-        head_pan_joint_limits_upper = god_map.world.get_connection_by_name("head_pan_joint").dof.upper_limits.position
+            "torso_lift_joint"
+        ).dof.upper_limits.position
+        head_pan_joint_limits_lower = god_map.world.get_connection_by_name(
+            "head_pan_joint"
+        ).dof.lower_limits.position
+        head_pan_joint_limits_upper = god_map.world.get_connection_by_name(
+            "head_pan_joint"
+        ).dof.upper_limits.position
 
         goal_js = {
             "r_elbow_flex_joint": r_elbow_flex_joint_limits_lower - 0.2,
@@ -506,7 +517,7 @@ class TestJointGoals:
         zero_pose.api.motion_goals.add_joint_position(goal_js)
         zero_pose.execute()
         js = {"torso_lift_joint": 0.32}
-        zero_pose.api.motion_goals.add_joint_position(js, name='g2')
+        zero_pose.api.motion_goals.add_joint_position(js, name="g2")
         zero_pose.execute()
 
         goal_js = {
@@ -515,7 +526,7 @@ class TestJointGoals:
             "head_pan_joint": head_pan_joint_limits_upper + 0.2,
         }
 
-        zero_pose.api.motion_goals.add_joint_position(goal_js, name='g3')
+        zero_pose.api.motion_goals.add_joint_position(goal_js, name="g3")
         zero_pose.execute()
 
 
@@ -567,8 +578,10 @@ class TestMonitors:
     def test_joint_sequence(self, zero_pose: PR2Tester):
         g1 = "g1"
         zero_pose.api.motion_goals.add_joint_position(
-            name=g1, goal_state=zero_pose.better_pose, end_condition=g1
-        ,)
+            name=g1,
+            goal_state=zero_pose.better_pose,
+            end_condition=g1,
+        )
         end_monitor = zero_pose.api.monitors.add_local_minimum_reached(
             name="local min", start_condition=g1
         )

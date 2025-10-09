@@ -1,8 +1,9 @@
 import builtins
 import json
 import threading
+from dataclasses import fields
 from time import sleep
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Union, List, Dict, Any, Type
 
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
@@ -13,13 +14,13 @@ import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
-from giskard_msgs.msg import GiskardError, MotionStatechartNode
 from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy_message_converter.message_converter import (
     convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message,
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary,
 )
+from typing_extensions import get_origin, get_args
 
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
@@ -32,6 +33,7 @@ from giskardpy.data_types.exceptions import (
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy.model.trajectory import Trajectory
+from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
@@ -53,7 +55,11 @@ from semantic_world.world_description.geometry import (
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world import World
-from semantic_world.world_description.world_entity import Body, KinematicStructureEntity
+from semantic_world.world_description.world_entity import (
+    Body,
+    KinematicStructureEntity,
+    Connection,
+)
 from semantic_world.world_description.world_state import WorldState
 
 
@@ -322,7 +328,7 @@ def ros_kwargs_to_giskard_kwargs(d: Any, world: World) -> Dict[str, Any]:
 
 def convert_dictionary_to_ros_message(json_data):
     # maybe somehow search for message that fits to structure of json?
-    if json_data["message_type"] == msg_type_as_str(MotionStatechartNode):
+    if json_data["message_type"] == msg_type_as_str(giskard_msgs.MotionStatechartNode):
         json_data["message"]["kwargs"] = json.dumps(json_data["message"]["kwargs"])
     return original_convert_dictionary_to_ros_message(
         json_data["message_type"], json_data["message"]
@@ -343,7 +349,7 @@ def motion_statechart_node_to_ros_msg(
 
 
 def exception_to_error_msg(exception: Exception) -> giskard_msgs.GiskardError:
-    error = GiskardError()
+    error = giskard_msgs.GiskardError()
     error.type = exception.__class__.__name__
     error.msg = str(exception)
     return error
@@ -367,7 +373,7 @@ exception_classes.update(
 
 
 def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception]:
-    if msg.type == GiskardError.SUCCESS:
+    if msg.type == giskard_msgs.GiskardError.SUCCESS:
         return None
     if msg.type in exception_classes:
         return exception_classes[msg.type](msg.msg)
@@ -420,7 +426,7 @@ def thing_to_json(thing: Any) -> Any:
         return [thing_to_json(x) for x in thing]
     if isinstance(thing, dict):
         return {k: thing_to_json(v) for k, v in thing.items()}
-    if isinstance(thing, MotionStatechartNode):
+    if isinstance(thing, giskard_msgs.MotionStatechartNode):
         return thing_to_json(convert_ros_message_to_dictionary(thing))
     if is_ros_message(thing):
         return convert_ros_message_to_dictionary(thing)
@@ -486,27 +492,88 @@ def ros_msg_to_giskard_obj(msg, world: World):
                 return joint_name_msg_to_prefix_name(msg, world)
             except UnknownJointException:
                 raise e
-    elif isinstance(msg, GiskardError):
+    elif isinstance(msg, giskard_msgs.GiskardError):
         return error_msg_to_exception(msg)
-    elif isinstance(msg, MotionStatechartNode):
+    elif isinstance(msg, giskard_msgs.MotionStatechartNode):
         return create_node(msg, world)
     return msg
 
 
-def create_node(msg_node: MotionStatechartNode, world: World):
+def create_node(
+    msg_node: giskard_msgs.MotionStatechartNode, world: World
+) -> MotionStatechartNode:
+    node_class = parse_node_class(msg_node)
     parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, world)
+    parsed_kwargs_and_replaced = convert_prefixed_name(node_class, parsed_kwargs, world)
+    return node_class(name=msg_node.name, **parsed_kwargs_and_replaced)
+
+
+def convert_prefixed_name(
+    node_class: Type[MotionStatechartNode],
+    kwargs: Dict[str, Any],
+    world: World,
+) -> Dict[str, Any]:
+    for field in fields(node_class):
+        if field.name in kwargs:
+            value = kwargs[field.name]
+            replace_connection_and_kinematic_structure_entity_in_kwargs(
+                field.type, value, world
+            )
+    return kwargs
+
+
+def replace_connection_and_kinematic_structure_entity_in_kwargs(
+    type_hint: Any, kwargs_value: Any, world: World
+) -> Any:
+    if isinstance(kwargs_value, dict):
+        type_args = get_args(type_hint)
+        for key, value in kwargs_value.copy().items():
+            replaced_key = replace_str_prefixed_name(type_args[0], key, world)
+            if replaced_key is not None:
+                del kwargs_value[key]
+                kwargs_value[replaced_key] = value
+            replaced_value = replace_str_prefixed_name(type_args[1], value, world)
+            if replaced_value is not None:
+                kwargs_value[key] = replaced_value
+        return kwargs_value
+    if isinstance(kwargs_value, list):
+        type_args = get_args(type_hint)
+        for index, value in enumerate(kwargs_value):
+            replaced_value = replace_str_prefixed_name(type_args[1], value, world)
+            if replaced_value is not None:
+                kwargs_value[index] = replaced_value
+        return kwargs_value
+    replaced_value = replace_str_prefixed_name(
+        get_origin(type_hint), kwargs_value, world
+    )
+    if replaced_value is not None:
+        return replaced_value
+    return kwargs_value
+
+
+def replace_str_prefixed_name(
+    kwargs_type, kwargs_value, world: World
+) -> Optional[Union[KinematicStructureEntity, Connection]]:
+    if isinstance(kwargs_value, (str, PrefixedName)):
+        if issubclass(kwargs_type, KinematicStructureEntity):
+            return world.get_kinematic_structure_entity_by_name(kwargs_value)
+        elif issubclass(kwargs_type, Connection):
+            return world.get_connection_by_name(kwargs_value)
+
+
+def parse_node_class(
+    msg_node: giskard_msgs.MotionStatechartNode,
+) -> Type[MotionStatechartNode]:
     if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-        C = god_map.motion_statechart_manager.allowed_monitor_types[msg_node.class_name]
-        node: Monitor = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_monitor_types[
+            msg_node.class_name
+        ]
     elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-        C = god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-        node: Task = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
     elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-        C = god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-        node: Goal = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
     else:
         raise UnknownGoalException(f"unknown task type: '{msg_node.class_name}'.")
-    return node
 
 
 def ros_joint_state_to_giskard_joint_state(
