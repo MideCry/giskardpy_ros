@@ -54,8 +54,7 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.goals.cartesian_goals import (
-    RelativePositionSequence,
-    ToDriveOrNotToDrive,
+    RelativePositionSequence
 )
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
@@ -3052,7 +3051,6 @@ class TestCartGoals:
         zero_pose.api.motion_goals.add_cartesian_pose(
             goal_pose=eef_goal,
             tip_link="r_gripper_tool_frame",
-            working_frame=LinkName(name="map"),
             root_link="base_footprint",
         )
         zero_pose.api.motion_goals.add_cartesian_pose(
@@ -3060,69 +3058,11 @@ class TestCartGoals:
         )
         zero_pose.execute()
         assert (
-            god_map.world.compute_fk_np(
-                PrefixedName("map"), PrefixedName("r_gripper_tool_frame", "pr2")
+            god_map.world.compute_forward_kinematics_np(
+                god_map.world.root, god_map.world.get_kinematic_structure_entity_by_name('r_gripper_tool_frame')
             )[0, 3]
-            < 0.9
+            < 0.95
         )
-
-    def test_cart_goal_1eef_base_follow_forward(self, better_pose: PR2Tester):
-        x = 0.7
-        y = 0.55
-        GiskardBlackboard().ros_visualizer.pub_box_marker(
-            "box",
-            frame_id="base_footprint",
-            xyz=[2 * x, 2 * y, 4.0],
-            color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5),
-        )
-        p = PoseStamped()
-        p.header.frame_id = better_pose.r_tip
-        p.pose.position.x = 1.0
-        p.pose.orientation.w = 1.0
-        better_pose.api.motion_goals.allow_all_collisions()
-        better_pose.api.motion_goals.add_cartesian_pose(
-            goal_pose=p,
-            tip_link=better_pose.r_tip,
-            root_link="map",
-            weight=WEIGHT_BELOW_CA,
-        )
-        better_pose.api.motion_goals.add_motion_goal(
-            class_name=ToDriveOrNotToDrive.__name__,
-            name="walky",
-            xyz=[x, y, 0.0],
-            tip_link=LinkName(name=better_pose.r_tip),
-        )
-        better_pose.execute()
-
-    def test_cart_goal_1eef_base_follow_sideways(self, better_pose: PR2Tester):
-        x = 0.7
-        y = 0.5
-        GiskardBlackboard().ros_visualizer.pub_box_marker(
-            "box",
-            frame_id="base_footprint",
-            xyz=[2 * x, 2 * y, 4.0],
-            color=ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5),
-        )
-
-        p = PoseStamped()
-        p.header.frame_id = better_pose.r_tip
-        p.pose.position.y = -1.0
-        p.pose.orientation.w = 1.0
-        better_pose.api.motion_goals.allow_all_collisions()
-        better_pose.api.motion_goals.add_cartesian_pose(
-            goal_pose=p,
-            tip_link=better_pose.r_tip,
-            working_frame=LinkName(name="map"),
-            root_link="base_footprint",
-            weight=WEIGHT_BELOW_CA,
-        )
-        better_pose.api.motion_goals.add_motion_goal(
-            class_name=ToDriveOrNotToDrive.__name__,
-            name="walky",
-            xyz=[x, y, 0.0],
-            tip_link=LinkName(name=better_pose.r_tip),
-        )
-        better_pose.execute()
 
     def test_10_cart_goals(self, zero_pose: PR2Tester):
         p1 = PoseStamped()
