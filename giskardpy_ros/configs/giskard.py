@@ -94,6 +94,7 @@ class Giskard:
         god_map.model_synchronizer = ModelSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
+        god_map.model_synchronizer.pause()
         god_map.state_synchronizer = StateSynchronizer(
             world=self.world_config.world, node=rospy.node
         )

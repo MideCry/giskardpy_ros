@@ -12,7 +12,7 @@ from line_profiler import profile
 
 class CollisionSceneUpdater(GiskardBehavior):
     def __init__(self):
-        super().__init__('update collision scene')
+        super().__init__("update collision scene")
 
     @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time

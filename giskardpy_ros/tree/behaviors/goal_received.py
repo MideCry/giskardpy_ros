@@ -10,15 +10,12 @@ from line_profiler import profile
 
 class GoalReceived(GiskardBehavior):
     def __init__(self, action_server: ActionServerHandler):
-        name = f'has \'{action_server.name}\' goal?'
+        name = f"has '{action_server.name}' goal?"
         self.action_server = action_server
         super().__init__(name)
-
 
     def update(self):
         if self.action_server.has_goal():
             self.action_server.accept_goal()
-            god_map.state_synchronizer.pause()
-            god_map.model_synchronizer.pause()
             return Status.SUCCESS
         return Status.FAILURE
