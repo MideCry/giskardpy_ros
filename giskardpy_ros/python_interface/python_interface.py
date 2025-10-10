@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass, field
 from threading import Thread
 from time import sleep
@@ -2387,7 +2388,8 @@ class GiskardWrapper:
     motion_goals: MotionGoalWrapper = field(init=False)
 
     def __post_init__(self):
-        self.world = god_map.world  # TODO needs view modification pr merge
+        # TODO needs view modification pr merge
+        self.world = god_map.world
         # self.world = fetch_world_from_service(node_handle)
         # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
         # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
