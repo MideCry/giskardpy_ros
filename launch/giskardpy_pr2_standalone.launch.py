@@ -8,10 +8,16 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, RegisterEventHandler
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+)
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
 
 def generate_launch_description():
     robot_description = Command(
@@ -27,35 +33,34 @@ def generate_launch_description():
             ),
         ]
     )
-    #upload_pr2_launch = os.path.join(get_package_share_directory('iai_pr2_description'),
+    # upload_pr2_launch = os.path.join(get_package_share_directory('iai_pr2_description'),
     #                                 'launch', 'upload_pr2.launch.py')
     #
-    return LaunchDescription([
-        # Static transform publisher (example, modify as needed for your robot)
-        #IncludeLaunchDescription(
-        #    PythonLaunchDescriptionSource(upload_pr2_launch)
-        #),
-        Node(
-            package='giskardpy_ros',
-            executable='pr2_standalone',
-            name='giskard',
-            parameters=[{'robot_description': robot_description}],
-            output='screen',
-        ),
-        Node(
-            package='giskardpy_ros',
-            executable='interactive_marker',
-            name='giskard_interactive_marker',
-            parameters=[{'root_link': 'map',
-                         'tip_link': 'r_gripper_tool_frame'}],
-            output='screen',
-        ),
-        # RViz node
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-        ),
-    ])
-
+    return LaunchDescription(
+        [
+            # Static transform publisher (example, modify as needed for your robot)
+            # IncludeLaunchDescription(
+            #    PythonLaunchDescriptionSource(upload_pr2_launch)
+            # ),
+            Node(
+                package="giskardpy_ros",
+                executable="pr2_standalone",
+                name="giskard",
+                parameters=[{"robot_description": robot_description}],
+                output="screen",
+            ),
+            Node(
+                package="rviz2",
+                executable="rviz2",
+                name="rviz2",
+                output="screen",
+            ),
+            Node(
+                package="giskardpy_ros",
+                executable="interactive_marker",
+                name="giskard_interactive_marker",
+                parameters=[{"root_link": "map", "tip_link": "r_gripper_tool_frame"}],
+                output="screen",
+            ),
+        ]
+    )

@@ -2,35 +2,39 @@ import rclpy
 from geometry_msgs.msg import PoseStamped
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from rclpy import Parameter
-from rclpy.duration import Duration
-from rclpy.time import Time
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 from visualization_msgs.msg import InteractiveMarkerFeedback
 
-import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
+from giskardpy_ros.python_interface.python_interface import (
+    GiskardWrapper,
+)
 from giskardpy_ros.ros2 import rospy
 
 
 class InteractiveMarkerNode:
     def __init__(self) -> None:
         super().__init__()
-        self.giskard = GiskardWrapperNode('interactive_cartesian_goals')
-        tf.init(self.giskard.node_handle)
+        self.giskard = GiskardWrapper(
+            node_handle=rospy.node, giskard_node_name="giskard"
+        )
 
-        self.giskard.declare_parameters(namespace='',
-                                        parameters=[('root_link', Parameter.Type.STRING),
-                                                    ('tip_link', Parameter.Type.STRING)])
-        self.root_link = self.giskard.get_parameter('root_link').value
-        self.tip_link = self.giskard.get_parameter('tip_link').value
+        self.giskard.node_handle.declare_parameters(
+            namespace="",
+            parameters=[
+                ("root_link", Parameter.Type.STRING),
+                ("tip_link", Parameter.Type.STRING),
+            ],
+        )
+        self.root_link = self.giskard.node_handle.get_parameter("root_link").value
+        self.tip_link = self.giskard.node_handle.get_parameter("tip_link").value
 
         # Create an interactive marker server
-        self.server = InteractiveMarkerServer(self.giskard.node_handle, 'cartesian_goals')
+        self.server = InteractiveMarkerServer(rospy.node, "cartesian_goals")
 
         # Create an interactive marker
         int_marker = InteractiveMarker()
         int_marker.header.frame_id = self.tip_link
-        int_marker.name = f'{self.root_link}/{self.tip_link}'
+        int_marker.name = f"{self.root_link}/{self.tip_link}"
         int_marker.scale = 0.25
         int_marker.pose.orientation.w = 1.0
 
@@ -55,14 +59,44 @@ class InteractiveMarkerNode:
         int_marker.controls.append(box_control)
 
         # Create controls to move the marker along all axes
-        self.add_control(int_marker, 'move_x', InteractiveMarkerControl.MOVE_AXIS, 1.0, 0.0, 0.0, 1.0)
-        self.add_control(int_marker, 'move_y', InteractiveMarkerControl.MOVE_AXIS, 0.0, 1.0, 0.0, 1.0)
-        self.add_control(int_marker, 'move_z', InteractiveMarkerControl.MOVE_AXIS, 0.0, 0.0, 1.0, 1.0)
+        self.add_control(
+            int_marker, "move_x", InteractiveMarkerControl.MOVE_AXIS, 1.0, 0.0, 0.0, 1.0
+        )
+        self.add_control(
+            int_marker, "move_y", InteractiveMarkerControl.MOVE_AXIS, 0.0, 1.0, 0.0, 1.0
+        )
+        self.add_control(
+            int_marker, "move_z", InteractiveMarkerControl.MOVE_AXIS, 0.0, 0.0, 1.0, 1.0
+        )
 
         # Create controls to rotate the marker around all axes
-        self.add_control(int_marker, 'rotate_x', InteractiveMarkerControl.ROTATE_AXIS, 1.0, 0.0, 0.0, 1.0)
-        self.add_control(int_marker, 'rotate_y', InteractiveMarkerControl.ROTATE_AXIS, 0.0, 1.0, 0.0, 1.0)
-        self.add_control(int_marker, 'rotate_z', InteractiveMarkerControl.ROTATE_AXIS, 0.0, 0.0, 1.0, 1.0)
+        self.add_control(
+            int_marker,
+            "rotate_x",
+            InteractiveMarkerControl.ROTATE_AXIS,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+        )
+        self.add_control(
+            int_marker,
+            "rotate_y",
+            InteractiveMarkerControl.ROTATE_AXIS,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+        )
+        self.add_control(
+            int_marker,
+            "rotate_z",
+            InteractiveMarkerControl.ROTATE_AXIS,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+        )
 
         # Add the interactive marker to the server
         self.server.insert(int_marker)
@@ -75,8 +109,16 @@ class InteractiveMarkerNode:
 
         self.int_marker = int_marker
 
-    def add_control(self, int_marker: InteractiveMarker, name: str, interaction_mode: int, x: float, y: float, z: float,
-                    w: float) -> None:
+    def add_control(
+        self,
+        int_marker: InteractiveMarker,
+        name: str,
+        interaction_mode: int,
+        x: float,
+        y: float,
+        z: float,
+        w: float,
+    ) -> None:
         control = InteractiveMarkerControl()
         control.name = name
         control.interaction_mode = interaction_mode
@@ -88,13 +130,15 @@ class InteractiveMarkerNode:
 
     def process_feedback(self, feedback: InteractiveMarkerFeedback) -> None:
         if feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP:
-            self.giskard.node_handle.get_logger().info(f"Marker feedback received: {feedback.event_type}")
+            self.giskard.node_handle.get_logger().info(
+                f"Marker feedback received: {feedback.event_type}"
+            )
             goal = PoseStamped()
             goal.header = feedback.header
             goal.pose = feedback.pose
-            self.giskard.motion_goals.add_cartesian_pose(goal_pose=goal,
-                                                         tip_link=self.tip_link,
-                                                         root_link=self.root_link)
+            self.giskard.motion_goals.add_cartesian_pose(
+                goal_pose=goal, tip_link=self.tip_link, root_link=self.root_link
+            )
             self.giskard.motion_goals.allow_all_collisions()
             self.giskard.add_default_end_motion_conditions()
             self.giskard.execute_async()
@@ -107,17 +151,18 @@ class InteractiveMarkerNode:
             self.int_marker.pose.orientation.y = 0.0
             self.int_marker.pose.orientation.z = 0.0
             self.int_marker.pose.orientation.w = 1.0
+            # self.server.clear()
             self.server.insert(self.int_marker)
             self.server.applyChanges()
 
 
 def main(args: None = None) -> None:
-    rospy.init_node('interactive_marker')
+    rospy.init_node("interactive_marker")
     node = InteractiveMarkerNode()
-    node.giskard.node_handle.get_logger().info('interactive marker server running')
+    node.giskard.node_handle.get_logger().info("interactive marker server running")
     rospy.spinner_thread.join()
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
