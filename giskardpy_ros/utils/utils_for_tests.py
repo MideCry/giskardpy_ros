@@ -182,7 +182,7 @@ class GiskardTester:
         self.api = GiskardWrapperNode(node_name="tests")
 
     def get_odometry_joint(self) -> OmniDrive:
-        return god_map.world.get_connections_by_type(OmniDrive)
+        return god_map.world.get_views_by_type(AbstractRobot)[0].drive
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
         root_T_tip = god_map.world.compute_forward_kinematics(
@@ -989,10 +989,10 @@ class GiskardTester:
         )
 
     def move_base(self, goal_pose) -> None:
-        tip = self.get_odometry_joint().child_link_name
+        tip = self.get_odometry_joint().child
         self.api.motion_goals.add_cartesian_pose(
             goal_pose=goal_pose,
-            tip_link=tip.short_name,
+            tip_link=tip.name,
             root_link="map",
             name="base goal",
         )

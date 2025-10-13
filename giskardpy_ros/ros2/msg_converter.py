@@ -1,4 +1,5 @@
 import builtins
+import importlib
 import json
 import threading
 from dataclasses import fields
@@ -14,6 +15,7 @@ import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
+from random_events.utils import SubclassJSONSerializer
 from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy_message_converter.message_converter import (
@@ -304,6 +306,11 @@ def json_dict_to_ros_kwargs(d: Any) -> Dict[str, Any]:
             d[i] = json_dict_to_ros_kwargs(element)
 
     if isinstance(d, dict):
+        if "type" in d:
+            try:
+                return SubclassJSONSerializer.from_json(d)
+            except ValueError:
+                pass  # it wasn't a SubclassJSONSerializer
         if "message_type" in d:
             d = convert_dictionary_to_ros_message(d)
         else:
@@ -430,6 +437,8 @@ def thing_to_json(thing: Any) -> Any:
         return thing_to_json(convert_ros_message_to_dictionary(thing))
     if is_ros_message(thing):
         return convert_ros_message_to_dictionary(thing)
+    if isinstance(thing, SubclassJSONSerializer):
+        return thing.to_json()
     return thing
 
 

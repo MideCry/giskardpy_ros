@@ -271,9 +271,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         bar_center: PointStamped,
         bar_axis: Vector3Stamped,
         bar_length: float,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         tip_grasp_axis: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_linear_velocity: Optional[float] = None,
         reference_angular_velocity: Optional[float] = None,
@@ -296,10 +296,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_linear_velocity: m/s
         :param reference_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=GraspBar.__name__,
             root_link=root_link,
@@ -321,8 +317,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_cartesian_pose(
         self,
         goal_pose: PoseStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_linear_velocity: Optional[float] = None,
         reference_angular_velocity: Optional[float] = None,
@@ -346,10 +342,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight: None = use default weight
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianPose.__name__,
             goal_pose=goal_pose,
@@ -368,8 +360,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_base_arm_weight_scaling(
         self,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         tip_goal: PointStamped,
         arm_joints: List[str],
         base_joints: List[str],
@@ -391,10 +383,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param arm_joints: joints of the arm that should be scaled.
         :param base_joints: joints of the base that should be scaled.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=BaseArmWeightScaling.__name__,
             name=name,
@@ -412,8 +400,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_maximize_manipulability(
         self,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
@@ -433,10 +421,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight: None = use default weight
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=MaxManipulability.__name__,
             name=name,
@@ -451,9 +435,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_align_planes(
         self,
         goal_normal: Vector3Stamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         tip_normal: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_angular_velocity: Optional[float] = None,
         weight: Optional[float] = None,
@@ -471,10 +455,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight:
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=AlignPlanes.__name__,
             tip_link=tip_link,
@@ -580,8 +560,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_justin_torso_limit(
         self,
         name: Optional[str] = None,
-        root_link: Union[str, giskard_msgs.LinkName] = "torso1",
-        tip_link: Union[str, giskard_msgs.LinkName] = "torso4",
+        root_link: Union[str, PrefixedName] = "torso1",
+        tip_link: Union[str, PrefixedName] = "torso4",
         forward_distance: float = 0.05,
         backward_distance: float = 0.14,
         weight: float = WEIGHT_ABOVE_CA,
@@ -590,10 +570,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         end_condition: str = "",
         **kwargs: goal_parameter,
     ) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=JustinTorsoLimitCart.__name__,
             root_link=root_link,
@@ -611,8 +587,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_cartesian_position(
         self,
         goal_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_velocity: Optional[float] = 0.2,
         weight: Optional[float] = None,
@@ -631,10 +607,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param weight:
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianPosition.__name__,
             goal_point=goal_point,
@@ -653,8 +625,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_cartesian_orientation(
         self,
         goal_orientation: QuaternionStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_velocity: Optional[float] = None,
         weight: Optional[float] = None,
@@ -674,10 +646,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_velocity: rad/s, approx limit
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianOrientation.__name__,
             goal_orientation=goal_orientation,
@@ -696,9 +664,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_pointing(
         self,
         goal_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         pointing_axis: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         max_velocity: float = 0.3,
         threshold: float = 0.01,
@@ -716,10 +684,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pointing_axis: the axis of tip_link that will be used for pointing
         :param max_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=Pointing.__name__,
             tip_link=tip_link,
@@ -738,8 +702,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_wiggle_insert(
         self,
-        root_link: giskard_msgs.LinkName,
-        tip_link: giskard_msgs.LinkName,
+        root_link: PrefixedName,
+        tip_link: PrefixedName,
         hole_point: PointStamped,
         name: Optional[str] = None,
         down_velocity: float = 0.2,
@@ -774,10 +738,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param center_pull_strength_vector: (only when random_walk=True) Forces translation movement faster back towards
                                                                          hole_point
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=WiggleInsert.__name__,
             root_link=root_link,
@@ -981,8 +941,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_close_container(
         self,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        environment_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        environment_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         goal_joint_state: Optional[float] = None,
         weight: Optional[float] = None,
@@ -993,10 +953,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         """
         Same as Open, but will use minimum value as default for goal_joint_state
         """
-        if isinstance(environment_link, str):
-            environment_link = giskard_msgs.LinkName(name=environment_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=Close.__name__,
             tip_link=tip_link,
@@ -1030,10 +986,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param goal_joint_state: goal state for the container. default is maximum joint state.
         :param weight:
         """
-        if isinstance(environment_link, str):
-            environment_link = LinkName(name=environment_link)
-        if isinstance(tip_link, str):
-            tip_link = LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=Open.__name__,
             tip_link=tip_link,
@@ -1134,8 +1086,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_diff_drive_base(
         self,
         goal_pose: PoseStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_linear_velocity: Optional[float] = None,
         reference_angular_velocity: Optional[float] = None,
@@ -1157,10 +1109,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_linear_velocity: m/s
         :param reference_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=DiffDriveBaseGoal.__name__,
             goal_pose=goal_pose,
@@ -1178,8 +1126,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_limit_cartesian_velocity(
         self,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         max_linear_velocity: float = 0.1,
         max_angular_velocity: float = 0.5,
@@ -1197,10 +1145,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param max_linear_velocity: m/s
         :param max_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianVelocityLimit.__name__,
             root_link=root_link,
@@ -1463,8 +1407,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_cartesian_pose_straight(
         self,
         goal_pose: PoseStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_linear_velocity: Optional[float] = None,
         reference_angular_velocity: Optional[float] = None,
@@ -1488,10 +1432,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianPoseStraight.__name__,
             goal_pose=goal_pose,
@@ -1511,8 +1451,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_cartesian_position_straight(
         self,
         goal_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_velocity: float = None,
         weight: Optional[float] = None,
@@ -1525,10 +1465,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         """
         Same as set_translation_goal, but will try to move in a straight line.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=CartesianPositionStraight.__name__,
             goal_point=goal_point,
@@ -1547,9 +1483,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_align_perpendicular(
         self,
         reference_normal: Vector3Stamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         tip_normal: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         reference_velocity: Optional[float] = None,
         weight: Optional[float] = None,
@@ -1558,10 +1494,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         end_condition: str = "",
         **kwargs: goal_parameter,
     ) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=AlignPerpendicular.__name__,
             tip_normal=tip_normal,
@@ -1581,8 +1513,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         self,
         reference_point: PointStamped,
         tip_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         lower_limit: float,
         upper_limit: float,
         name: Optional[str] = None,
@@ -1593,10 +1525,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         end_condition: str = "",
         **kwargs: goal_parameter,
     ) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=HeightGoal.__name__,
             tip_point=tip_point,
@@ -1618,8 +1546,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         self,
         reference_point: PointStamped,
         tip_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
-        root_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
         lower_limit: float,
         upper_limit: float,
         name: Optional[str] = None,
@@ -1630,10 +1558,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         end_condition: str = "",
         **kwargs: goal_parameter,
     ) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=DistanceGoal.__name__,
             tip_point=tip_point,
@@ -1654,9 +1578,9 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_angle(
         self,
         reference_vector: Vector3Stamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         tip_vector: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         lower_angle: float,
         upper_angle: float,
         name: Optional[str] = None,
@@ -1667,10 +1591,6 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         end_condition: str = "",
         **kwargs: goal_parameter,
     ) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_motion_goal(
             class_name=AngleGoal.__name__,
             tip_vector=tip_vector,
@@ -1794,8 +1714,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_cartesian_pose(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         goal_pose: PoseStamped,
         name: Optional[str] = None,
         position_threshold: float = 0.01,
@@ -1809,10 +1729,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_link is closer than the thresholds to goal_pose.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=PoseReached.__name__,
             name=name,
@@ -1830,8 +1746,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_cartesian_position(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         goal_point: PointStamped,
         name: Optional[str] = None,
         threshold: float = 0.01,
@@ -1844,10 +1760,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_link is closer than threshold to goal_point.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=PositionReached.__name__,
             name=name,
@@ -1864,8 +1776,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_distance_to_line(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         center_point: PointStamped,
         line_axis: Vector3Stamped,
         line_length: float,
@@ -1879,10 +1791,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_link is closer than threshold to the line defined by center_point, line_axis and line_length.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=DistanceToLine.__name__,
             name=name,
@@ -1900,8 +1808,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_cartesian_orientation(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         goal_orientation: QuaternionStamped,
         name: Optional[str] = None,
         threshold: float = 0.01,
@@ -1914,10 +1822,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_link is closer than threshold to goal_orientation
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=OrientationReached.__name__,
             name=name,
@@ -1935,9 +1839,9 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
     def add_pointing_at(
         self,
         goal_point: PointStamped,
-        tip_link: Union[str, giskard_msgs.LinkName],
+        tip_link: Union[str, PrefixedName],
         pointing_axis: Vector3Stamped,
-        root_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
@@ -1948,10 +1852,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if pointing_axis of tip_link is pointing at goal_point withing threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=PointingAt.__name__,
             name=name,
@@ -1968,8 +1868,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_vectors_aligned(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         goal_normal: Vector3Stamped,
         tip_normal: Vector3Stamped,
         name: Optional[str] = None,
@@ -1982,10 +1882,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_normal of tip_link is aligned with goal_normal within threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=VectorsAligned.__name__,
             name=name,
@@ -2223,8 +2119,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_vectors_perpendicular(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         reference_normal: Vector3Stamped,
         tip_normal: Vector3Stamped,
         name: Optional[str] = None,
@@ -2237,10 +2133,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if tip_normal of tip_link is perpendicular to goal_normal within threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=PerpendicularMonitor.__name__,
             name=name,
@@ -2257,8 +2149,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_angle(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         reference_vector: Vector3Stamped,
         tip_vector: Vector3Stamped,
         lower_angle: float,
@@ -2272,10 +2164,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         """
         True if angle between tip_vector and reference_vector is within lower and upper angle.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=AngleMonitor.__name__,
             name=name,
@@ -2293,8 +2181,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_height(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         reference_point: PointStamped,
         tip_point: PointStamped,
         lower_limit: float,
@@ -2309,10 +2197,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         True if distance along the z-axis of root_link between tip_point and reference_point
         is within lower and upper limit.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=HeightMonitor.__name__,
             name=name,
@@ -2330,8 +2214,8 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
 
     def add_distance(
         self,
-        root_link: Union[str, giskard_msgs.LinkName],
-        tip_link: Union[str, giskard_msgs.LinkName],
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
         reference_point: PointStamped,
         tip_point: PointStamped,
         lower_limit: float,
@@ -2346,10 +2230,6 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         True if distance between tip_point and reference_point on the plane (that has the z-axis of
         root_link as a normal vector) is within lower and upper limit.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
         return self.add_monitor(
             class_name=DistanceMonitor.__name__,
             name=name,
