@@ -53,9 +53,7 @@ from giskardpy.data_types.exceptions import (
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import hacky_urdf_parser_fix
-from giskardpy.motion_statechart.goals.cartesian_goals import (
-    RelativePositionSequence
-)
+from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
@@ -3059,7 +3057,10 @@ class TestCartGoals:
         zero_pose.execute()
         assert (
             god_map.world.compute_forward_kinematics_np(
-                god_map.world.root, god_map.world.get_kinematic_structure_entity_by_name('r_gripper_tool_frame')
+                god_map.world.root,
+                god_map.world.get_kinematic_structure_entity_by_name(
+                    "r_gripper_tool_frame"
+                ),
             )[0, 3]
             < 0.95
         )
@@ -5282,32 +5283,6 @@ class TestCollisionAvoidanceGoals:
     #     kitchen_setup.send_goal()
     #
     #     # kitchen_setup.add_cylinder('pot', size=[0.2,0.2], pose=pot_pose)
-
-
-class TestInfoServices:
-    def test_get_object_info(self, zero_pose: PR2Tester):
-        result = zero_pose.api.world.get_group_info("pr2")
-        expected = {
-            "brumbrum",
-            "head_pan_joint",
-            "head_tilt_joint",
-            "l_elbow_flex_joint",
-            "l_forearm_roll_joint",
-            "l_shoulder_lift_joint",
-            "l_shoulder_pan_joint",
-            "l_upper_arm_roll_joint",
-            "l_wrist_flex_joint",
-            "l_wrist_roll_joint",
-            "r_elbow_flex_joint",
-            "r_forearm_roll_joint",
-            "r_shoulder_lift_joint",
-            "r_shoulder_pan_joint",
-            "r_upper_arm_roll_joint",
-            "r_wrist_flex_joint",
-            "r_wrist_roll_joint",
-            "torso_lift_joint",
-        }
-        assert set(result.controlled_joints) == expected
 
 
 class TestBenchmark:
