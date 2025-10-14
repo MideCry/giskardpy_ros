@@ -109,17 +109,6 @@ def kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
             js_topic="/kitchen/joint_states",
             set_js_topic="/kitchen/cram_joint_states",
         )
-    js = {}
-    for joint_name in god_map.world.groups[
-        better_pose.default_env_name
-    ].movable_joint_names:
-        joint = god_map.world.joints[joint_name]
-        if isinstance(joint, Has1DOFState):
-            if GiskardBlackboard().tree_config.is_standalone():
-                js[str(joint.dof.name)] = 0.0
-            else:
-                js[str(joint.dof.name.name)] = 0.0
-    better_pose.set_env_state(js)
     return better_pose
 
 
