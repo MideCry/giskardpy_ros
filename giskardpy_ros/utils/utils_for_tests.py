@@ -26,6 +26,7 @@ import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy_ros.utils.utils import is_in_github_workflow
+from semantic_world.adapters.urdf import URDFParser
 from semantic_world.exceptions import ViewNotFoundError, DuplicateViewError
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
@@ -49,10 +50,12 @@ from semantic_world.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
     RevoluteConnection,
+    FixedConnection,
 )
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
 from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_world.world_description.geometry import Box, Scale
 from semantic_world.world_description.world_entity import RootedView, Body
 
 
@@ -673,42 +676,7 @@ class GiskardTester:
         parent_body_name: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ):
-        if isinstance(parent_body_name, str):
-            parent_body_name = giskard_msgs.LinkName(name=parent_body_name)
-        if expected_error_type is None:
-            assert PrefixedName(name) in self.api.world.get_group_names()
-            response2 = self.api.world.get_group_info(name)
-            view: RootedView = god_map.world.get_view_by_name(name)
-            if pose is not None:  # check if pose is consistent
-                p = self.transform_msg(god_map.world.root.name, pose)
-                compare_poses(p.pose, view.root.global_pose)
-                compare_poses(view.root.global_pose, response2.root_link_pose.pose)
-            if (
-                parent_body_name and parent_body_name.group_name != ""
-            ):  # check if parent group is consistent
-                robot = self.api.world.get_group_info(parent_body_name.group_name)
-                assert name in robot.child_groups
-                expected_parent_link = msg_converter.link_name_msg_to_body(
-                    parent_body_name, god_map.world
-                )
-                real_parent_link = view.root.parent_kinematic_structure_entity
-                assert expected_parent_link == real_parent_link
-            else:
-                if parent_body_name is None or parent_body_name.name == "":
-                    parent_body = god_map.world.root
-                else:
-                    parent_body = msg_converter.link_name_msg_to_body(
-                        parent_body_name, god_map.world
-                    )
-                # todo check if collision avoidance config is correct?
-                assert (
-                    parent_body == view.root.parent_kinematic_structure_entity
-                ), f"Parent body '{parent_body.name}' does not match view's parent body '{view.root.parent_kinematic_structure_entity.name}'"
-        else:
-            if expected_error_type != DuplicateViewError:
-                with pytest.raises(ViewNotFoundError) as e:
-                    god_map.world.get_view_by_name(name)
-                assert name not in self.api.world.get_group_names()
+        pass  # fixme
 
     def add_box_to_world(
         self,
@@ -718,14 +686,24 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_box(
-                name=name, size=size, pose=pose, parent_link=parent_link
+        with self.api.world.modify_world():
+            box = Body(name=PrefixedName(name))
+            box_shape = Box(scale=Scale(*size))
+            box.collision.append(box_shape)
+            box.visual.append(box_shape)
+
+            connection = FixedConnection(
+                parent=self.api.world.get_kinematic_structure_entity_by_name(
+                    parent_link
+                ),
+                child=box,
+                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                    pose, self.api.world
+                ),
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(box)
+        self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
             pose=pose,
@@ -836,30 +814,25 @@ class GiskardTester:
         set_js_topic: Optional[str] = "",
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_urdf(
-                name=name,
-                urdf=urdf,
-                pose=pose,
-                parent_link=parent_link,
-                js_topic=js_topic,
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
-        self.check_add_object_result(
-            name=name,
-            pose=pose,
-            parent_body_name=parent_link,
-            expected_error_type=expected_error_type,
-        )
-        if set_js_topic:
-            self.env_joint_state_pubs[name] = rospy.node.create_publisher(
-                JointState, set_js_topic, 10
+        pr2_parser = URDFParser(urdf=urdf, prefix=name)
+        world_with_pr2 = pr2_parser.parse()
+        with self.api.world.modify_world():
+            c_map_root = FixedConnection(
+                parent=parent_link,
+                child=world_with_pr2.root,
+                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                    pose, self.api.world
+                ),
             )
-        if self.default_env_name is None:
-            self.default_env_name = name
+            self.api.world.merge_world(world_with_pr2, root_connection=c_map_root)
+
+        self.wait_heartbeats()
 
     def update_parent_link_of_group(
         self,

@@ -1,8 +1,8 @@
 import builtins
-import importlib
 import json
 import threading
 from dataclasses import fields
+from json import JSONDecodeError
 from time import sleep
 from typing import Optional, Union, List, Dict, Any, Type
 
@@ -177,7 +177,7 @@ def trans_matrix_to_pose_stamped(
     data: cas.TransformationMatrix,
 ) -> geometry_msgs.PoseStamped:
     pose_stamped = geometry_msgs.PoseStamped()
-    pose_stamped.header.frame_id = str(data.reference_frame)
+    pose_stamped.header.frame_id = str(data.reference_frame.name.name)
     position = data.to_position().to_np()
     orientation = data.to_rotation_matrix().to_quaternion().to_np()
     pose_stamped.pose.position = geometry_msgs.Point(
@@ -301,6 +301,11 @@ def json_str_to_ros_kwargs(json_str: str) -> Dict[str, Any]:
 
 
 def json_dict_to_ros_kwargs(d: Any) -> Dict[str, Any]:
+    if isinstance(d, str):
+        try:
+            d = json.loads(d)
+        except JSONDecodeError:
+            pass
     if isinstance(d, list):
         for i, element in enumerate(d):
             d[i] = json_dict_to_ros_kwargs(element)
@@ -315,7 +320,8 @@ def json_dict_to_ros_kwargs(d: Any) -> Dict[str, Any]:
             d = convert_dictionary_to_ros_message(d)
         else:
             for key, value in d.copy().items():
-                d[key] = json_dict_to_ros_kwargs(value)
+                del d[key]
+                d[json_dict_to_ros_kwargs(key)] = json_dict_to_ros_kwargs(value)
     return d
 
 
@@ -432,13 +438,13 @@ def thing_to_json(thing: Any) -> Any:
     if isinstance(thing, list):
         return [thing_to_json(x) for x in thing]
     if isinstance(thing, dict):
-        return {k: thing_to_json(v) for k, v in thing.items()}
+        return {thing_to_json(k): thing_to_json(v) for k, v in thing.items()}
     if isinstance(thing, giskard_msgs.MotionStatechartNode):
         return thing_to_json(convert_ros_message_to_dictionary(thing))
     if is_ros_message(thing):
         return convert_ros_message_to_dictionary(thing)
     if isinstance(thing, SubclassJSONSerializer):
-        return thing.to_json()
+        return json.dumps(thing.to_json())
     return thing
 
 

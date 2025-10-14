@@ -182,16 +182,8 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
             js_topic="/apartment_joint_states",
             set_js_topic="/iai_kitchen/cram_joint_states",
         )
-    js = {}
-    for joint_name in god_map.world.groups[
-        better_pose.default_env_name
-    ].movable_joint_names:
-        joint = god_map.world.joints[joint_name]
-        if isinstance(joint, Has1DOFState):
-            js[str(joint.free_variable.name)] = 0.0
-    better_pose.set_env_state(js)
     base_pose = PoseStamped()
-    base_pose.header.frame_id = "iai_apartment/side_B"
+    base_pose.header.frame_id = "side_B"
     base_pose.pose.position.x = 1.5
     base_pose.pose.position.y = 2.4
     base_pose.pose.orientation.w = 1.0
