@@ -52,6 +52,7 @@ from semantic_world.world_description.connections import (
     PrismaticConnection,
     RevoluteConnection,
     FixedConnection,
+    ActiveConnection1DOF,
 )
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
 from semantic_world.robots.abstract_robot import AbstractRobot
@@ -361,12 +362,10 @@ class GiskardTester:
         for joint_name in goal_js:
             goal = goal_js[joint_name]
             current = current_js[joint_name]
-            if isinstance(joint_name, str):
-                joint_name = god_map.world.search_for_joint_name(joint_name)
-            if (
-                joint_name in god_map.world.joints
-                and god_map.world.is_joint_continuous(joint_name)
-            ):
+            connection: ActiveConnection1DOF = god_map.world.get_connection_by_name(
+                joint_name
+            )
+            if not connection.dof.has_position_limits():
                 np.testing.assert_almost_equal(
                     shortest_angular_distance(goal, current),
                     0,

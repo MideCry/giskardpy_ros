@@ -16,7 +16,7 @@ from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
-from giskardpy.motion_statechart.tasks.pointing import Pointing, PointingCone
+from giskardpy.motion_statechart.tasks.pointing import PointingCone
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -810,8 +810,7 @@ class TestCollisionAvoidanceGoals:
         zero_pose.execute(
             expected_error_type=EmptyProblemException, local_min_end=False
         )
-        current_state = god_map.world.state.to_position_dict()
-        current_state = {k.short_name: v for k, v in current_state.items()}
+        current_state = {k.name: v[0] for k, v in god_map.world.state.items()}
         zero_pose.compare_joint_state(current_state, zero_pose.default_pose)
 
     def test_self_collision_avoidance(self, zero_pose: HSRTester):
@@ -866,7 +865,7 @@ class TestCollisionAvoidanceGoals:
         grasp = box_setup.api.motion_goals.add_motion_goal(
             class_name=GraspSequence.__name__,
             name="pick up",
-            tip_link=LinkName(name=box_setup.tip),
+            tip_link=box_setup.tip,
             root_link="map",
             gripper_joint="hand_motor_joint",
             goal_pose=grasp_pose,
@@ -937,8 +936,8 @@ class TestCollisionAvoidanceGoals:
         box_setup.add_box_to_world(
             name=bread_name, size=(0.1, 0.2, 0.06), pose=bread_pose, parent_link="box"
         )
-        box_setup.dye_group(group_name=box_name, rgba=(0.0, 0.588, 0.784, 1.0))
-        box_setup.dye_group(group_name=bread_name, rgba=(0.784, 0.588, 0.0, 1.0))
+        # box_setup.dye_group(group_name=box_name, rgba=(0.0, 0.588, 0.784, 1.0))
+        # box_setup.dye_group(group_name=bread_name, rgba=(0.784, 0.588, 0.0, 1.0))
         box_setup.close_gripper()
 
         pre_schnibble_pose = PoseStamped()
@@ -967,8 +966,8 @@ class TestCollisionAvoidanceGoals:
         cut = box_setup.api.motion_goals.add_motion_goal(
             class_name=Cutting.__name__,
             name="Cut",
-            root_link=LinkName(name="map"),
-            tip_link=LinkName(name=box_name),
+            root_link="map",
+            tip_link=box_name,
             depth=0.1,
             right_shift=-0.1,
             start_condition=pre_schnibble,
