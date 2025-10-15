@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 
-from semantic_world.world_description.connections import Has1DOFState
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     ExecutionException,
@@ -16,6 +15,7 @@ from giskardpy.data_types.exceptions import (
 from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_world.world_description.connections import ActiveConnection1DOF
 
 try:
     import pr2_controllers_msgs.msg
@@ -63,7 +63,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         GiskardBehavior.__init__(self, str(self))
         self.min_deadline: rospy.Time
         self.max_deadline: rospy.Time
-        self.controlled_joints: List[Has1DOFState] = []
+        self.controlled_joints: List[ActiveConnection1DOF] = []
         self.fill_velocity_values = fill_velocity_values
         self.goal_time_tolerance = rospy.Duration(goal_time_tolerance)
         self.path_tolerance = path_tolerance

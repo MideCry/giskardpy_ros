@@ -24,6 +24,7 @@ import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
 from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_world.adapters.urdf import URDFParser
@@ -183,6 +184,35 @@ class GiskardTester:
         self.heart.start()
         self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name="tests")
+
+    def clear_world(self):
+        tmp_state = deepcopy(god_map.world.state)
+        with god_map.world.modify_world():
+            god_map.world.clear()
+            GiskardBlackboard().giskard.world_config.setup_world()
+            robots = god_map.world.get_views_by_type(AbstractRobot)
+            GiskardBlackboard().giskard.robot_interface_config.setup()
+            god_map.world._notify_model_change()
+            self.collision_scene = CollisionWorldSynchronizer(
+                collision_detector=god_map.collision_scene.collision_detector,
+                world=god_map.world,
+                robots=robots,
+            )
+            god_map.collision_scene = self.collision_scene
+            # self.collision_scene.sync()
+            GiskardBlackboard().giskard.world_config.setup_collision_config()
+            # copy only state of joints that didn't get deleted
+        god_map.world.world_is_being_modified = True
+        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
+        for v in tmp_state.keys():
+            if v not in dof_names:
+                del god_map.world.state[v]
+        god_map.world.notify_state_change()
+        god_map.collision_scene.sync()
+        # GiskardBlackboard().giskard.collision_scene.setup()
+        # self.clear_markers()
+        get_middleware().loginfo("Cleared world.")
+        god_map.world.world_is_being_modified = False
 
     def get_odometry_joint(self) -> OmniDrive:
         return god_map.world.get_views_by_type(AbstractRobot)[0].drive
@@ -610,16 +640,6 @@ class GiskardTester:
         # self.wait_heartbeats()
         assert new_group_name in self.api.world.get_group_names()
 
-    def clear_world(self) -> World_Result:
-        respone = self.api.world.clear()
-        # self.wait_heartbeats()
-        self.default_env_name = None
-        assert respone.error.type == giskard_msgs.GiskardError.SUCCESS
-        assert len(god_map.world.groups) == 1
-        assert len(self.api.world.get_group_names()) == 1
-        assert self.original_number_of_links == len(god_map.world.links)
-        return respone
-
     def remove_group(
         self, name: str, expected_error_type: Optional[type(Exception)] = None
     ) -> None:
@@ -1000,7 +1020,7 @@ class GiskardTester:
         self.execute()
 
     def reset(self):
-        pass
+        self.clear_world()
 
     def reset_base(self):
         p = PoseStamped()

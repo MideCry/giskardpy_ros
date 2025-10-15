@@ -1,109 +1,113 @@
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
+from pkg_resources import resource_filename
 
-from giskardpy.model.world_config import WorldConfig
+from giskardpy.model.world_config import WorldConfig, WorldWithOmniDriveRobot
 from giskardpy_ros.configs.robot_interface_config import (
     StandAloneRobotInterfaceConfig,
     RobotInterfaceConfig,
 )
 from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_world.robots.hsrb import HSRB
 from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_world.world_description.connections import ActiveConnection, OmniDrive
+from semantic_world.world_description.world_entity import CollisionCheckingConfig
 
 
-class WorldWithHSRConfig(WorldConfig):
-    map_name: str
-    localization_joint_name: str
-    odom_link_name: str
-    drive_joint_name: str
-
-    def __init__(
-        self,
-        map_name: str = "map",
-        localization_joint_name: str = "localization",
-        odom_link_name: str = "odom",
-        drive_joint_name: str = "brumbrum",
-        description_name: str = "robot_description",
-        urdf: Optional[str] = None,
-    ):
-        super().__init__()
-        self.map_name = map_name
-        self.localization_joint_name = localization_joint_name
-        self.odom_link_name = odom_link_name
-        self.drive_joint_name = drive_joint_name
-        self.robot_description_name = description_name
-        self.robot_description = urdf
+@dataclass
+class WorldWithHSRConfig(WorldWithOmniDriveRobot):
 
     def setup_world(self):
-        self.set_default_color(1, 1, 1, 1)
-        self.set_default_limits(
-            {
-                Derivatives.velocity: 1,
-                Derivatives.acceleration: np.inf,
-                Derivatives.jerk: None,
-            }
+        super().setup_world()
+        self.hsr = HSRB.from_world(self.world)
+
+    def setup_collision_config(self):
+        path_to_srdf = resource_filename(
+            "giskardpy", "../self_collision_matrices/iai/hsrb.srdf"
         )
-        self.add_empty_link(PrefixedName(self.map_name))
-        self.add_6dof_joint(
-            parent_link=self.map_name,
-            child_link=self.odom_link_name,
-            joint_name=self.localization_joint_name,
+        self.world.load_collision_srdf(path_to_srdf)
+        for body in self.hsr.bodies_with_collisions:
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.05, violated_distance=0.0
+            )
+            body.set_static_collision_config(collision_config)
+
+        connection: ActiveConnection = self.world.get_connection_by_name(
+            "wrist_roll_joint"
         )
-        self.add_empty_link(PrefixedName(self.odom_link_name))
-        self.add_robot_urdf(urdf=self.robot_description)
-        root_link_name = self.get_root_link_of_group(self.robot_group_name)
-        self.add_omni_drive_joint(
-            parent_link_name=self.odom_link_name,
-            child_link_name=root_link_name,
-            name=self.drive_joint_name,
-            x_name=PrefixedName("odom_x", self.robot_group_name),
-            y_name=PrefixedName("odom_y", self.robot_group_name),
-            yaw_vel_name=PrefixedName("odom_t", self.robot_group_name),
-            translation_limits={
-                Derivatives.velocity: 0.2,
-                Derivatives.acceleration: np.inf,
-                Derivatives.jerk: None,
-            },
-            rotation_limits={
-                Derivatives.velocity: 0.2,
-                Derivatives.acceleration: np.inf,
-                Derivatives.jerk: None,
-            },
-            robot_group_name=self.robot_group_name,
-        )
-        self.set_joint_limits(
-            limit_map={
-                Derivatives.jerk: None,
-            },
-            joint_name="arm_lift_joint",
+        connection.set_static_collision_config_for_direct_child_bodies(
+            CollisionCheckingConfig(
+                buffer_zone_distance=0.05,
+                violated_distance=0.0,
+                max_avoided_bodies=4,
+            )
         )
 
+        connection: ActiveConnection = self.hsr.drive
+        connection.set_static_collision_config_for_direct_child_bodies(
+            CollisionCheckingConfig(
+                buffer_zone_distance=0.1,
+                violated_distance=0.03,
+                max_avoided_bodies=2,
+            )
+        )
 
-# class HSRCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-#     def __init__(self, drive_joint_name: str = 'brumbrum'):
-#         super().__init__()
-#         self.drive_joint_name = drive_joint_name
-#
-#     def setup(self):
-#         self.load_self_collision_matrix('self_collision_matrices/iai/hsrb.srdf')
-#         self.set_default_external_collision_avoidance(soft_threshold=0.05,
-#                                                       hard_threshold=0.0)
-#         self.overwrite_external_collision_avoidance('wrist_roll_joint',
-#                                                     number_of_repeller=4,
-#                                                     soft_threshold=0.05,
-#                                                     hard_threshold=0.0,
-#                                                     max_velocity=0.2)
-#         self.overwrite_external_collision_avoidance(joint_name=self.drive_joint_name,
-#                                                     number_of_repeller=2,
-#                                                     soft_threshold=0.1,
-#                                                     hard_threshold=0.03)
-#         self.overwrite_self_collision_avoidance(link_name='head_tilt_link',
-#                                                 soft_threshold=0.03)
+        connection: ActiveConnection = self.world.get_connection_by_name(
+            "head_tilt_joint"
+        )
+        connection.set_static_collision_config_for_direct_child_bodies(
+            CollisionCheckingConfig(
+                buffer_zone_distance=0.03,
+            )
+        )
+        # self.set_default_limits(
+        #     {
+        #         Derivatives.velocity: 1,
+        #         Derivatives.acceleration: np.inf,
+        #         Derivatives.jerk: None,
+        #     }
+        # )
+        # self.add_empty_link(PrefixedName(self.map_name))
+        # self.add_6dof_joint(
+        #     parent_link=self.map_name,
+        #     child_link=self.odom_link_name,
+        #     joint_name=self.localization_joint_name,
+        # )
+        # self.add_empty_link(PrefixedName(self.odom_link_name))
+        # self.add_robot_urdf(urdf=self.robot_description)
+        # root_link_name = self.get_root_link_of_group(self.robot_group_name)
+        # self.add_omni_drive_joint(
+        #     parent_link_name=self.odom_link_name,
+        #     child_link_name=root_link_name,
+        #     name=self.drive_joint_name,
+        #     x_name=PrefixedName("odom_x", self.robot_group_name),
+        #     y_name=PrefixedName("odom_y", self.robot_group_name),
+        #     yaw_vel_name=PrefixedName("odom_t", self.robot_group_name),
+        #     translation_limits={
+        #         Derivatives.velocity: 0.2,
+        #         Derivatives.acceleration: np.inf,
+        #         Derivatives.jerk: None,
+        #     },
+        #     rotation_limits={
+        #         Derivatives.velocity: 0.2,
+        #         Derivatives.acceleration: np.inf,
+        #         Derivatives.jerk: None,
+        #     },
+        #     robot_group_name=self.robot_group_name,
+        # )
+        # self.set_joint_limits(
+        #     limit_map={
+        #         Derivatives.jerk: None,
+        #     },
+        #     joint_name="arm_lift_joint",
+        # )
 
 
-class HSRStandaloneInterface(StandAloneRobotInterfaceConfig):
-    def __init__(self, drive_joint_name: str = "brumbrum"):
-        super().__init__(
+class HSRStandaloneInterface(RobotInterfaceConfig):
+    def setup(self):
+        self.register_controlled_joints(
             [
                 "arm_flex_joint",
                 "arm_lift_joint",
@@ -112,7 +116,7 @@ class HSRStandaloneInterface(StandAloneRobotInterfaceConfig):
                 "head_tilt_joint",
                 "wrist_flex_joint",
                 "wrist_roll_joint",
-                drive_joint_name,
+                self.world.get_connections_by_type(OmniDrive)[0].name,
             ]
         )
 

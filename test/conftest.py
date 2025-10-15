@@ -11,7 +11,7 @@ from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
-from semantic_world.world_description.connections import Has1DOFState
+from semantic_world.world_description.connections import ActiveConnection1DOF
 
 
 @pytest.fixture(scope="module")
@@ -143,7 +143,7 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
         better_pose.default_env_name
     ].movable_joint_names:
         joint = god_map.world.joints[joint_name]
-        if isinstance(joint, Has1DOFState):
+        if isinstance(joint, ActiveConnection1DOF):
             if GiskardBlackboard().tree_config.is_standalone():
                 js[str(joint.dof.name)] = 0.0
             else:

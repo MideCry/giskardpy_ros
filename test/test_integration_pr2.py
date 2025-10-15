@@ -300,35 +300,6 @@ class PR2Tester(GiskardTester):
         #                     root_link_name='br_caster_l_wheel_link')
         # self.dye_group('br_l', rgba=(1, 0, 0, 1))
 
-    def clear_world(self):
-        tmp_state = deepcopy(god_map.world.state)
-        with god_map.world.modify_world():
-            god_map.world.clear()
-            GiskardBlackboard().giskard.world_config.setup_world()
-            robots = god_map.world.get_views_by_type(AbstractRobot)
-            GiskardBlackboard().giskard.robot_interface_config.setup()
-            god_map.world._notify_model_change()
-            self.collision_scene = CollisionWorldSynchronizer(
-                collision_detector=god_map.collision_scene.collision_detector,
-                world=god_map.world,
-                robots=robots,
-            )
-            god_map.collision_scene = self.collision_scene
-            # self.collision_scene.sync()
-            GiskardBlackboard().giskard.world_config.setup_collision_config()
-            # copy only state of joints that didn't get deleted
-        god_map.world.world_is_being_modified = True
-        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
-        for v in tmp_state.keys():
-            if v not in dof_names:
-                del god_map.world.state[v]
-        god_map.world.notify_state_change()
-        god_map.collision_scene.sync()
-        # GiskardBlackboard().giskard.collision_scene.setup()
-        # self.clear_markers()
-        get_middleware().loginfo("Cleared world.")
-        god_map.world.world_is_being_modified = False
-
 
 @pytest.fixture(scope="module")
 def giskard(request, ros):
