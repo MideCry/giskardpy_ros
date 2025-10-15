@@ -11,13 +11,12 @@ from geometry_msgs.msg import (
 )
 from numpy import pi
 
-from giskard_msgs.msg import LinkName
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
-from giskardpy.motion_statechart.tasks.pointing import Pointing
+from giskardpy.motion_statechart.tasks.pointing import Pointing, PointingCone
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -346,10 +345,10 @@ class TestConstraints:
         pointing_axis.vector.z = 1.0
 
         zero_pose.api.motion_goals.add_motion_goal(
-            class_name=Pointing.__name__,
+            class_name=PointingCone.__name__,
             name="pointy_cone",
-            tip_link=LinkName(name=tip_link),
-            root_link=LinkName(name="map"),
+            tip_link=tip_link,
+            root_link="map",
             goal_point=goal_point,
             pointing_axis=pointing_axis,
         )
@@ -358,7 +357,7 @@ class TestConstraints:
         zero_pose.execute(local_min_end=False)
 
     def test_open_fridge(self, kitchen_setup: HSRTester):
-        handle_frame_id = "iai_kitchen/iai_fridge_door_handle"
+        handle_frame_id = "iai_fridge_door_handle"
         handle_name = "iai_fridge_door_handle"
         kitchen_setup.open_gripper()
         base_goal = PoseStamped()

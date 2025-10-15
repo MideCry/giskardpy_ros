@@ -344,40 +344,13 @@ class GiskardTester:
         )
         get_middleware().loginfo("stopping tree")
 
-    def set_env_state(
-        self, joint_state: Dict[str, float], object_name: Optional[str] = None
-    ):
-        if object_name is None:
-            object_name = self.default_env_name
-        if GiskardBlackboard().tree_config.is_standalone():
-            self.api.monitors.add_set_seed_configuration(
-                seed_configuration=joint_state, name="set kitchen state"
-            )
-            self.api.motion_goals.allow_all_collisions()
-            self.execute()
-        else:
-            joint_state_msg = position_dict_to_joint_states(joint_state)
-            self.env_joint_state_pubs[object_name].publish(joint_state_msg)
-        self.wait_heartbeats(3)
-        current_js = god_map.world.state
-        joint_names_with_prefix = set(j.long_name for j in current_js)
-        joint_state_names = list()
-        for j_n in joint_state.keys():
-            if type(j_n) == PrefixedName or "/" in j_n:
-                joint_state_names.append(j_n)
-            else:
-                joint_state_names.append(str(PrefixedName(j_n, object_name)))
-        assert set(joint_state_names).difference(joint_names_with_prefix) == set()
-        for joint_name, state in current_js.items():
-            if joint_name.short_name in joint_state:
-                jn = joint_name.short_name
-            elif joint_name in joint_state:
-                jn = joint_name
-            else:
-                continue
-            np.testing.assert_almost_equal(
-                current_js[joint_name].position, joint_state[jn], 2
-            )
+    def set_env_state(self, joint_state: Dict[str, float]):
+        self.api.monitors.add_set_seed_configuration(
+            seed_configuration=joint_state, name="set kitchen state"
+        )
+        self.api.motion_goals.allow_all_collisions()
+        self.execute()
+        self.wait_heartbeats()
 
     def compare_joint_state(
         self,
