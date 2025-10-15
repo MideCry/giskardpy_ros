@@ -438,7 +438,7 @@ class TestConstraints:
         kitchen_setup.execute()
 
     def test_open_fridge_sequence_simple(self, kitchen_setup: HSRTester):
-        handle_frame_id = "iai_kitchen/iai_fridge_door_handle"
+        handle_frame_id = "iai_fridge_door_handle"
         handle_name = "iai_fridge_door_handle"
         camera_link = "head_rgbd_sensor_link"
         kitchen_setup.open_gripper()
@@ -514,7 +514,7 @@ class TestConstraints:
         kitchen_setup.execute(local_min_end=False)
 
     def test_open_fridge_sequence_semi_simple(self, kitchen_setup: HSRTester):
-        handle_frame_id = "iai_kitchen/iai_fridge_door_handle"
+        handle_frame_id = "iai_fridge_door_handle"
         handle_name = "iai_fridge_door_handle"
         camera_link = "head_rgbd_sensor_link"
         kitchen_setup.open_gripper()
@@ -643,7 +643,7 @@ class TestConstraints:
         kitchen_setup.execute(local_min_end=False)
 
     def test_open_fridge_sequence(self, kitchen_setup: HSRTester):
-        handle_frame_id = "iai_kitchen/iai_fridge_door_handle"
+        handle_frame_id = "iai_fridge_door_handle"
         handle_name = "iai_fridge_door_handle"
         camera_link = "head_rgbd_sensor_link"
         kitchen_setup.open_gripper()
