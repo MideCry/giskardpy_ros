@@ -206,7 +206,7 @@ def numpy_to_pose_stamped(
 
 def point3_to_point_stamped(data: cas.Point3) -> geometry_msgs.PointStamped:
     point_stamped = geometry_msgs.PointStamped()
-    point_stamped.header.frame_id = str(data.reference_frame)
+    point_stamped.header.frame_id = str(data.reference_frame.name.name)
     position = data.to_np()
     point_stamped.point = geometry_msgs.Point(
         x=position[0], y=position[1], z=position[2]
@@ -218,10 +218,10 @@ def trans_matrix_to_transform_stamped(
     data: cas.TransformationMatrix,
 ) -> geometry_msgs.TransformStamped:
     transform_stamped = geometry_msgs.TransformStamped()
-    transform_stamped.header.frame_id = data.reference_frame
-    transform_stamped.child_frame_id = data.child_frame
+    transform_stamped.header.frame_id = data.reference_frame.name.name
+    transform_stamped.child_frame_id = data.child_frame.name.name
     position = data.to_position().to_np()
-    orientation = data.to_rotation().to_quaternion().to_np()
+    orientation = data.to_rotation_matrix().to_quaternion().to_np()
     transform_stamped.transform.translation = geometry_msgs.Vector3(
         x=position[0], y=position[1], z=position[2]
     )

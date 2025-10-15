@@ -226,10 +226,10 @@ class GiskardTester:
         return msg_converter.to_ros_message(root_T_tip)
 
     def compute_fk_point(self, root_link: str, tip_link: str) -> PointStamped:
-        root_T_tip = god_map.world.compute_fk_point(
-            root_link=god_map.world.search_for_link_name(root_link),
-            tip_link=god_map.world.search_for_link_name(tip_link),
-        )
+        root_T_tip = god_map.world.compute_forward_kinematics(
+            root=god_map.world.get_kinematic_structure_entity_by_name(root_link),
+            tip=god_map.world.get_kinematic_structure_entity_by_name(tip_link),
+        ).to_position()
         return msg_converter.to_ros_message(root_T_tip)
 
     def has_odometry_joint(self) -> bool:

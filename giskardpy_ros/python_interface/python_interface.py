@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from copy import deepcopy
 from dataclasses import dataclass, field
 from threading import Thread
 from time import sleep
 from typing import Dict, Tuple, Optional, List, Union
 
-import giskard_msgs.msg as giskard_msgs
 import numpy as np
 import rclpy
 from geometry_msgs.msg import (
@@ -19,32 +17,19 @@ from geometry_msgs.msg import (
 )
 from giskard_msgs.action import Move
 from giskard_msgs.action._move import Move_Result
+from giskard_msgs.msg import CollisionEntry, LinkName
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
-from giskard_msgs.msg import WorldBody, CollisionEntry, GiskardError, LinkName
-from giskard_msgs.srv._get_group_names import (
-    GetGroupNames,
-    GetGroupNames_Response,
-    GetGroupNames_Request,
-)
-from giskard_msgs.srv._get_group_info import (
-    GetGroupInfo,
-    GetGroupInfo_Response,
-    GetGroupInfo_Request,
-)
-from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
 from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
-from rclpy.client import Client
 from rclpy.node import Node
-from shape_msgs.msg import SolidPrimitive
 
-from giskardpy.god_map import god_map
-from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
     ExecutionException,
 )
+from giskardpy.god_map import god_map
+from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import (
     DiffDriveBaseGoal,
@@ -126,14 +111,8 @@ from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
-from giskardpy_ros.utils.utils import make_world_body_box
-from semantic_world.adapters.ros.world_fetcher import fetch_world_from_service
-from semantic_world.adapters.ros.world_synchronizer import (
-    ModelSynchronizer,
-    StateSynchronizer,
-)
 from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots.abstract_robot import RobotView
+from semantic_world.robots.abstract_robot import AbstractRobot
 from semantic_world.world import World
 
 
@@ -163,7 +142,7 @@ class MotionStatechartNodeWrapper:
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         **kwargs,
     ) -> str:
@@ -244,7 +223,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         start_condition: str = "",
         pause_condition: str = "",
         name: Optional[str] = None,
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs,
     ) -> str:
         """
@@ -280,7 +259,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -326,7 +305,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -369,7 +348,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -405,7 +384,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -443,7 +422,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -478,7 +457,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         max_velocity: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -507,7 +486,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         max_velocity: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -536,7 +515,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         max_velocity: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -567,7 +546,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: float = WEIGHT_ABOVE_CA,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         return self.add_motion_goal(
@@ -595,7 +574,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -633,7 +612,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -673,7 +652,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -717,7 +696,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         """
         Press down while wiggling the end effector.
@@ -763,7 +742,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         collisions: List[CollisionEntry],
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         key = (start_condition, pause_condition, end_condition)
         self._collision_entries[key].extend(collisions)
@@ -798,7 +777,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         group2: str = CollisionEntry.ALL,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         """
         Tell Giskard to allow collision between group1 and group2. Use CollisionEntry.ALL to allow collision with all
@@ -824,7 +803,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         group2: str = CollisionEntry.ALL,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         """
         Tell Giskard to avoid collision between group1 and group2. Use CollisionEntry.ALL to allow collision with all
@@ -851,7 +830,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         self,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
@@ -867,7 +846,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         min_distance: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         """
         If you don't want to override the distance, don't call this function. Avoid all is the default, if you don't
@@ -891,7 +870,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         robot_name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ):
         """
         Allows the collision of the robot with itself for the next goal.
@@ -917,12 +896,12 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
     def add_avoid_joint_limits(
         self,
         name: Optional[str] = None,
-        percentage: int = 15.0,
+        percentage: float = 15.0,
         joint_list: Optional[List[str]] = None,
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         This goal will push joints away from their position limits. For example if percentage is 15 and the joint
@@ -948,7 +927,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         Same as Open, but will use minimum value as default for goal_joint_state
@@ -974,7 +953,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         Open a container in an environment.
@@ -1011,7 +990,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         root_group: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         Aligns the tip_link with the door_object to push it open. Only works if the door object is part of the urdf.
@@ -1055,7 +1034,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         reference_angular_velocity: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         Positions the gripper in contact with the door before pushing to open.
@@ -1094,7 +1073,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -1134,7 +1113,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -1172,7 +1151,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -1232,7 +1211,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         enable_laser_avoidance: bool = True,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         :param name: name of the goal
@@ -1326,7 +1305,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         laser_frame_id: str = "base_range_sensor_link",
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
     ) -> str:
         """
         Will follow the path, orienting itself and the head towards the next points in the list.
@@ -1416,7 +1395,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -1459,7 +1438,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         """
@@ -1491,7 +1470,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         return self.add_motion_goal(
@@ -1522,7 +1501,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         return self.add_motion_goal(
@@ -1555,7 +1534,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         return self.add_motion_goal(
@@ -1588,7 +1567,7 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         weight: Optional[float] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         **kwargs: goal_parameter,
     ) -> str:
         return self.add_motion_goal(
@@ -1621,7 +1600,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         **kwargs,
     ) -> str:
@@ -1651,7 +1630,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1672,7 +1651,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1695,7 +1674,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         threshold: float = 0.01,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1723,7 +1702,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1754,7 +1733,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1784,7 +1763,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         threshold: float = 0.01,
     ) -> str:
@@ -1816,7 +1795,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         absolute: bool = False,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -1845,7 +1824,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         threshold: float = 0.01,
     ) -> str:
@@ -1875,7 +1854,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         threshold: float = 0.01,
     ) -> str:
@@ -2030,7 +2009,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         mod: int = 2,
     ) -> str:
@@ -2057,7 +2036,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         true_for_ticks: int = 1,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2080,7 +2059,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2101,7 +2080,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2126,7 +2105,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
         threshold: float = 0.01,
     ) -> str:
@@ -2158,7 +2137,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2190,7 +2169,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2223,7 +2202,7 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         name: Optional[str] = None,
         start_condition: str = "",
         pause_condition: str = "",
-        end_condition: str = "",
+        end_condition: Optional[str] = "",
         reset_condition: str = "",
     ) -> str:
         """
@@ -2384,7 +2363,7 @@ class GiskardWrapper:
 
     @property
     def robot_name(self) -> PrefixedName:
-        return self.world.get_views_by_type(RobotView)[0].name
+        return self.world.get_views_by_type(AbstractRobot)[0].name
 
     def clear_motion_goals_and_monitors(self):
         """
