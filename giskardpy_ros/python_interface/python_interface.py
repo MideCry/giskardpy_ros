@@ -133,7 +133,7 @@ from semantic_world.adapters.ros.world_synchronizer import (
     StateSynchronizer,
 )
 from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots import RobotView
+from semantic_world.robots.abstract_robot import RobotView
 from semantic_world.world import World
 
 

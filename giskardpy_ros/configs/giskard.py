@@ -26,7 +26,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from semantic_world.adapters.ros.world_fetcher import FetchWorldServer
 from semantic_world.world_description.connections import ActiveConnection
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots.abstract_robot import AbstractRobot
 
 from semantic_world.adapters.ros.world_synchronizer import (
     ModelReloadSynchronizer,

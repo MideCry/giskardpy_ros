@@ -5,13 +5,13 @@ from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
+from semantic_world.robots.pr2 import PR2
 from semantic_world.world_description.connections import (
     OmniDrive,
     RevoluteConnection,
     ActiveConnection,
 )
 from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots import PR2
 
 from pkg_resources import resource_filename
 

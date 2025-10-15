@@ -53,7 +53,7 @@ from semantic_world.world_description.connections import (
     FixedConnection,
 )
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots.abstract_robot import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world_description.geometry import Box, Scale, Sphere, Cylinder
 from semantic_world.world_description.world_entity import RootedView, Body

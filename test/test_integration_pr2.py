@@ -91,7 +91,7 @@ from giskardpy_ros.utils.utils_for_tests import (
     compare_points,
 )
 from semantic_world.exceptions import SymbolResolutionError
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots.abstract_robot import AbstractRobot
 from semantic_world.world_description.connections import RevoluteConnection
 from semantic_world.world_description.world_entity import Body
 

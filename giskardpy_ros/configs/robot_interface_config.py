@@ -24,7 +24,7 @@ from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 from semantic_world.world_description.connections import OmniDrive, ActiveConnection
 from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots.abstract_robot import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world import World
 

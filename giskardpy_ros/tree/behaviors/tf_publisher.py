@@ -11,7 +11,7 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from semantic_world.robots import AbstractRobot
+from semantic_world.robots.abstract_robot import AbstractRobot
 
 
 class TfPublishingModes(Enum):
@@ -28,7 +28,13 @@ class TFPublisher(GiskardBehavior):
     Published tf for attached and environment objects.
     """
 
-    def __init__(self, name: str, mode: TfPublishingModes, tf_topic: str = 'tf', include_prefix: bool = True):
+    def __init__(
+        self,
+        name: str,
+        mode: TfPublishingModes,
+        tf_topic: str = "tf",
+        include_prefix: bool = True,
+    ):
         super().__init__(name)
         self.original_links = set(body.name for body in god_map.world.bodies)
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)
@@ -51,10 +57,17 @@ class TFPublisher(GiskardBehavior):
     def update(self):
         try:
             if self.mode == TfPublishingModes.all:
-                self.tf_pub.publish(msg_converter.world_to_tf_message(god_map.world, self.include_prefix))
+                self.tf_pub.publish(
+                    msg_converter.world_to_tf_message(
+                        god_map.world, self.include_prefix
+                    )
+                )
             else:
                 tf_msg = TFMessage()
-                if self.mode in [TfPublishingModes.attached_objects, TfPublishingModes.attached_and_world_objects]:
+                if self.mode in [
+                    TfPublishingModes.attached_objects,
+                    TfPublishingModes.attached_and_world_objects,
+                ]:
                     for robot in self.robots:
                         robot_links = set(robot.bodies)
                     attached_links = robot_links - self.original_links
@@ -65,11 +78,18 @@ class TFPublisher(GiskardBehavior):
                             parent_link_name = body.parent_body
                             fk = get_fk(parent_link_name, link_name)
                             if self.include_prefix:
-                                tf = self.make_transform(fk.header.frame_id, str(link_name), fk.pose)
+                                tf = self.make_transform(
+                                    fk.header.frame_id, str(link_name), fk.pose
+                                )
                             else:
-                                tf = self.make_transform(fk.header.frame_id, str(link_name.name), fk.pose)
+                                tf = self.make_transform(
+                                    fk.header.frame_id, str(link_name.name), fk.pose
+                                )
                             tf_msg.transforms.append(tf)
-            if self.mode in [TfPublishingModes.world_objects, TfPublishingModes.attached_and_world_objects]:
+            if self.mode in [
+                TfPublishingModes.world_objects,
+                TfPublishingModes.attached_and_world_objects,
+            ]:
                 for group_name, group in god_map.world.groups.items():
                     if group_name in self.robots:
                         # robot frames will exist for sure
@@ -78,7 +98,9 @@ class TFPublisher(GiskardBehavior):
                         continue
                     get_fk = god_map.world.compute_fk
                     fk = get_fk(god_map.world.root.name, group.root_link_name)
-                    tf = self.make_transform(fk.header.frame_id, str(group.root_link_name), fk.pose)
+                    tf = self.make_transform(
+                        fk.header.frame_id, str(group.root_link_name), fk.pose
+                    )
                     tf_msg.transforms.append(tf)
                 self.tf_pub.publish(tf_msg)
 
