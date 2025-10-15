@@ -55,7 +55,7 @@ from semantic_world.world_description.connections import (
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
 from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.geometry import Box, Scale
+from semantic_world.world_description.geometry import Box, Scale, Sphere, Cylinder
 from semantic_world.world_description.world_entity import RootedView, Body
 
 
@@ -686,16 +686,20 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
+            )
         with self.api.world.modify_world():
-            box = Body(name=PrefixedName(name))
+            box = Body(name=PrefixedName(name), _world=self.api.world)
             box_shape = Box(scale=Scale(*size))
             box.collision.append(box_shape)
             box.visual.append(box_shape)
 
             connection = FixedConnection(
-                parent=self.api.world.get_kinematic_structure_entity_by_name(
-                    parent_link
-                ),
+                parent=parent_link,
                 child=box,
                 connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
                     pose, self.api.world
@@ -737,14 +741,28 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_sphere(
-                name=name, radius=radius, pose=pose, parent_link=parent_link
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
+        with self.api.world.modify_world():
+            sphere = Body(name=PrefixedName(name), _world=self.api.world)
+            sphere_shape = Sphere(radius=radius)
+            sphere.collision.append(sphere_shape)
+            sphere.visual.append(sphere_shape)
+
+            connection = FixedConnection(
+                parent=parent_link,
+                child=sphere,
+                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                    pose, self.api.world
+                ),
+            )
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(sphere)
+        self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
             pose=pose,
@@ -761,18 +779,28 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_cylinder(
-                name=name,
-                height=height,
-                radius=radius,
-                pose=pose,
-                parent_link=parent_link,
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
+        with self.api.world.modify_world():
+            cylinder = Body(name=PrefixedName(name), _world=self.api.world)
+            cylinder_shape = Cylinder(width=radius * 2, height=height)
+            cylinder.collision.append(cylinder_shape)
+            cylinder.visual.append(cylinder_shape)
+
+            connection = FixedConnection(
+                parent=parent_link,
+                child=cylinder,
+                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                    pose, self.api.world
+                ),
+            )
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(cylinder)
+        self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
             pose=pose,
