@@ -3742,7 +3742,7 @@ class TestSelfCollisionAvoidance:
         box_pose = PoseStamped()
         box_pose.header.frame_id = "r_gripper_tool_frame"
         box_pose.pose.orientation.w = 1.0
-        better_pose.api.world.add_box(
+        better_pose.add_box_to_world(
             name=box_name,
             size=(0.2, 0.1, 0.1),
             pose=box_pose,
