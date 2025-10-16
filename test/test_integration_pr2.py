@@ -66,7 +66,7 @@ from giskardpy.motion_statechart.tasks.task import (
     WEIGHT_ABOVE_CA,
     WEIGHT_COLLISION_AVOIDANCE,
 )
-from giskardpy.qp.qp_controller_config import SupportedQPSolver
+from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -77,7 +77,6 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.pr2 import (
     PR2StandaloneInterface,
     WorldWithPR2Config,
-    PR2QPControllerConfig,
 )
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -227,7 +226,7 @@ class PR2Tester(GiskardTester):
                 behavior_tree_config=StandAloneBTConfig(
                     debug_mode=True, publish_tf=True
                 ),
-                qp_controller_config=PR2QPControllerConfig(
+                qp_controller_config=QPControllerConfig(
                     mpc_dt=0.05,
                     control_dt=None,
                     retries_with_relaxed_constraints=15,
