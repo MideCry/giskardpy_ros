@@ -30,7 +30,9 @@ class BehaviorTreeConfig:
     add_debug_marker_publisher: bool = False
     add_trajectory_visualizer: bool = False
     add_debug_trajectory_visualizer: bool = False
-    add_qp_data_publisher: QPDataPublisherConfig = field(default_factory=QPDataPublisherConfig)
+    add_qp_data_publisher: QPDataPublisherConfig = field(
+        default_factory=QPDataPublisherConfig
+    )
 
     def __post_init__(self):
         if is_in_github_workflow():
@@ -55,14 +57,22 @@ class BehaviorTreeConfig:
         if self.debug_mode:
             # self.add_gantt_chart_plotter()
             # self.add_goal_graph_plotter()
-            if self.add_trajectory_plotter: self._add_trajectory_plotter(wait=True)
-            if self.add_debug_trajectory_plotter: self._add_debug_trajectory_plotter(wait=True)
-            if self.add_debug_marker_publisher: self._add_debug_marker_publisher()
-            if self.add_trajectory_visualizer: self._add_trajectory_visualizer()
-            if self.add_debug_trajectory_visualizer: self._add_debug_trajectory_visualizer()
-            if self.add_gantt_chart_plotter: self._add_gantt_chart_plotter()
-            if self.add_goal_graph_plotter: self._add_goal_graph_plotter()
-            if self.add_qp_data_publisher.any(): self._add_qp_data_publisher(publish_config=self.add_qp_data_publisher)
+            if self.add_trajectory_plotter:
+                self._add_trajectory_plotter(wait=True)
+            if self.add_debug_trajectory_plotter:
+                self._add_debug_trajectory_plotter(wait=True)
+            if self.add_debug_marker_publisher:
+                self._add_debug_marker_publisher()
+            if self.add_trajectory_visualizer:
+                self._add_trajectory_visualizer()
+            if self.add_debug_trajectory_visualizer:
+                self._add_debug_trajectory_visualizer()
+            if self.add_gantt_chart_plotter:
+                self._add_gantt_chart_plotter()
+            if self.add_goal_graph_plotter:
+                self._add_goal_graph_plotter()
+            if self.add_qp_data_publisher.any():
+                self._add_qp_data_publisher(publish_config=self.add_qp_data_publisher)
 
     def switch_to_projection_mode(self):
         """Override this method to define projection mode behavior for each config type."""
@@ -72,11 +82,13 @@ class BehaviorTreeConfig:
         """Override this method to define execution mode behavior for each config type."""
         raise NotImplementedError()
 
-    def add_visualization_marker_publisher(self,
-                                           mode: VisualizationMode,
-                                           add_to_sync: Optional[bool] = None,
-                                           add_to_control_loop: Optional[bool] = None,
-                                           scale_scale: float = 1.0):
+    def add_visualization_marker_publisher(
+        self,
+        mode: VisualizationMode,
+        add_to_sync: Optional[bool] = None,
+        add_to_control_loop: Optional[bool] = None,
+        scale_scale: float = 1.0,
+    ):
         """
 
         :param add_to_sync: Markers are published while waiting for a goal.
@@ -87,9 +99,13 @@ class BehaviorTreeConfig:
         """
         GiskardBlackboard().ros_visualizer = ROSMsgVisualization(mode=mode)
         if add_to_sync:
-            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale)
+            self.tree.wait_for_goal.publish_state.add_visualization_marker_behavior(
+                mode, scale_scale=scale_scale
+            )
         if add_to_control_loop:
-            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(mode, scale_scale=scale_scale)
+            self.tree.control_loop_branch.publish_state.add_visualization_marker_behavior(
+                mode, scale_scale=scale_scale
+            )
 
     def _add_qp_data_publisher(self, publish_config: QPDataPublisherConfig):
         """
@@ -97,11 +113,17 @@ class BehaviorTreeConfig:
         """
         self.add_evaluate_debug_expressions()
         if GiskardBlackboard().tree_config.is_open_loop():
-            self.tree.execute_traj.base_closed_loop.publish_state.add_qp_data_publisher(publish_config=publish_config)
+            self.tree.execute_traj.base_closed_loop.publish_state.add_qp_data_publisher(
+                publish_config=publish_config
+            )
         else:
-            self.tree.control_loop_branch.publish_state.add_qp_data_publisher(publish_config=publish_config)
+            self.tree.control_loop_branch.publish_state.add_qp_data_publisher(
+                publish_config=publish_config
+            )
 
-    def _add_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
+    def _add_trajectory_plotter(
+        self, normalize_position: bool = False, wait: bool = False
+    ):
         """
         Plots the generated trajectories.
         :param normalize_position: Positions are centered around zero.
@@ -116,13 +138,16 @@ class BehaviorTreeConfig:
     def _add_debug_trajectory_visualizer(self):
         self.tree.cleanup_control_loop.add_debug_visualize_trajectory()
 
-    def _add_debug_trajectory_plotter(self, normalize_position: bool = False, wait: bool = False):
+    def _add_debug_trajectory_plotter(
+        self, normalize_position: bool = False, wait: bool = False
+    ):
         """
         Plots debug expressions defined in goals.
         """
         self.add_evaluate_debug_expressions()
-        self.tree.cleanup_control_loop.add_plot_debug_trajectory(normalize_position=normalize_position,
-                                                                 wait=wait)
+        self.tree.cleanup_control_loop.add_plot_debug_trajectory(
+            normalize_position=normalize_position, wait=wait
+        )
 
     def _add_gantt_chart_plotter(self):
         self.add_evaluate_debug_expressions()
@@ -139,22 +164,28 @@ class BehaviorTreeConfig:
         self.add_evaluate_debug_expressions()
         self.tree.control_loop_branch.publish_state.add_debug_marker_publisher()
 
-    def add_tf_publisher(self, include_prefix: bool = True, tf_topic: str = 'tf',
-                         mode: TfPublishingModes = TfPublishingModes.attached_and_world_objects):
+    def add_tf_publisher(
+        self,
+        include_prefix: bool = True,
+        tf_topic: str = "tf",
+        mode: TfPublishingModes = TfPublishingModes.attached_and_world_objects,
+    ):
         """
         Publishes tf for Giskard's internal state.
         """
-        self.tree.wait_for_goal.publish_state.add_tf_publisher(include_prefix=include_prefix,
-                                                               tf_topic=tf_topic,
-                                                               mode=mode)
+        self.tree.wait_for_goal.publish_state.add_tf_publisher(
+            include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
+        )
         if GiskardBlackboard().tree_config.is_standalone():
-            self.tree.control_loop_branch.publish_state.add_tf_publisher(include_prefix=include_prefix,
-                                                                         tf_topic=tf_topic,
-                                                                         mode=mode)
+            self.tree.control_loop_branch.publish_state.add_tf_publisher(
+                include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
+            )
 
-    def add_robot_description_publisher(self, topic: str = 'robot_description'):
+    def add_robot_description_publisher(self, topic: str = "robot_description"):
         if GiskardBlackboard().tree_config.is_standalone():
-            self.tree.wait_for_goal.publish_state.add_robot_description_publisher(topic=topic)
+            self.tree.wait_for_goal.publish_state.add_robot_description_publisher(
+                topic=topic
+            )
 
     def add_evaluate_debug_expressions(self):
         self.tree.prepare_control_loop.add_compile_debug_expressions()
@@ -162,34 +193,47 @@ class BehaviorTreeConfig:
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=False)
         else:
             self.tree.control_loop_branch.add_evaluate_debug_expressions(log_traj=True)
-        if GiskardBlackboard().tree_config.is_open_loop() and hasattr(GiskardBlackboard().tree.execute_traj,
-                                                                      'prepare_base_control'):
+        if GiskardBlackboard().tree_config.is_open_loop() and hasattr(
+            GiskardBlackboard().tree.execute_traj, "prepare_base_control"
+        ):
             GiskardBlackboard().tree.execute_traj.prepare_base_control.add_compile_debug_expressions()
-            GiskardBlackboard().tree.execute_traj.base_closed_loop.add_evaluate_debug_expressions(log_traj=False)
+            GiskardBlackboard().tree.execute_traj.base_closed_loop.add_evaluate_debug_expressions(
+                log_traj=False
+            )
 
-    def add_js_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False):
+    def add_js_publisher(
+        self, topic_name: Optional[str] = None, include_prefix: bool = False
+    ):
         """
         Publishes joint states for Giskard's internal state.
         """
         GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
             include_prefix=include_prefix,
             topic_name=topic_name,
-            only_prismatic_and_revolute=True)
-        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(include_prefix=include_prefix,
-                                                                                       topic_name=topic_name,
-                                                                                       only_prismatic_and_revolute=True)
+            only_prismatic_and_revolute=True,
+        )
+        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(
+            include_prefix=include_prefix,
+            topic_name=topic_name,
+            only_prismatic_and_revolute=True,
+        )
 
-    def add_free_variable_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False):
+    def add_free_variable_publisher(
+        self, topic_name: Optional[str] = None, include_prefix: bool = False
+    ):
         """
         Publishes joint states for Giskard's internal state.
         """
         GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
             include_prefix=include_prefix,
             topic_name=topic_name,
-            only_prismatic_and_revolute=False)
-        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(include_prefix=include_prefix,
-                                                                                       topic_name=topic_name,
-                                                                                       only_prismatic_and_revolute=False)
+            only_prismatic_and_revolute=False,
+        )
+        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(
+            include_prefix=include_prefix,
+            topic_name=topic_name,
+            only_prismatic_and_revolute=False,
+        )
 
 
 @dataclass
@@ -200,6 +244,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     :param publish_tf: publish all link poses in tf.
     :param include_prefix: whether to include the robot name prefix when publishing joint states or tf
     """
+
     publish_js: bool = False
     publish_free_variables: bool = False
     publish_tf: bool = True
@@ -213,19 +258,23 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             self.publish_js = False
             self.publish_tf = True
         if self.publish_js and self.publish_free_variables:
-            raise SetupException('publish_js and publish_free_variables cannot be True at the same time.')
+            raise SetupException(
+                "publish_js and publish_free_variables cannot be True at the same time."
+            )
 
     def setup(self):
         super().setup()
         self.tree.control_loop_branch.add_projection_behaviors()
-        self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
-                                                mode=self.visualization_mode)
+        self.add_visualization_marker_publisher(
+            add_to_sync=True, add_to_control_loop=True, mode=self.visualization_mode
+        )
         if self.publish_tf:
-            self.add_tf_publisher(include_prefix=self.include_prefix, mode=TfPublishingModes.all)
+            self.add_tf_publisher(
+                include_prefix=self.include_prefix, mode=TfPublishingModes.all
+            )
         if self.publish_robot_description:
             self.add_robot_description_publisher()
         self.add_evaluate_debug_expressions()
-        # self.add_debug_marker_publisher()
         if self.publish_js:
             self.add_js_publisher(include_prefix=self.include_prefix)
         if self.publish_free_variables:
@@ -252,9 +301,12 @@ class OpenLoopBTConfig(BehaviorTreeConfig):
         super().setup()
         self.tree.control_loop_branch.add_projection_behaviors()
         self.tree.execute_traj = ExecuteTraj()
-        self.tree.execute_traj_failure_is_success = FailureIsSuccess('ignore failure', self.tree.execute_traj)
-        self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=True,
-                                                mode=self.visualization_mode)
+        self.tree.execute_traj_failure_is_success = FailureIsSuccess(
+            "ignore failure", self.tree.execute_traj
+        )
+        self.add_visualization_marker_publisher(
+            add_to_sync=True, add_to_control_loop=True, mode=self.visualization_mode
+        )
 
     def switch_to_projection_mode(self):
         self.tree.root.remove_child(self.tree.execute_traj_failure_is_success)
@@ -272,8 +324,9 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
     def setup(self):
         super().setup()
         self.tree.control_loop_branch.add_closed_loop_behaviors()
-        self.add_visualization_marker_publisher(add_to_sync=True, add_to_control_loop=False,
-                                                mode=self.visualization_mode)
+        self.add_visualization_marker_publisher(
+            add_to_sync=True, add_to_control_loop=False, mode=self.visualization_mode
+        )
 
     def switch_to_projection_mode(self):
         self.tree.control_loop_branch.switch_to_projection()
