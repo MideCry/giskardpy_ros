@@ -3825,8 +3825,7 @@ class TestSelfCollisionAvoidance:
             "r_wrist_flex_joint": -1.18811419869,
             "r_wrist_roll_joint": 2.26884630124,
         }
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.api.motion_goals.add_joint_position(goal_js)
+        zero_pose.api.monitors.add_set_seed_configuration(goal_js)
         zero_pose.execute()
 
         p = PoseStamped()
