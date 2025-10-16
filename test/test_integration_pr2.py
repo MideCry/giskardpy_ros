@@ -2088,7 +2088,9 @@ class TestConstraints:
             center = (upper_limit + lower_limit) / 2.0
             upper_limit2 = center + joint_range / 2.0 * (1 - percentage / 100.0)
             lower_limit2 = center - joint_range / 2.0 * (1 - percentage / 100.0)
-            assert upper_limit2 >= position >= lower_limit2
+            assert (
+                upper_limit2 >= position >= lower_limit2
+            ), f"{joint.name}: {upper_limit2} >= {position} >= {lower_limit2}"
 
     def test_pointing(self, better_pose: PR2Tester):
         tip = "head_mount_kinect_rgb_link"
