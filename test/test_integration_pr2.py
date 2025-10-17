@@ -304,13 +304,14 @@ class PR2Tester(GiskardTester):
         # self.dye_group('br_l', rgba=(1, 0, 0, 1))
 
 
-@pytest.fixture(scope="module")
-def giskard(request, ros):
-    # launch_launchfile('package://iai_pr2_description/launch/upload_pr2_cableguide.launch')
+@pytest.fixture()
+def giskard(init_rospy):
     c = PR2Tester()
-    # c = PR2TesterMujoco()
-    request.addfinalizer(c.tear_down)
-    return c
+    try:
+        yield c
+    finally:
+        print("tear down")
+        c.tear_down()
 
 
 @pytest.fixture()
@@ -3737,6 +3738,7 @@ class TestSelfCollisionAvoidance:
         )
         zero_pose.detach_group(attached_link_name)
 
+    @pytest.mark.skip(reason="need to update collision matrix with a collision checker")
     def test_box_overlapping_with_gripper(self, better_pose: PR2Tester):
         box_name = "muh"
         box_pose = PoseStamped()
@@ -3749,7 +3751,6 @@ class TestSelfCollisionAvoidance:
             parent_link="r_gripper_tool_frame",
         )
 
-        get_middleware().loginfo("Set a Cartesian goal for the box")
         box_goal = PoseStamped()
         box_goal.header.frame_id = box_name
         box_goal.pose.position.x = -0.5

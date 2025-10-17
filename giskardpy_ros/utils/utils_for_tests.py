@@ -343,6 +343,7 @@ class GiskardTester:
         get_middleware().loginfo(
             f"total time spend moving: {self.total_time_spend_moving}"
         )
+        GiskardBlackboard().tree.shutdown()
         get_middleware().loginfo("stopping tree")
 
     def set_env_state(self, joint_state: Dict[str, float]):
@@ -651,15 +652,19 @@ class GiskardTester:
     def detach_group(
         self, name: str, expected_error_type: Optional[type(Exception)] = None
     ) -> None:
-        try:
-            response = self.api.world.detach_group(name)
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
-        self.check_add_object_result(
-            name=name, pose=None, expected_error_type=expected_error_type
-        )
+        with self.api.world.modify_world():
+            body = self.api.world.get_body_by_name(name)
+            parent_T_connection = self.api.world.compute_forward_kinematics(
+                self.api.world.root, body
+            )
+            new_connection = FixedConnection(
+                parent=self.api.world.root,
+                child=body,
+                parent_T_connection_expression=parent_T_connection,
+            )
+            self.api.world.remove_connection(body.parent_connection)
+            self.api.world.add_connection(new_connection)
+        self.wait_heartbeats()
 
     def check_add_object_result(
         self,

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import rclpy
 from geometry_msgs.msg import PoseStamped, Quaternion
 
 import giskardpy_ros.ros2.tfwrapper as tf
@@ -14,30 +15,53 @@ from giskardpy_ros.utils.utils_for_tests import GiskardTester
 from semantic_world.world_description.connections import ActiveConnection1DOF
 
 
-@pytest.fixture(scope="module")
-def ros(request):
+# @pytest.fixture()
+# def ros(request):
+#     rospy.init_node("giskard")
+#     get_middleware().loginfo("init ros")
+#     tf.init()
+#     get_middleware().loginfo("done tf init")
+#
+#     def kill_ros():
+#         import rclpy
+#
+#         try:
+#             GiskardBlackboard().tree.render()
+#         except KeyError as e:
+#             get_middleware().logerr(f"Failed to render behavior tree.")
+#         get_middleware().loginfo("shutdown ros")
+#         rclpy.shutdown()
+#
+#     request.addfinalizer(kill_ros)
+
+
+@pytest.fixture(scope="function")
+def init_rospy():
+
     rospy.init_node("giskard")
     get_middleware().loginfo("init ros")
     tf.init()
     get_middleware().loginfo("done tf init")
 
-    def kill_ros():
-        import rclpy
+    try:
+        yield None
+    finally:
+        print("kill ros")
+        # Stop executor cleanly and wait for the thread to exit
+        rospy.spinner_thread.join(2.0)
 
-        try:
-            GiskardBlackboard().tree.render()
-        except KeyError as e:
-            get_middleware().logerr(f"Failed to render behavior tree.")
-        get_middleware().loginfo("shutdown ros")
+        # Remove the node from the executor and destroy it
+        # (executor.shutdown() takes care of spinning; add_node is safe to keep as-is)
+        rospy.node.destroy_node()
+
+        # Shut down the ROS client library
         rclpy.shutdown()
-
-    request.addfinalizer(kill_ros)
 
 
 @pytest.fixture()
 def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
     get_middleware().loginfo("resetting giskard")
-    giskard.api.clear_motion_goals_and_monitors()
+    # giskard.api.clear_motion_goals_and_monitors()
     if GiskardBlackboard().tree_config.is_standalone() and giskard.has_odometry_joint():
         zero = PoseStamped()
         zero.header.frame_id = "map"
@@ -46,7 +70,7 @@ def resetted_giskard(giskard: GiskardTester) -> GiskardTester:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(start_condition=done)
         giskard.execute()
-    giskard.reset()
+    # giskard.reset()
     return giskard
 
 
