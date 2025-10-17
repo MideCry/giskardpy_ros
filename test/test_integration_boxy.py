@@ -17,66 +17,68 @@ from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 class BoxyTester(GiskardTester):
     default_pose = {
-        'neck_shoulder_pan_joint': 0.0,
-        'neck_shoulder_lift_joint': 0.0,
-        'neck_elbow_joint': 0.0,
-        'neck_wrist_1_joint': 0.0,
-        'neck_wrist_2_joint': 0.0,
-        'neck_wrist_3_joint': 0.0,
-        'triangle_base_joint': 0.0,
-        'left_arm_0_joint': 0.0,
-        'left_arm_1_joint': 0.0,
-        'left_arm_2_joint': 0.0,
-        'left_arm_3_joint': 0.0,
-        'left_arm_4_joint': 0.0,
-        'left_arm_5_joint': 0.0,
-        'left_arm_6_joint': 0.0,
-        'right_arm_0_joint': 0.0,
-        'right_arm_1_joint': 0.0,
-        'right_arm_2_joint': 0.0,
-        'right_arm_3_joint': 0.0,
-        'right_arm_4_joint': 0.0,
-        'right_arm_5_joint': 0.0,
-        'right_arm_6_joint': 0.0,
+        "neck_shoulder_pan_joint": 0.0,
+        "neck_shoulder_lift_joint": 0.0,
+        "neck_elbow_joint": 0.0,
+        "neck_wrist_1_joint": 0.0,
+        "neck_wrist_2_joint": 0.0,
+        "neck_wrist_3_joint": 0.0,
+        "triangle_base_joint": 0.0,
+        "left_arm_0_joint": 0.0,
+        "left_arm_1_joint": 0.0,
+        "left_arm_2_joint": 0.0,
+        "left_arm_3_joint": 0.0,
+        "left_arm_4_joint": 0.0,
+        "left_arm_5_joint": 0.0,
+        "left_arm_6_joint": 0.0,
+        "right_arm_0_joint": 0.0,
+        "right_arm_1_joint": 0.0,
+        "right_arm_2_joint": 0.0,
+        "right_arm_3_joint": 0.0,
+        "right_arm_4_joint": 0.0,
+        "right_arm_5_joint": 0.0,
+        "right_arm_6_joint": 0.0,
     }
 
     better_pose = {
-        'neck_shoulder_pan_joint': -1.57,
-        'neck_shoulder_lift_joint': -1.88,
-        'neck_elbow_joint': -2.0,
-        'neck_wrist_1_joint': 0.139999387693,
-        'neck_wrist_2_joint': 1.56999999998,
-        'neck_wrist_3_joint': 0,
-        'triangle_base_joint': -0.24,
-        'left_arm_0_joint': -0.68,
-        'left_arm_1_joint': 1.08,
-        'left_arm_2_joint': -0.13,
-        'left_arm_3_joint': -1.35,
-        'left_arm_4_joint': 0.3,
-        'left_arm_5_joint': 0.7,
-        'left_arm_6_joint': -0.01,
-        'right_arm_0_joint': 0.68,
-        'right_arm_1_joint': -1.08,
-        'right_arm_2_joint': 0.13,
-        'right_arm_3_joint': 1.35,
-        'right_arm_4_joint': -0.3,
-        'right_arm_5_joint': -0.7,
-        'right_arm_6_joint': 0.01,
+        "neck_shoulder_pan_joint": -1.57,
+        "neck_shoulder_lift_joint": -1.88,
+        "neck_elbow_joint": -2.0,
+        "neck_wrist_1_joint": 0.139999387693,
+        "neck_wrist_2_joint": 1.56999999998,
+        "neck_wrist_3_joint": 0,
+        "triangle_base_joint": -0.24,
+        "left_arm_0_joint": -0.68,
+        "left_arm_1_joint": 1.08,
+        "left_arm_2_joint": -0.13,
+        "left_arm_3_joint": -1.35,
+        "left_arm_4_joint": 0.3,
+        "left_arm_5_joint": 0.7,
+        "left_arm_6_joint": -0.01,
+        "right_arm_0_joint": 0.68,
+        "right_arm_1_joint": -1.08,
+        "right_arm_2_joint": 0.13,
+        "right_arm_3_joint": 1.35,
+        "right_arm_4_joint": -0.3,
+        "right_arm_5_joint": -0.7,
+        "right_arm_6_joint": 0.01,
     }
 
     def __init__(self, giskard=None):
         if giskard is None:
-            giskard = Giskard(world_config=WorldWithBoxyBaseConfig(),
-                              collision_checker_id=CollisionCheckerLib.bpb,
-                              robot_interface_config=BoxyStandaloneInterfaceConfig(),
-                              behavior_tree_config=StandAloneBTConfig(),
-                              qp_controller_config=QPControllerConfig(mpc_dt=0.05,
-                                                                      control_dt=None))
-        self.camera_tip = 'camera_link'
-        self.r_tip = 'right_gripper_tool_frame'
-        self.l_tip = 'left_gripper_tool_frame'
-        self.r_gripper_group = 'r_gripper'
+            giskard = Giskard(
+                world_config=WorldWithBoxyBaseConfig(),
+                collision_checker_id=CollisionCheckerLib.bpb,
+                robot_interface_config=BoxyStandaloneInterfaceConfig(),
+                behavior_tree_config=StandAloneBTConfig(),
+                qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
+            )
+        self.camera_tip = "camera_link"
+        self.r_tip = "right_gripper_tool_frame"
+        self.l_tip = "left_gripper_tool_frame"
+        self.r_gripper_group = "r_gripper"
         super().__init__(giskard)
+
     def open_r_gripper(self):
         return
 
@@ -92,37 +94,45 @@ class BoxyTester(GiskardTester):
     def reset(self):
         self.open_l_gripper()
         self.open_r_gripper()
-        self.register_group('l_gripper',
-                            root_link_name=LinkName('left_gripper_tool_frame', self.robot_name))
-        self.register_group('r_gripper',
-                            root_link_name=LinkName('right_gripper_tool_frame', self.robot_name))
+        self.register_group(
+            "l_gripper",
+            root_link_name=LinkName("left_gripper_tool_frame", self.robot_name),
+        )
+        self.register_group(
+            "r_gripper",
+            root_link_name=LinkName("right_gripper_tool_frame", self.robot_name),
+        )
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def giskard(request, ros) -> BoxyTester:
-    launch_launchfile('package://iai_boxy_description/launch/upload_boxy.launch')
+    launch_launchfile("package://iai_boxy_description/launch/upload_boxy.launch")
     c = BoxyTester()
     request.addfinalizer(c.tear_down)
     return c
 
 
 class TestJointGoals:
-    def test_joint_movement1(self, zero_pose: BoxyTester):
-        zero_pose.allow_self_collision()
-        js = copy(zero_pose.better_pose)
-        js['triangle_base_joint'] = zero_pose.default_pose['triangle_base_joint']
-        zero_pose.set_joint_goal(js)
-        zero_pose.execute()
+    def test_joint_movement1(self, default_pose_giskard: BoxyTester):
+        default_pose_giskard.allow_self_collision()
+        js = copy(default_pose_giskard.better_pose)
+        js["triangle_base_joint"] = default_pose_giskard.default_pose[
+            "triangle_base_joint"
+        ]
+        default_pose_giskard.set_joint_goal(js)
+        default_pose_giskard.execute()
 
 
 class TestConstraints:
     def test_pointing(self, better_pose: BoxyTester):
-        tip = 'head_mount_kinect2_rgb_optical_frame'
-        goal_point = better_pose.compute_fk_point('map', better_pose.r_tip)
+        tip = "head_mount_kinect2_rgb_optical_frame"
+        goal_point = better_pose.compute_fk_point("map", better_pose.r_tip)
         z = Vector3Stamped()
         z.header.frame_id = tip
         z.vector.z = 1
-        better_pose.set_pointing_goal(goal_point=goal_point, tip_link=tip, pointing_axis=z, root_link='map')
+        better_pose.set_pointing_goal(
+            goal_point=goal_point, tip_link=tip, pointing_axis=z, root_link="map"
+        )
         better_pose.execute()
 
         current_x = Vector3Stamped()
@@ -133,8 +143,13 @@ class TestConstraints:
         np.testing.assert_almost_equal(expected_x.point.y, 0, 2)
         np.testing.assert_almost_equal(expected_x.point.x, 0, 2)
 
-        goal_point = better_pose.compute_fk_point('map', better_pose.r_tip)
-        better_pose.set_pointing_goal(goal_point=goal_point, tip_link=tip, pointing_axis=z, root_link=better_pose.r_tip)
+        goal_point = better_pose.compute_fk_point("map", better_pose.r_tip)
+        better_pose.set_pointing_goal(
+            goal_point=goal_point,
+            tip_link=tip,
+            pointing_axis=z,
+            root_link=better_pose.r_tip,
+        )
 
         r_goal = PoseStamped()
         r_goal.header.frame_id = better_pose.r_tip
@@ -142,12 +157,13 @@ class TestConstraints:
         r_goal.pose.position.z -= 0.5
         r_goal.pose.orientation.w = 1
         r_goal = better_pose.transform_msg(better_pose.default_root, r_goal)
-        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
-                                                                      [0, -1, 0, 0],
-                                                                      [1, 0, 0, 0],
-                                                                      [0, 0, 0, 1]]))
+        r_goal.pose.orientation = Quaternion(
+            *quaternion_from_matrix(
+                [[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
+            )
+        )
 
-        better_pose.set_cart_goal(r_goal, better_pose.r_tip, 'base_footprint')
+        better_pose.set_cart_goal(r_goal, better_pose.r_tip, "base_footprint")
         better_pose.execute()
 
         current_x = Vector3Stamped()
@@ -159,8 +175,8 @@ class TestConstraints:
         np.testing.assert_almost_equal(expected_x.point.x, 0, 2)
 
     def test_open_drawer(self, kitchen_setup: BoxyTester):
-        handle_frame_id = 'iai_kitchen/sink_area_left_middle_drawer_handle'
-        handle_name = 'sink_area_left_middle_drawer_handle'
+        handle_frame_id = "iai_kitchen/sink_area_left_middle_drawer_handle"
+        handle_name = "sink_area_left_middle_drawer_handle"
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
         bar_axis.vector.y = 1
@@ -172,12 +188,14 @@ class TestConstraints:
         tip_grasp_axis.header.frame_id = kitchen_setup.l_tip
         tip_grasp_axis.vector.y = 1
 
-        kitchen_setup.set_grasp_bar_goal(root_link=kitchen_setup.default_root,
-                                         tip_link=kitchen_setup.l_tip,
-                                         tip_grasp_axis=tip_grasp_axis,
-                                         bar_center=bar_center,
-                                         bar_axis=bar_axis,
-                                         bar_length=0.4)
+        kitchen_setup.set_grasp_bar_goal(
+            root_link=kitchen_setup.default_root,
+            tip_link=kitchen_setup.l_tip,
+            tip_grasp_axis=tip_grasp_axis,
+            bar_center=bar_center,
+            bar_axis=bar_axis,
+            bar_length=0.4,
+        )
 
         # Create gripper from kitchen object
         x_gripper = Vector3Stamped()
@@ -190,32 +208,38 @@ class TestConstraints:
         x_goal.vector.x = -1
 
         # Align planes for gripper to be horizontal/vertical
-        kitchen_setup.set_align_planes_goal(tip_link=kitchen_setup.l_tip,
-                                            tip_normal=x_gripper,
-                                            root_link='map',
-                                            goal_normal=x_goal)
+        kitchen_setup.set_align_planes_goal(
+            tip_link=kitchen_setup.l_tip,
+            tip_normal=x_gripper,
+            root_link="map",
+            goal_normal=x_goal,
+        )
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.execute()  # send goal to Giskard
 
-        kitchen_setup.set_open_container_goal(tip_link=kitchen_setup.l_tip,
-                                              environment_link=handle_name)
+        kitchen_setup.set_open_container_goal(
+            tip_link=kitchen_setup.l_tip, environment_link=handle_name
+        )
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.execute()  # send goal to Giskard
         # Update kitchen object
-        kitchen_setup.set_env_state({'sink_area_left_middle_drawer_main_joint': 0.48})
+        kitchen_setup.set_env_state({"sink_area_left_middle_drawer_main_joint": 0.48})
 
         # Close drawer partially
-        kitchen_setup.set_open_container_goal(tip_link=kitchen_setup.l_tip,
-                                              environment_link=handle_name,
-                                              goal_joint_state=0.2)
+        kitchen_setup.set_open_container_goal(
+            tip_link=kitchen_setup.l_tip,
+            environment_link=handle_name,
+            goal_joint_state=0.2,
+        )
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.execute()  # send goal to Giskard
         # Update kitchen object
-        kitchen_setup.set_env_state({'sink_area_left_middle_drawer_main_joint': 0.2})
+        kitchen_setup.set_env_state({"sink_area_left_middle_drawer_main_joint": 0.2})
 
-        kitchen_setup.set_close_container_goal(tip_link=kitchen_setup.l_tip,
-                                               environment_link=handle_name)
+        kitchen_setup.set_close_container_goal(
+            tip_link=kitchen_setup.l_tip, environment_link=handle_name
+        )
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.execute()  # send goal to Giskard
         # Update kitchen object
-        kitchen_setup.set_env_state({'sink_area_left_middle_drawer_main_joint': 0.0})
+        kitchen_setup.set_env_state({"sink_area_left_middle_drawer_main_joint": 0.0})

@@ -136,13 +136,13 @@ class TiagoTester(GiskardTester):
 
 class TestCartGoals:
 
-    def test_drive_topright_bottom_left(self, zero_pose: TiagoTester):
+    def test_drive_topright_bottom_left(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position = Point(x=0.489, y=-0.598, z=0.000)
         goal.pose.orientation.w = 1.0
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
 
         goal = PoseStamped()
         goal.header.frame_id = "map"
@@ -150,10 +150,10 @@ class TestCartGoals:
         goal.pose.orientation = Quaternion(
             x=0.0, y=0.0, z=0.916530200374776, w=0.3999654882623912
         )
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
 
-    def test_drive_forward_forward(self, zero_pose: TiagoTester):
+    def test_drive_forward_forward(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = 1.0
@@ -161,8 +161,8 @@ class TestCartGoals:
         # goal.pose.orientation.w = 1
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 4)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = 2.0
@@ -170,20 +170,20 @@ class TestCartGoals:
         # goal.pose.orientation.w = 1
         q = quaternion_from_axis_angle([0, 0, 1], -np.pi / 4)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
         # zero_pose.set_translation_goal(goal, 'base_footprint', 'odom')
         # zero_pose.plan_and_execute()
 
-    def test_drive_rotate(self, zero_pose: TiagoTester):
+    def test_drive_rotate(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 4)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
 
-    def test_drive_backward_backward(self, zero_pose: TiagoTester):
+    def test_drive_backward_backward(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = -1.0
@@ -191,8 +191,8 @@ class TestCartGoals:
         # goal.pose.orientation.w = 1
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 4)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = -2.0
@@ -200,38 +200,38 @@ class TestCartGoals:
         # goal.pose.orientation.w = 1
         q = quaternion_from_axis_angle([0, 0, 1], -np.pi / 4)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
         # zero_pose.set_translation_goal(goal, 'base_footprint', 'odom')
         # zero_pose.plan_and_execute()
 
-    def test_drive_left(self, zero_pose: TiagoTester):
+    def test_drive_left(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = 0.01
         goal.pose.position.y = 0.5
         q = quaternion_from_axis_angle([0, 0, 1], np.pi / 8)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
 
-    def test_drive_left_right(self, zero_pose: TiagoTester):
+    def test_drive_left_right(self, default_pose_giskard: TiagoTester):
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = 0.01
         goal.pose.position.y = 0.5
         q = quaternion_from_axis_angle([0, 0, 1], -np.pi)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.pose.position.x = -0.01
         goal.pose.position.y = -0.5
         q = quaternion_from_axis_angle([0, 0, 1], np.pi * 0.2)
         goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.move_base(goal)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.move_base(goal)
 
     def test_drive7(self, apartment_setup: TiagoTester):
         apartment_setup.api.motion_goals.add_joint_position(
@@ -293,10 +293,14 @@ class TestCartGoals:
 
 
 class TestCollisionAvoidance:
-    def test_avoid_all(self, zero_pose: TiagoTester):
-        zero_pose.api.motion_goals.add_joint_position(zero_pose.better_pose)
-        zero_pose.api.motion_goals.avoid_collision(0.1, group1=zero_pose.api.robot_name)
-        zero_pose.execute()
+    def test_avoid_all(self, default_pose_giskard: TiagoTester):
+        default_pose_giskard.api.motion_goals.add_joint_position(
+            default_pose_giskard.better_pose
+        )
+        default_pose_giskard.api.motion_goals.avoid_collision(
+            0.1, group1=default_pose_giskard.api.robot_name
+        )
+        default_pose_giskard.execute()
 
     def test_attach_object(self, better_pose):
         parent_link = "arm_left_tool_link"
@@ -384,7 +388,7 @@ class TestCollisionAvoidance:
         )
         apartment_setup.execute()
 
-    def test_self_collision_avoidance(self, zero_pose: TiagoTester):
+    def test_self_collision_avoidance(self, default_pose_giskard: TiagoTester):
         js = {
             "arm_left_1_joint": -1.1069832458862692,
             "arm_left_2_joint": 1.4746164329656843,
@@ -411,15 +415,15 @@ class TestCollisionAvoidance:
         # zero_pose.set_joint_goal(js)
         # zero_pose.allow_all_collisions()
         # zero_pose.plan_and_execute()
-        zero_pose.api.monitors.add_set_seed_configuration(js)
+        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
         # zero_pose.set_joint_goal(zero_pose.better_pose2)
         js2 = {
             "torso_lift_joint": 0.3400000002235174,
         }
-        zero_pose.api.motion_goals.add_joint_position(js2)
-        zero_pose.plan()
+        default_pose_giskard.api.motion_goals.add_joint_position(js2)
+        default_pose_giskard.plan()
 
-    def test_avoid_self_collision4(self, zero_pose: TiagoTester):
+    def test_avoid_self_collision4(self, default_pose_giskard: TiagoTester):
         js = {
             "arm_left_1_joint": 0.21181287002285662,
             "arm_left_2_joint": -0.6151379734525764,
@@ -443,35 +447,41 @@ class TestCollisionAvoidance:
             "head_2_joint": 0.4333201391595926,
         }
 
-        zero_pose.api.monitors.add_set_seed_configuration(js)
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.api.motion_goals.add_joint_position(zero_pose.better_pose2)
-        zero_pose.execute()
+        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.api.motion_goals.add_joint_position(
+            default_pose_giskard.better_pose2
+        )
+        default_pose_giskard.execute()
 
-    def test_left_arm(self, zero_pose: TiagoTester):
+    def test_left_arm(self, default_pose_giskard: TiagoTester):
         box_pose = PoseStamped()
         box_pose.header.frame_id = "arm_left_3_link"
         box_pose.pose.position.z = 0.07
         box_pose.pose.position.x = 0.1
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_box_to_world("box", size=(0.05, 0.05, 0.05), pose=box_pose)
+        default_pose_giskard.add_box_to_world(
+            "box", size=(0.05, 0.05, 0.05), pose=box_pose
+        )
         box_pose = PoseStamped()
         box_pose.header.frame_id = "arm_left_5_link"
         box_pose.pose.position.z = 0.07
         box_pose.pose.position.y = -0.1
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_box_to_world("box2", size=(0.05, 0.05, 0.05), pose=box_pose)
-        zero_pose.execute()
+        default_pose_giskard.add_box_to_world(
+            "box2", size=(0.05, 0.05, 0.05), pose=box_pose
+        )
+        default_pose_giskard.execute()
 
-    def test_load_negative_scale(self, zero_pose: TiagoTester):
+    def test_load_negative_scale(self, default_pose_giskard: TiagoTester):
         mesh_path = "package://iai_tiago_description/meshes/arm/arm_3_collision.dae"
         box_pose = PoseStamped()
         box_pose.header.frame_id = "base_link"
         box_pose.pose.position.x = 0.6
         box_pose.pose.position.z = 0.0
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_mesh_to_world(
+        default_pose_giskard.add_mesh_to_world(
             name="meshy",
             mesh=mesh_path,
             pose=box_pose,
@@ -482,7 +492,7 @@ class TestCollisionAvoidance:
         box_pose.pose.position.x = 0.6
         box_pose.pose.position.z = -0.1
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_box_to_world(
+        default_pose_giskard.add_box_to_world(
             "box1", size=(0.1, 0.1, 0.01), pose=box_pose, parent_link="base_link"
         )
         box_pose = PoseStamped()
@@ -491,7 +501,7 @@ class TestCollisionAvoidance:
         box_pose.pose.position.y = 0.1
         box_pose.pose.position.z = 0.05
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_box_to_world(
+        default_pose_giskard.add_box_to_world(
             "box2", size=(0.1, 0.01, 0.1), pose=box_pose, parent_link="base_link"
         )
         box_pose = PoseStamped()
@@ -500,7 +510,7 @@ class TestCollisionAvoidance:
         box_pose.pose.position.y = -0.1
         box_pose.pose.position.z = 0.05
         box_pose.pose.orientation.w = 1.0
-        zero_pose.add_box_to_world(
+        default_pose_giskard.add_box_to_world(
             "box3", size=(0.1, 0.01, 0.1), pose=box_pose, parent_link="base_link"
         )
         # box_pose = PoseStamped()
@@ -512,7 +522,7 @@ class TestCollisionAvoidance:
         #                    pose=box_pose,
         #                    scale=(1, 1, 1),
         #                    )
-        zero_pose.execute()
+        default_pose_giskard.execute()
 
     def test_drive_into_kitchen(self, apartment_setup: TiagoTester):
         base_goal = PoseStamped()
@@ -566,17 +576,19 @@ class TestConstraints:
 
 
 class TestJointGoals:
-    def test_out_of_joint_soft_limits3(self, zero_pose: TiagoTester):
+    def test_out_of_joint_soft_limits3(self, default_pose_giskard: TiagoTester):
         js = {
             "arm_right_5_joint": -2.1031066629465776,
         }
-        zero_pose.api.monitors.add_set_seed_configuration(js)
-        zero_pose.api.motion_goals.add_joint_position(zero_pose.better_pose2)
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
+        default_pose_giskard.api.motion_goals.add_joint_position(
+            default_pose_giskard.better_pose2
+        )
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_out_of_joint_soft_limits6(self, zero_pose: TiagoTester):
+    def test_out_of_joint_soft_limits6(self, default_pose_giskard: TiagoTester):
         js = {
             "arm_left_1_joint": 0.2999719152605501,
             "arm_left_2_joint": -1.0770103752381537,
@@ -601,24 +613,24 @@ class TestJointGoals:
             "torso_lift_joint": 0.3487927046680741,
         }
 
-        zero_pose.api.monitors.add_set_seed_configuration(js)
+        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
         pointing_goal = PointStamped()
         pointing_goal.header.frame_id = "base_footprint"
         pointing_goal.point.x = 2.0
         z = Vector3Stamped()
         z.header.frame_id = "head_front_camera_link"  # 'xtion_link'
         z.vector.x = 1.0
-        zero_pose.api.motion_goals.add_pointing(
+        default_pose_giskard.api.motion_goals.add_pointing(
             tip_link="head_front_camera_link",
             root_link="base_footprint",
             goal_point=pointing_goal,
             pointing_axis=z,
         )
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_out_of_joint_soft_limits7(self, zero_pose: TiagoTester):
+    def test_out_of_joint_soft_limits7(self, default_pose_giskard: TiagoTester):
         js = {
             "arm_left_1_joint": 1.3505632726981545,
             "arm_left_2_joint": -1.1195635667275154,
@@ -643,15 +655,15 @@ class TestJointGoals:
             "torso_lift_joint": 0.3486754163734459,
         }
 
-        zero_pose.api.monitors.add_set_seed_configuration(js)
+        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
         js2 = deepcopy(js)
         # del js2['arm_right_2_joint']
-        zero_pose.api.motion_goals.add_joint_position(js2)
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.motion_goals.add_joint_position(js2)
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_joint_goals(self, zero_pose: TiagoTester):
+    def test_joint_goals(self, default_pose_giskard: TiagoTester):
         js1 = {
             "arm_left_1_joint": -1.0,
             "arm_left_2_joint": 0.0,
@@ -670,68 +682,84 @@ class TestJointGoals:
             "arm_right_6_joint": 0.5,
             "arm_right_7_joint": 0.0,
         }
-        zero_pose.api.motion_goals.add_joint_position(js1)
-        zero_pose.api.motion_goals.add_joint_position(js2)
+        default_pose_giskard.api.motion_goals.add_joint_position(js1)
+        default_pose_giskard.api.motion_goals.add_joint_position(js2)
 
-        zero_pose.execute()
+        default_pose_giskard.execute()
 
-    def test_joint_goals_at_limits(self, zero_pose: TiagoTester):
+    def test_joint_goals_at_limits(self, default_pose_giskard: TiagoTester):
         js1 = {"arm_right_5_joint": 3.0, "arm_left_5_joint": -3.0}
         # zero_pose.set_seed_configuration(start_state)
-        zero_pose.api.motion_goals.add_joint_position(js1, weight=WEIGHT_ABOVE_CA)
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.motion_goals.add_joint_position(
+            js1, weight=WEIGHT_ABOVE_CA
+        )
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_get_out_of_joint_soft_limits(self, zero_pose: TiagoTester):
+    def test_get_out_of_joint_soft_limits(self, default_pose_giskard: TiagoTester):
         js = {"head_1_joint": 2.0, "head_2_joint": -2.0}
-        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        zero_pose.api.motion_goals.add_joint_position(zero_pose.default_pose)
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.monitors.add_set_seed_configuration(
+            seed_configuration=js
+        )
+        default_pose_giskard.api.motion_goals.add_joint_position(
+            default_pose_giskard.default_pose
+        )
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_get_out_of_joint_soft_limits_passive(self, zero_pose: TiagoTester):
-        js = {
-            "arm_right_5_joint": 3,
-            # 'arm_left_5_joint': -3
-        }
-        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
-
-    def test_get_out_of_joint_soft_limits_passive_with_velocity(
-        self, zero_pose: TiagoTester
+    def test_get_out_of_joint_soft_limits_passive(
+        self, default_pose_giskard: TiagoTester
     ):
         js = {
             "arm_right_5_joint": 3,
             # 'arm_left_5_joint': -3
         }
-        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        god_map.world.state[
-            PrefixedName("arm_right_5_joint", "tiago_dual")
-        ].velocity = 1
-        # zero_pose.world.state[PrefixedName('arm_left_5_joint', 'tiago_dual')].velocity = -1
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.monitors.add_set_seed_configuration(
+            seed_configuration=js
+        )
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_try_to_stay_out_of_soft_limits(self, zero_pose: TiagoTester):
+    def test_get_out_of_joint_soft_limits_passive_with_velocity(
+        self, default_pose_giskard: TiagoTester
+    ):
         js = {
             "arm_right_5_joint": 3,
             # 'arm_left_5_joint': -3
         }
-        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        zero_pose.api.motion_goals.add_joint_position(js)
+        default_pose_giskard.api.monitors.add_set_seed_configuration(
+            seed_configuration=js
+        )
         god_map.world.state[
             PrefixedName("arm_right_5_joint", "tiago_dual")
         ].velocity = 1
-        zero_pose.api.motion_goals.allow_all_collisions()
-        zero_pose.execute()
-        zero_pose.are_joint_limits_violated()
+        # zero_pose.world.state[PrefixedName('arm_left_5_joint', 'tiago_dual')].velocity = -1
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
 
-    def test_get_out_of_joint_soft_limits2(self, zero_pose: TiagoTester):
+    def test_try_to_stay_out_of_soft_limits(self, default_pose_giskard: TiagoTester):
+        js = {
+            "arm_right_5_joint": 3,
+            # 'arm_left_5_joint': -3
+        }
+        default_pose_giskard.api.monitors.add_set_seed_configuration(
+            seed_configuration=js
+        )
+        default_pose_giskard.api.motion_goals.add_joint_position(js)
+        god_map.world.state[
+            PrefixedName("arm_right_5_joint", "tiago_dual")
+        ].velocity = 1
+        default_pose_giskard.api.motion_goals.allow_all_collisions()
+        default_pose_giskard.execute()
+        default_pose_giskard.are_joint_limits_violated()
+
+    def test_get_out_of_joint_soft_limits2(self, default_pose_giskard: TiagoTester):
         js = {"head_1_joint": 2, "head_2_joint": -2}
         js2 = {"head_1_joint": 2.1, "head_2_joint": 0, "torso_lift_joint": 1.5}
-        zero_pose.api.monitors.add_set_seed_configuration(seed_configuration=js)
-        zero_pose.api.motion_goals.add_joint_position(js2)
-        zero_pose.plan()
-        zero_pose.are_joint_limits_violated()
+        default_pose_giskard.api.monitors.add_set_seed_configuration(
+            seed_configuration=js
+        )
+        default_pose_giskard.api.motion_goals.add_joint_position(js2)
+        default_pose_giskard.plan()
+        default_pose_giskard.are_joint_limits_violated()
