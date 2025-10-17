@@ -278,30 +278,6 @@ class PR2Tester(GiskardTester):
         self.clear_world()
         self.open_l_gripper()
         self.open_r_gripper()
-        # self.register_group('l_gripper',
-        #                     root_link_name=giskard_msgs.LinkName(name='l_wrist_roll_link'))
-        # self.register_group('r_gripper',
-        #                     root_link_name=giskard_msgs.LinkName(name='r_wrist_roll_link'))
-
-        # self.register_group('fl_l',
-        #                     root_link_group_name=self.robot_name,
-        #                     root_link_name='fl_caster_l_wheel_link')
-        # self.dye_group('fl_l', rgba=(1, 0, 0, 1))
-        #
-        # self.register_group('fr_l',
-        #                     root_link_group_name=self.robot_name,
-        #                     root_link_name='fr_caster_l_wheel_link')
-        # self.dye_group('fr_l', rgba=(1, 0, 0, 1))
-        #
-        # self.register_group('bl_l',
-        #                     root_link_group_name=self.robot_name,
-        #                     root_link_name='bl_caster_l_wheel_link')
-        # self.dye_group('bl_l', rgba=(1, 0, 0, 1))
-        #
-        # self.register_group('br_l',
-        #                     root_link_group_name=self.robot_name,
-        #                     root_link_name='br_caster_l_wheel_link')
-        # self.dye_group('br_l', rgba=(1, 0, 0, 1))
 
 
 @pytest.fixture()
