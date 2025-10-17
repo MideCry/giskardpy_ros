@@ -41,7 +41,6 @@ from giskardpy.data_types.exceptions import (
     InvalidGoalException,
     EmptyProblemException,
     SetupException,
-    UnknownJointException,
     ExecutionException,
 )
 from giskardpy.god_map import god_map
@@ -344,7 +343,7 @@ class TestJointGoals:
                     god_map.world.state[connection.dof.name].position, goal, atol=1e-2
                 )
 
-    def test_joint_goal_projection(self, giskard: PR2Tester):
+    def test_joint_goal_projection(self, giskard: PR2Tester, better_pose):
         js = {
             "torso_lift_joint": 0.2999225173357618,
             "head_pan_joint": 0.041880780651479044,
@@ -372,7 +371,7 @@ class TestJointGoals:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
-        giskard.api.monitors.add_set_seed_configuration(giskard.better_pose)
+        giskard.api.monitors.add_set_seed_configuration(better_pose)
         done = giskard.api.motion_goals.add_joint_position(goal_state=js)
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(done)
@@ -530,11 +529,11 @@ class TestMonitors:
         giskard.execute(local_min_end=False)
         assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 4
 
-    def test_joint_sequence(self, giskard: PR2Tester, pocky_pose_state):
+    def test_joint_sequence(self, giskard: PR2Tester, pocky_pose_state, better_pose):
         g1 = "g1"
         giskard.api.motion_goals.add_joint_position(
             name=g1,
-            goal_state=giskard.better_pose,
+            goal_state=better_pose,
             end_condition=g1,
         )
         end_monitor = giskard.api.monitors.add_local_minimum_reached(
@@ -550,9 +549,9 @@ class TestMonitors:
         giskard.api.monitors.add_end_motion(start_condition=end_monitor)
         giskard.execute(local_min_end=False)
 
-    def test_reset(self, giskard: PR2Tester, pocky_pose_state):
+    def test_reset(self, giskard: PR2Tester, pocky_pose_state, better_pose):
         g1 = giskard.api.motion_goals.add_joint_position(
-            name="joint goal 1", goal_state=giskard.better_pose
+            name="joint goal 1", goal_state=better_pose
         )
         giskard.api.update_end_condition(node_name=g1, condition=g1)
         g2 = giskard.api.motion_goals.add_joint_position(
@@ -775,7 +774,7 @@ class TestMonitors:
         better_pose.api.monitors.add_end_motion(start_condition=inserted)
         better_pose.execute(local_min_end=False)
 
-    def test_bowl_and_cup_sequence(self, kitchen_setup: PR2Tester):
+    def test_bowl_and_cup_sequence(self, kitchen_setup: PR2Tester, better_pose):
         # %% setup
         bowl_name = "bowl"
         cup_name = "cup"
@@ -870,7 +869,7 @@ class TestMonitors:
         base_pose.pose.position.x = 0.1
         base_pose.pose.orientation.w = 1.0
         joint_position_reached = kitchen_setup.api.motion_goals.add_joint_position(
-            goal_state=kitchen_setup.better_pose,
+            goal_state=better_pose,
             name="phase 3 joint goal",
             start_condition=phase2,
             end_condition=None,
@@ -1218,7 +1217,7 @@ class TestMonitors:
         giskard.api.monitors.add_check_trajectory_length(30)
         giskard.execute()
 
-    def test_hold_monitors2(self, giskard: PR2Tester):
+    def test_hold_monitors2(self, giskard: PR2Tester, better_pose):
         true = giskard.api.monitors.add_sleep(0.0, name="always true")
 
         base_goal = PoseStamped()
@@ -1246,8 +1245,8 @@ class TestMonitors:
 
         local_min = giskard.api.monitors.add_local_minimum_reached()
 
-        joint_reached = giskard.api.monitors.add_joint_position(giskard.better_pose)
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        joint_reached = giskard.api.monitors.add_joint_position(better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
 
         end = giskard.api.monitors.add_end_motion(
             start_condition=f"{local_min} and {stayed_put} and {joint_reached}"
@@ -1256,23 +1255,23 @@ class TestMonitors:
         giskard.api.monitors.add_check_trajectory_length(30)
         giskard.execute()
 
-    def test_pause_condition_of_monitor(self, giskard: PR2Tester):
+    def test_pause_condition_of_monitor(self, giskard: PR2Tester, better_pose):
         sleep = giskard.api.monitors.add_sleep(2, name="sleep")
         joint_goal = giskard.api.monitors.add_joint_position(
             name="joint reached",
-            goal_state=giskard.better_pose,
+            goal_state=better_pose,
             pause_condition=f"not {sleep}",
         )
 
-        giskard.api.motion_goals.add_joint_position(goal_state=giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(goal_state=better_pose)
         giskard.api.monitors.add_end_motion(start_condition=joint_goal)
         giskard.execute()
 
-    def test_pause_condition_of_monitor2(self, giskard: PR2Tester):
+    def test_pause_condition_of_monitor2(self, giskard: PR2Tester, better_pose):
         sleep = giskard.api.monitors.add_sleep(1, name="sleep")
         sleep2 = giskard.api.monitors.add_sleep(1, name="sleep2", start_condition=sleep)
         joint_goal = giskard.api.monitors.add_joint_position(
-            name="joint reached", goal_state=giskard.better_pose
+            name="joint reached", goal_state=better_pose
         )
         teleport = giskard.api.monitors.add_set_seed_configuration(
             seed_configuration=giskard.default_pose
@@ -1286,7 +1285,7 @@ class TestMonitors:
         )
 
         giskard.api.motion_goals.add_joint_position(
-            goal_state=giskard.better_pose, start_condition=sleep2
+            goal_state=better_pose, start_condition=sleep2
         )
         giskard.api.monitors.add_end_motion(start_condition=joint_goal)
         giskard.api.monitors.add_cancel_motion(
@@ -1295,19 +1294,19 @@ class TestMonitors:
         giskard.api.monitors.add_check_trajectory_length(30)
         giskard.execute(local_min_end=False)
 
-    def test_end_plus_false_monitor(self, giskard: PR2Tester):
+    def test_end_plus_false_monitor(self, giskard: PR2Tester, better_pose):
         sleep = giskard.api.monitors.add_sleep(0.5, name="sleep")
         joint_goal = giskard.api.monitors.add_joint_position(
-            name="joint reached", goal_state=giskard.better_pose
+            name="joint reached", goal_state=better_pose
         )
         joint_goal2 = giskard.api.monitors.add_joint_position(
             name="joint reached2",
-            goal_state=giskard.better_pose,
+            goal_state=better_pose,
             end_condition=sleep,
         )
 
         giskard.api.motion_goals.add_joint_position(
-            goal_state=giskard.better_pose, start_condition=sleep
+            goal_state=better_pose, start_condition=sleep
         )
         giskard.api.monitors.add_end_motion(
             start_condition=f"{joint_goal} and not {joint_goal2}"
@@ -1317,14 +1316,14 @@ class TestMonitors:
         )
         giskard.execute()
 
-    def test_only_payload_monitors(self, giskard: PR2Tester):
+    def test_only_payload_monitors(self, giskard: PR2Tester, better_pose):
         sleep = giskard.api.monitors.add_sleep(5)
         giskard.api.monitors.add_cancel_motion(
             start_condition=sleep, error=SetupException("Time is up")
         )
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(expected_error_type=SetupException, local_min_end=False)
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
@@ -1413,11 +1412,9 @@ class TestMonitors:
         np.testing.assert_almost_equal(current_pose.pose.position.x, 0, decimal=2)
         np.testing.assert_almost_equal(current_pose.pose.position.y, 1, decimal=2)
 
-    def test_print_event(self, giskard: PR2Tester):
-        monitor_name = giskard.api.monitors.add_joint_position(
-            giskard.better_pose, name="goal"
-        )
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+    def test_print_event(self, giskard: PR2Tester, better_pose):
+        monitor_name = giskard.api.monitors.add_joint_position(better_pose, name="goal")
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.api.monitors.add_print(
             start_condition=monitor_name,
             name="printer",
@@ -1425,10 +1422,10 @@ class TestMonitors:
         )
         giskard.execute()
 
-    def test_collision_avoidance_sequence(self, fake_table_setup: PR2Tester):
-        fake_table_setup.api.monitors.add_set_seed_configuration(
-            fake_table_setup.better_pose
-        )
+    def test_collision_avoidance_sequence(
+        self, fake_table_setup: PR2Tester, better_pose
+    ):
+        fake_table_setup.api.monitors.add_set_seed_configuration(better_pose)
         fake_table_setup.execute()
         pose1 = PoseStamped()
         pose1.header.frame_id = "map"
@@ -1554,11 +1551,11 @@ class TestConstraints:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(expected_error_type=EmptyProblemException, local_min_end=False)
 
-    def test_add_debug_expr(self, giskard: PR2Tester):
+    def test_add_debug_expr(self, giskard: PR2Tester, better_pose):
         giskard.api.motion_goals.add_motion_goal(
             class_name=DebugGoal.__name__, name="goal"
         )
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.execute()
 
     @pytest.mark.skip(reason="Exception must be json serializable")
@@ -1570,27 +1567,25 @@ class TestConstraints:
         )
         giskard.execute(expected_error_type=SymbolResolutionError)
 
-    def test_SetSeedConfiguration(self, giskard: PR2Tester):
-        giskard.api.monitors.add_set_seed_configuration(
-            seed_configuration=giskard.better_pose
-        )
+    def test_SetSeedConfiguration(self, giskard: PR2Tester, better_pose):
+        giskard.api.monitors.add_set_seed_configuration(seed_configuration=better_pose)
         giskard.api.motion_goals.add_joint_position(giskard.default_pose)
         giskard.plan()
 
-    def test_SetOdometry(self, giskard: PR2Tester):
+    def test_SetOdometry(self, giskard: PR2Tester, better_pose):
         pose = PoseStamped()
         pose.header.frame_id = "map"
         pose.pose.position.x = 1.0
         pose.pose.orientation.w = 1.0
         giskard.api.monitors.add_set_seed_odometry(base_pose=pose, name="goal")
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.plan()
         pose = PoseStamped()
         pose.header.frame_id = "map"
         pose.pose.position.x = 1.0
         pose.pose.orientation.w = 1.0
         giskard.api.monitors.add_set_seed_odometry(base_pose=pose, name="goal")
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.plan()
 
     def test_drive_into_apartment(self, apartment_setup: PR2Tester):
@@ -1634,7 +1629,7 @@ class TestConstraints:
         assert len(result.trajectory._points) * dt > new_length + 1.0
 
     @pytest.mark.skip(reason="future problem")
-    def test_CollisionAvoidanceHint(self, kitchen_setup: PR2Tester):
+    def test_CollisionAvoidanceHint(self, kitchen_setup: PR2Tester, better_pose):
         tip = "base_footprint"
         base_pose = PoseStamped()
         base_pose.header.frame_id = "map"
@@ -1670,7 +1665,7 @@ class TestConstraints:
             weight=WEIGHT_COLLISION_AVOIDANCE,
             avoidance_hint=avoidance_hint,
         )
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
 
         kitchen_setup.api.motion_goals.add_cartesian_pose(
             goal_pose=base_pose,
@@ -2056,7 +2051,7 @@ class TestConstraints:
         better_pose.api.motion_goals.allow_all_collisions()
         better_pose.execute()
 
-    def test_pointing_kitchen(self, kitchen_setup: PR2Tester):
+    def test_pointing_kitchen(self, kitchen_setup: PR2Tester, better_pose):
         base_goal = PoseStamped()
         base_goal.header.frame_id = "base_footprint"
         base_goal.pose.position.y = -1.0
@@ -2090,7 +2085,7 @@ class TestConstraints:
             pointing_axis=pointing_axis,
             root_link=kitchen_setup.default_root,
         )
-        gaya_pose2 = deepcopy(kitchen_setup.better_pose)
+        gaya_pose2 = deepcopy(better_pose)
         del gaya_pose2["head_pan_joint"]
         del gaya_pose2["head_tilt_joint"]
         kitchen_setup.api.motion_goals.add_joint_position(gaya_pose2)
@@ -2703,13 +2698,13 @@ class TestMoveBaseGoals:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.move_base(base_goal)
 
-    def test_stay_put(self, giskard: PR2Tester):
+    def test_stay_put(self, giskard: PR2Tester, better_pose):
         base_goal = PoseStamped()
         base_goal.header.frame_id = giskard.default_root
         # base_goal.pose.position.y = 0.05
         base_goal.pose.orientation.w = 1.0
         # zero_pose.set_json_goal('PR2CasterConstraints')
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.move_base(base_goal)
 
     def test_forward_1m(self, giskard: PR2Tester):
@@ -3251,7 +3246,7 @@ class TestWorldManipulation:
         assert color_robot.b == old_color.b
         assert color_robot.a == old_color.a
 
-    def test_clear_world(self, giskard: PR2Tester):
+    def test_clear_world(self, giskard: PR2Tester, better_pose):
         object_name = "muh"
         p = PoseStamped()
         p.header.frame_id = "map"
@@ -3266,7 +3261,7 @@ class TestWorldManipulation:
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
         giskard.add_box_to_world(object_name, size=(1.0, 1.0, 1.0), pose=p)
         giskard.clear_world()
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.execute()
 
     def test_attach_remove_box(self, better_pose: PR2Tester):
@@ -3472,7 +3467,7 @@ class TestWorldManipulation:
         giskard.update_group_pose("asdf", p, expected_error_type=UnknownGroupException)
         giskard.update_group_pose(group_name, p)
 
-    def test_update_group_pose2(self, giskard: PR2Tester):
+    def test_update_group_pose2(self, giskard: PR2Tester, better_pose):
         group_name = "muh"
         p = PoseStamped()
         p.header.frame_id = "map"
@@ -3484,7 +3479,7 @@ class TestWorldManipulation:
         p.pose.position.x = 1.0
         giskard.update_group_pose("asdf", p, expected_error_type=UnknownGroupException)
         giskard.update_group_pose(group_name, p)
-        giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+        giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
@@ -4320,7 +4315,9 @@ class TestCollisionAvoidanceGoals:
 
         pocky_pose_setup.execute()
 
-    def test_avoid_collision_at_kitchen_corner(self, kitchen_setup: PR2Tester):
+    def test_avoid_collision_at_kitchen_corner(
+        self, kitchen_setup: PR2Tester, better_pose
+    ):
         base_pose = PoseStamped()
         base_pose.header.stamp = rospy.node.get_clock().now().to_msg()
         base_pose.header.frame_id = "map"
@@ -4338,7 +4335,7 @@ class TestCollisionAvoidanceGoals:
         )
         base_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         kitchen_setup.api.motion_goals.add_joint_position(
-            kitchen_setup.better_pose, weight=WEIGHT_ABOVE_CA
+            better_pose, weight=WEIGHT_ABOVE_CA
         )
         kitchen_setup.api.motion_goals.add_cartesian_pose(
             goal_pose=base_pose, tip_link="base_footprint", root_link="map"
@@ -4701,7 +4698,7 @@ class TestCollisionAvoidanceGoals:
         base_goal.pose.orientation.w = 1.0
         giskard.move_base(base_goal)
 
-    def test_get_milk_out_of_fridge(self, kitchen_setup: PR2Tester):
+    def test_get_milk_out_of_fridge(self, kitchen_setup: PR2Tester, better_pose):
         milk_name = "milk"
 
         # take milk out of fridge
@@ -4777,7 +4774,7 @@ class TestCollisionAvoidanceGoals:
         base_goal = PoseStamped()
         base_goal.header.frame_id = "base_footprint"
         base_goal.pose.orientation.w = 1.0
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         kitchen_setup.move_base(base_goal)
 
         # place milk back
@@ -4795,10 +4792,10 @@ class TestCollisionAvoidanceGoals:
 
         kitchen_setup.detach_group(milk_name)
 
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         kitchen_setup.execute()
 
-    def test_bowl_and_cup(self, kitchen_setup: PR2Tester):
+    def test_bowl_and_cup(self, kitchen_setup: PR2Tester, better_pose):
         # kernprof -lv py.test -s test/test_integration_pr2.py::TestCollisionAvoidanceGoals::test_bowl_and_cup
         bowl_name = "bowl"
         cup_name = "cup"
@@ -4880,7 +4877,7 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.execute()
         kitchen_setup.set_env_state({drawer_joint: 0.48})
 
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         base_pose = PoseStamped()
         base_pose.header.frame_id = "map"
         base_pose.pose.position.y = 1.0
@@ -4950,7 +4947,7 @@ class TestCollisionAvoidanceGoals:
             name=cup_name, parent_link=kitchen_setup.r_tip
         )
 
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         kitchen_setup.execute()
         base_goal = PoseStamped()
         base_goal.header.frame_id = "base_footprint"
@@ -4990,10 +4987,10 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.allow_collision(
             group1=kitchen_setup.api.robot_name, group2=bowl_name
         )
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         kitchen_setup.execute()
 
-    def test_ease_spoon(self, kitchen_setup: PR2Tester):
+    def test_ease_spoon(self, kitchen_setup: PR2Tester, better_pose):
         spoon_name = "spoon"
         percentage = 40.0
 
@@ -5045,7 +5042,7 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.api.motion_goals.add_avoid_joint_limits(percentage=percentage)
         kitchen_setup.execute()
 
-        kitchen_setup.api.motion_goals.add_joint_position(kitchen_setup.better_pose)
+        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
         kitchen_setup.execute()
 
     def test_tray(self, kitchen_setup: PR2Tester):
@@ -5225,7 +5222,7 @@ class TestBenchmark:
                 giskard.api.motion_goals.allow_all_collisions()
                 giskard.reset_base()
 
-    def test_joint_goal2(self, giskard: PR2Tester):
+    def test_joint_goal2(self, giskard: PR2Tester, better_pose):
         horizons = [9, 21, 31, 41]
         # horizons = [1, 7, 9, 21]
         # horizons = [9]
@@ -5235,7 +5232,7 @@ class TestBenchmark:
                 giskard.api.motion_goals.add_motion_goal(
                     class_name=SetQPSolver.__name__, qp_solver_id=qp_solver
                 )
-                giskard.api.motion_goals.add_joint_position(giskard.better_pose)
+                giskard.api.motion_goals.add_joint_position(better_pose)
                 giskard.api.motion_goals.allow_all_collisions()
                 giskard.execute()
 
@@ -5268,9 +5265,7 @@ class TestBenchmark:
                 giskard.api.motion_goals.add_cartesian_pose(l_goal, giskard.l_tip, root)
                 giskard.execute()
 
-                giskard.api.monitors.add_api.monitors.add_set_seed_configuration(
-                    giskard.default_pose
-                )
+                giskard.api.monitors.add_set_seed_configuration(giskard.default_pose)
                 giskard.api.motion_goals.allow_all_collisions()
                 giskard.reset_base()
 
@@ -5281,9 +5276,7 @@ class TestBenchmark:
         # horizons = [7]
         for qp_solver in self.qp_solvers:
             for h in horizons:
-                fake_table_setup.api.monitors.add_api.monitors.add_set_seed_configuration(
-                    h
-                )
+                fake_table_setup.api.monitors.add_set_seed_configuration(h)
                 fake_table_setup.api.motion_goals.add_motion_goal(
                     class_name=SetQPSolver.__name__, qp_solver_id=qp_solver
                 )
