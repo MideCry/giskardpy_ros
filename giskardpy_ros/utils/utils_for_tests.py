@@ -684,18 +684,21 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
+        pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
         with self.api.world.modify_world():
             box = Body(name=PrefixedName(name), _world=self.api.world)
             box_shape = Box(scale=Scale(*size))
             box.collision.append(box_shape)
             box.visual.append(box_shape)
+            box.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
                 child=box,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
-                    pose, self.api.world
-                ),
+                parent_T_connection_expression=pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(box)

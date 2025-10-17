@@ -4337,10 +4337,8 @@ class TestCollisionAvoidanceGoals:
         pocky_pose_setup.api.motion_goals.allow_self_collision()
 
         pocky_pose_setup.execute()
-        assert ("box", "bl") not in god_map.collision_scene.self_collision_matrix
-        pocky_pose_setup.check_cpi_geq(
-            pocky_pose_setup.api.world.get_group_info("r_gripper").links, 0.04
-        )
+        assert ("box", "bl") not in god_map.collision_scene.collision_matrix
+        pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_r_gripper_links(), 0.04)
 
     def test_avoid_collision_box_between_cylinders(self, pocky_pose_setup: PR2Tester):
         p = PoseStamped()
