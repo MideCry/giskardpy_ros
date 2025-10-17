@@ -186,35 +186,6 @@ class GiskardTester:
         self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name="tests")
 
-    def clear_world(self):
-        tmp_state = deepcopy(god_map.world.state)
-        with god_map.world.modify_world():
-            god_map.world.clear()
-            GiskardBlackboard().giskard.world_config.setup_world()
-            robots = god_map.world.get_views_by_type(AbstractRobot)
-            GiskardBlackboard().giskard.robot_interface_config.setup()
-            god_map.world._notify_model_change()
-            self.collision_scene = CollisionWorldSynchronizer(
-                collision_detector=god_map.collision_scene.collision_detector,
-                world=god_map.world,
-                robots=robots,
-            )
-            god_map.collision_scene = self.collision_scene
-            # self.collision_scene.sync()
-            GiskardBlackboard().giskard.world_config.setup_collision_config()
-            # copy only state of joints that didn't get deleted
-        god_map.world.world_is_being_modified = True
-        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
-        for v in tmp_state.keys():
-            if v not in dof_names:
-                del god_map.world.state[v]
-        god_map.world.notify_state_change()
-        god_map.collision_scene.sync()
-        # GiskardBlackboard().giskard.collision_scene.setup()
-        # self.clear_markers()
-        get_middleware().loginfo("Cleared world.")
-        god_map.world.world_is_being_modified = False
-
     def get_odometry_joint(self) -> OmniDrive:
         return god_map.world.get_views_by_type(AbstractRobot)[0].drive
 
@@ -330,12 +301,6 @@ class GiskardTester:
         get_middleware().loginfo(f"saved benchmark file in {file_name}")
 
     def tear_down(self):
-        # GiskardBlackboard().tree.stop_spinning()
-        # self.print_qp_solver_times()
-        # rospy.sleep(1)
-        # self.heart.shutdown()
-        # TODO it is strange that I need to kill the services... should be investigated. (:
-        # GiskardBlackboard().tree.kill_all_services()
         giskarding_time = self.total_time_spend_giskarding
         if not GiskardBlackboard().tree_config.is_standalone():
             giskarding_time -= self.total_time_spend_moving
@@ -998,9 +963,6 @@ class GiskardTester:
             name="base goal",
         )
         self.execute()
-
-    def reset(self):
-        self.clear_world()
 
     def reset_base(self):
         p = PoseStamped()
