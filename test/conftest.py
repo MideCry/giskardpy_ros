@@ -47,15 +47,12 @@ def init_rospy():
         yield None
     finally:
         print("kill ros")
-        # Stop executor cleanly and wait for the thread to exit
-        rospy.spinner_thread.join(2.0)
-
-        # Remove the node from the executor and destroy it
-        # (executor.shutdown() takes care of spinning; add_node is safe to keep as-is)
-        rospy.node.destroy_node()
-
-        # Shut down the ROS client library
-        rclpy.shutdown()
+        # Cleanly reset TF and shutdown ROS2 node/executor
+        try:
+            tf.shutdown()
+        except Exception:
+            pass
+        rospy.shutdown()
 
 
 @pytest.fixture()
