@@ -1,3 +1,4 @@
+import time
 from copy import deepcopy
 from typing import Optional, List, Dict, Union
 
@@ -192,7 +193,7 @@ class ROSMsgVisualization:
             if force or (
                 not self.frame_locked or self.frame_locked and self.has_world_changed()
             ):
-                # self.clear_marker(world_ns)
+                self.clear_marker(world_ns)
                 marker_array.markers.extend(
                     self.create_world_markers(name_space=world_ns)
                 )
@@ -307,14 +308,12 @@ class ROSMsgVisualization:
 
     def clear_marker(self, ns: str):
         msg = MarkerArray()
-        for i in self.marker_ids.values():
-            marker = Marker()
-            marker.action = Marker.DELETE
-            marker.id = i
-            marker.ns = ns
-            msg.markers.append(marker)
+        marker = Marker()
+        marker.action = Marker.DELETEALL
+        marker.ns = ns
+        msg.markers.append(marker)
         self.publisher.publish(msg)
-        self.marker_ids = {}
+        # self.marker_ids = {}
 
     def debug_state_to_vectors_markers(
         self,

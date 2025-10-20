@@ -499,14 +499,6 @@ def ros_msg_to_giskard_obj(msg, world: World):
         return quaternion_stamped_to_quaternion(msg, world)
     elif isinstance(msg, giskard_msgs.CollisionEntry):
         return collision_entry_msg_to_giskard(msg, world=world)
-    elif isinstance(msg, giskard_msgs.LinkName):
-        try:
-            return link_name_msg_to_body(msg, world)
-        except UnknownLinkException as e:
-            try:
-                return joint_name_msg_to_prefix_name(msg, world)
-            except UnknownJointException:
-                raise e
     elif isinstance(msg, giskard_msgs.GiskardError):
         return error_msg_to_exception(msg)
     elif isinstance(msg, giskard_msgs.MotionStatechartNode):
@@ -600,16 +592,6 @@ def ros_joint_state_to_giskard_joint_state(
         joint_name = PrefixedName(joint_name, prefix)
         js[joint_name][Derivatives.position] = msg.position[i]
     return js
-
-
-def world_body_to_link(
-    link_name: PrefixedName, msg: giskard_msgs.WorldBody, color: Color
-) -> Body:
-    link = Body(name=link_name)
-    geometry = world_body_to_geometry(msg=msg, color=color)
-    link.collision.append(geometry)
-    link.visual.append(geometry)
-    return link
 
 
 def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: Color) -> Shape:

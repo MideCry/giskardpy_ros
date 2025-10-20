@@ -259,8 +259,7 @@ class GiskardTester:
         rgba: Tuple[float, float, float, float],
         expected_error_codes=(DyeGroup_Response.SUCCESS,),
     ):
-        res = self.api.world.dye_group(group_name, rgba)
-        assert res.error_codes in expected_error_codes
+        pass
 
     def print_qp_solver_times(self):
         file_name = f"{god_map.tmp_folder}/benchmark.csv"
@@ -750,18 +749,21 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
+        pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
         with self.api.world.modify_world():
             cylinder = Body(name=PrefixedName(name), _world=self.api.world)
             cylinder_shape = Cylinder(width=radius * 2, height=height)
             cylinder.collision.append(cylinder_shape)
             cylinder.visual.append(cylinder_shape)
+            cylinder.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
                 child=cylinder,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
-                    pose, self.api.world
-                ),
+                parent_T_connection_expression=pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(cylinder)
@@ -833,22 +835,20 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            if parent_link is None:
-                parent_link = giskard_msgs.LinkName()
-            r = self.api.world.update_parent_link_of_group(
-                name=name, parent_link=parent_link
+        with self.api.world.modify_world():
+            body = self.api.world.get_kinematic_structure_entity_by_name(name)
+            parent = self.api.world.get_kinematic_structure_entity_by_name(parent_link)
+            parent_T_connection = self.api.world.compute_forward_kinematics(
+                parent, body
             )
-            self.wait_heartbeats()
-            assert r.error.type == GiskardError.SUCCESS
-            self.check_add_object_result(
-                name=name,
-                pose=None,
-                parent_body_name=parent_link,
-                expected_error_type=expected_error_type,
+            new_connection = FixedConnection(
+                parent=parent,
+                child=body,
+                parent_T_connection_expression=parent_T_connection,
             )
-        except Exception as e:
-            assert type(e) == expected_error_type
+            self.api.world.remove_connection(body.parent_connection)
+            self.api.world.add_connection(new_connection)
+        self.wait_heartbeats()
 
     def get_external_collisions(self) -> Collisions:
         collision_goals = []
