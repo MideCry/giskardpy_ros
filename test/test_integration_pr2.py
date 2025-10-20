@@ -517,14 +517,14 @@ class TestMonitors:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
-    def test_start_of_expression_monitor(self, giskard: PR2Tester):
+    def test_start_of_expression_monitor(self, giskard: PR2Tester, default_joint_state):
         time_above = giskard.api.monitors.add_time_above(threshold=5)
         local_min = giskard.api.monitors.add_local_minimum_reached(
             start_condition=time_above
         )
         end_monitor = giskard.api.monitors.add_end_motion(start_condition=local_min)
 
-        giskard.api.motion_goals.add_joint_position(goal_state=giskard.default_pose)
+        giskard.api.motion_goals.add_joint_position(goal_state=default_joint_state)
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(local_min_end=False)
         assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 4
@@ -1357,34 +1357,6 @@ class TestMonitors:
         giskard.execute()
 
     def test_RelativePositionSequence(self, giskard: PR2Tester):
-        pose1 = PoseStamped()
-        pose1.header.frame_id = "map"
-        pose1.pose.position.x = 1.0
-        pose1.pose.orientation.w = 1.0
-
-        pose2 = PoseStamped()
-        pose2.header.frame_id = "base_footprint"
-        pose2.pose.position.y = 1.0
-        pose2.pose.orientation.w = 1.0
-
-        done = giskard.api.motion_goals.add_motion_goal(
-            class_name=RelativePositionSequence.__name__,
-            goal1=pose1,
-            goal2=pose2,
-            root_link="map",
-            tip_link="base_footprint",
-        )
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.monitors.add_end_motion(start_condition=done)
-        giskard.api.monitors.add_check_trajectory_length(30)
-        giskard.execute()
-        current_pose = giskard.compute_fk_pose(
-            root_link="map", tip_link="base_footprint"
-        )
-        np.testing.assert_almost_equal(current_pose.pose.position.x, 0, decimal=2)
-        np.testing.assert_almost_equal(current_pose.pose.position.y, 1, decimal=2)
-
-    def test_open_door(self, giskard: PR2Tester):
         pose1 = PoseStamped()
         pose1.header.frame_id = "map"
         pose1.pose.position.x = 1.0
