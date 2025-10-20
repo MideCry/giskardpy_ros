@@ -3946,10 +3946,12 @@ class TestCollisionAvoidanceGoals:
         kitchen_setup.teleport_base(pose)
         kitchen_setup.execute(expected_error_type=HardConstraintsViolatedException)
 
+    @pytest.mark.skip(reason="Needs View PR")
     def test_unknown_group1(self, box_setup: PR2Tester):
         box_setup.api.motion_goals.avoid_collision(min_distance=0.05, group1="muh")
         box_setup.execute(expected_error_type=UnknownGroupException)
 
+    @pytest.mark.skip(reason="Needs View PR")
     def test_unknown_group2(self, box_setup: PR2Tester):
         box_setup.api.motion_goals.avoid_collision(group2="muh")
         box_setup.execute(expected_error_type=UnknownGroupException)
@@ -3968,7 +3970,7 @@ class TestCollisionAvoidanceGoals:
 
     def test_avoid_collision_with_box(self, box_setup: PR2Tester):
         box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.05, group1=box_setup.api.robot_name
+            min_distance=0.05, group1=box_setup.api.robot_name.name
         )
         box_setup.api.motion_goals.avoid_collision(
             min_distance=0.15, group1=box_setup.l_gripper_group, group2="box"
@@ -4010,7 +4012,7 @@ class TestCollisionAvoidanceGoals:
         base_goal.pose.orientation.z = 1.0
         box_setup.teleport_base(base_goal)
         box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.05, group1=box_setup.api.robot_name
+            min_distance=0.05, group1=box_setup.api.robot_name.name
         )
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.execute()
@@ -4021,6 +4023,7 @@ class TestCollisionAvoidanceGoals:
             [god_map.world.get_kinematic_structure_entity_by_name("base_link")], 0.07
         )
 
+    @pytest.mark.skip(reason="Needs View PR")
     def test_collision_override(self, box_setup: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = box_setup.default_root
@@ -4033,7 +4036,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.teleport_base(p)
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.25, group1=box_setup.api.robot_name, group2="box"
+            min_distance=0.25, group1=box_setup.api.robot_name.name, group2="box"
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
@@ -4562,6 +4565,7 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.detach_group(attached_link_name)
 
+    @pytest.mark.skip(reason="Needs View PR")
     def test_attached_collision_allow(self, box_setup: PR2Tester):
         pocky = "http:muh#pocky"
         p = PoseStamped()

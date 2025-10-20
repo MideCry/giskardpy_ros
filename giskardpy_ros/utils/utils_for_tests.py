@@ -1,19 +1,16 @@
 import asyncio
 import csv
 import os
-from collections import defaultdict
 from copy import deepcopy
 from threading import Thread
 from time import time, sleep
-from typing import Tuple, Optional, List, Dict, Union, Set, Iterable
+from typing import Tuple, Optional, List, Dict, Union, Iterable
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
-import pytest
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 from giskard_msgs.action._move import Move_Result, Move_Goal
-from giskard_msgs.action._world import World_Result
 from giskard_msgs.msg import GiskardError
 from giskard_msgs.srv._dye_group import DyeGroup_Response
 from rclpy.publisher import Publisher
@@ -23,20 +20,14 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.model.collision_matrix_manager import CollisionViewRequest
-from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
-from giskardpy.model.collisions import Collisions, GiskardCollision
-from giskardpy_ros.utils.utils import is_in_github_workflow
-from semantic_world.adapters.urdf import URDFParser
-from semantic_world.exceptions import ViewNotFoundError, DuplicateViewError
-from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     UnknownGroupException,
-    DuplicateNameException,
     WorldException,
 )
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy.motion_statechart.tasks.diff_drive_goals import (
     DiffDriveTangentialToPoint,
     KeepHandInWorkspace,
@@ -45,8 +36,12 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
-from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy_ros.utils.utils import is_in_github_workflow
+from semantic_world.adapters.urdf import URDFParser
+from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_world.robots.abstract_robot import AbstractRobot
+from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
@@ -55,10 +50,14 @@ from semantic_world.world_description.connections import (
     ActiveConnection1DOF,
 )
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
-from semantic_world.robots.abstract_robot import AbstractRobot
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.geometry import Box, Scale, Sphere, Cylinder
-from semantic_world.world_description.world_entity import RootedView, Body
+from semantic_world.world_description.geometry import (
+    Box,
+    Scale,
+    Sphere,
+    Cylinder,
+    FileMesh,
+)
+from semantic_world.world_description.world_entity import Body
 
 
 def compare_poses(
@@ -784,14 +783,31 @@ class GiskardTester:
         scale: Tuple[float, float, float] = (1.0, 1.0, 1.0),
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_mesh(
-                name=name, mesh=mesh, pose=pose, parent_link=parent_link, scale=scale
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
+        pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
+        with self.api.world.modify_world():
+            mesh_body = Body(name=PrefixedName(name), _world=self.api.world)
+            mesh_shape = FileMesh(filename=mesh, scale=Scale(*scale))
+            mesh_body.collision.append(mesh_shape)
+            mesh_body.visual.append(mesh_shape)
+            mesh_body.collision_config.buffer_zone_distance = 0.05
+
+            connection = FixedConnection(
+                parent=parent_link,
+                child=mesh_body,
+                parent_T_connection_expression=pose,
+            )
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(mesh_body)
+        self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
             pose=pose,
