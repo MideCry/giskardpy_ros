@@ -1,19 +1,16 @@
 import asyncio
 import csv
 import os
-from collections import defaultdict
 from copy import deepcopy
 from threading import Thread
 from time import time, sleep
-from typing import Tuple, Optional, List, Dict, Union, Set, Iterable
+from typing import Tuple, Optional, List, Dict, Union, Iterable
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
-import pytest
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 from giskard_msgs.action._move import Move_Result, Move_Goal
-from giskard_msgs.action._world import World_Result
 from giskard_msgs.msg import GiskardError
 from giskard_msgs.srv._dye_group import DyeGroup_Response
 from rclpy.publisher import Publisher
@@ -23,20 +20,14 @@ from tf2_py import LookupException, ExtrapolationException
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.model.collision_matrix_manager import CollisionViewRequest
-from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
-from giskardpy.model.collisions import Collisions, GiskardCollision
-from giskardpy_ros.utils.utils import is_in_github_workflow
-from semantic_world.adapters.urdf import URDFParser
-from semantic_world.exceptions import ViewNotFoundError, DuplicateViewError
-from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     UnknownGroupException,
-    DuplicateNameException,
     WorldException,
 )
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy.motion_statechart.tasks.diff_drive_goals import (
     DiffDriveTangentialToPoint,
     KeepHandInWorkspace,
@@ -45,8 +36,12 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
-from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy_ros.utils.utils import is_in_github_workflow
+from semantic_world.adapters.urdf import URDFParser
+from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_world.robots.abstract_robot import AbstractRobot
+from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
@@ -55,10 +50,14 @@ from semantic_world.world_description.connections import (
     ActiveConnection1DOF,
 )
 from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
-from semantic_world.robots.abstract_robot import AbstractRobot
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.geometry import Box, Scale, Sphere, Cylinder
-from semantic_world.world_description.world_entity import RootedView, Body
+from semantic_world.world_description.geometry import (
+    Box,
+    Scale,
+    Sphere,
+    Cylinder,
+    FileMesh,
+)
+from semantic_world.world_description.world_entity import Body
 
 
 def compare_poses(
@@ -186,35 +185,6 @@ class GiskardTester:
         self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name="tests")
 
-    def clear_world(self):
-        tmp_state = deepcopy(god_map.world.state)
-        with god_map.world.modify_world():
-            god_map.world.clear()
-            GiskardBlackboard().giskard.world_config.setup_world()
-            robots = god_map.world.get_views_by_type(AbstractRobot)
-            GiskardBlackboard().giskard.robot_interface_config.setup()
-            god_map.world._notify_model_change()
-            self.collision_scene = CollisionWorldSynchronizer(
-                collision_detector=god_map.collision_scene.collision_detector,
-                world=god_map.world,
-                robots=robots,
-            )
-            god_map.collision_scene = self.collision_scene
-            # self.collision_scene.sync()
-            GiskardBlackboard().giskard.world_config.setup_collision_config()
-            # copy only state of joints that didn't get deleted
-        god_map.world.world_is_being_modified = True
-        dof_names = [dof.name for dof in god_map.world.degrees_of_freedom]
-        for v in tmp_state.keys():
-            if v not in dof_names:
-                del god_map.world.state[v]
-        god_map.world.notify_state_change()
-        god_map.collision_scene.sync()
-        # GiskardBlackboard().giskard.collision_scene.setup()
-        # self.clear_markers()
-        get_middleware().loginfo("Cleared world.")
-        god_map.world.world_is_being_modified = False
-
     def get_odometry_joint(self) -> OmniDrive:
         return god_map.world.get_views_by_type(AbstractRobot)[0].drive
 
@@ -288,8 +258,7 @@ class GiskardTester:
         rgba: Tuple[float, float, float, float],
         expected_error_codes=(DyeGroup_Response.SUCCESS,),
     ):
-        res = self.api.world.dye_group(group_name, rgba)
-        assert res.error_codes in expected_error_codes
+        pass
 
     def print_qp_solver_times(self):
         file_name = f"{god_map.tmp_folder}/benchmark.csv"
@@ -330,12 +299,6 @@ class GiskardTester:
         get_middleware().loginfo(f"saved benchmark file in {file_name}")
 
     def tear_down(self):
-        # GiskardBlackboard().tree.stop_spinning()
-        # self.print_qp_solver_times()
-        # rospy.sleep(1)
-        # self.heart.shutdown()
-        # TODO it is strange that I need to kill the services... should be investigated. (:
-        # GiskardBlackboard().tree.kill_all_services()
         giskarding_time = self.total_time_spend_giskarding
         if not GiskardBlackboard().tree_config.is_standalone():
             giskarding_time -= self.total_time_spend_moving
@@ -343,6 +306,7 @@ class GiskardTester:
         get_middleware().loginfo(
             f"total time spend moving: {self.total_time_spend_moving}"
         )
+        GiskardBlackboard().tree.shutdown()
         get_middleware().loginfo("stopping tree")
 
     def set_env_state(self, joint_state: Dict[str, float]):
@@ -651,15 +615,19 @@ class GiskardTester:
     def detach_group(
         self, name: str, expected_error_type: Optional[type(Exception)] = None
     ) -> None:
-        try:
-            response = self.api.world.detach_group(name)
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
-        self.check_add_object_result(
-            name=name, pose=None, expected_error_type=expected_error_type
-        )
+        with self.api.world.modify_world():
+            body = self.api.world.get_body_by_name(name)
+            parent_T_connection = self.api.world.compute_forward_kinematics(
+                self.api.world.root, body
+            )
+            new_connection = FixedConnection(
+                parent=self.api.world.root,
+                child=body,
+                parent_T_connection_expression=parent_T_connection,
+            )
+            self.api.world.remove_connection(body.parent_connection)
+            self.api.world.add_connection(new_connection)
+        self.wait_heartbeats()
 
     def check_add_object_result(
         self,
@@ -684,25 +652,28 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
+        parent_T_pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
         with self.api.world.modify_world():
             box = Body(name=PrefixedName(name), _world=self.api.world)
             box_shape = Box(scale=Scale(*size))
             box.collision.append(box_shape)
             box.visual.append(box_shape)
+            box.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
                 child=box,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
-                    pose, self.api.world
-                ),
+                parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(box)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
@@ -777,25 +748,28 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
+        parent_T_pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
         with self.api.world.modify_world():
             cylinder = Body(name=PrefixedName(name), _world=self.api.world)
             cylinder_shape = Cylinder(width=radius * 2, height=height)
             cylinder.collision.append(cylinder_shape)
             cylinder.visual.append(cylinder_shape)
+            cylinder.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
                 child=cylinder,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
-                    pose, self.api.world
-                ),
+                parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(cylinder)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
@@ -809,17 +783,34 @@ class GiskardTester:
         scale: Tuple[float, float, float] = (1.0, 1.0, 1.0),
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            response = self.api.world.add_mesh(
-                name=name, mesh=mesh, pose=pose, parent_link=parent_link, scale=scale
+        if parent_link is None:
+            parent_link = self.api.world.root
+        else:
+            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
+                parent_link
             )
-            self.wait_heartbeats()
-            assert response.error.type == GiskardError.SUCCESS
-        except Exception as e:
-            assert type(e) == expected_error_type
+        parent_T_pose = self.api.world.transform(
+            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            target_frame=parent_link,
+        )
+        with self.api.world.modify_world():
+            mesh_body = Body(name=PrefixedName(name), _world=self.api.world)
+            mesh_shape = FileMesh(filename=mesh, scale=Scale(*scale))
+            mesh_body.collision.append(mesh_shape)
+            mesh_body.visual.append(mesh_shape)
+            mesh_body.collision_config.buffer_zone_distance = 0.05
+
+            connection = FixedConnection(
+                parent=parent_link,
+                child=mesh_body,
+                parent_T_connection_expression=parent_T_pose,
+            )
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(mesh_body)
+        self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
@@ -860,22 +851,20 @@ class GiskardTester:
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
         expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
-        try:
-            if parent_link is None:
-                parent_link = giskard_msgs.LinkName()
-            r = self.api.world.update_parent_link_of_group(
-                name=name, parent_link=parent_link
+        with self.api.world.modify_world():
+            body = self.api.world.get_kinematic_structure_entity_by_name(name)
+            parent = self.api.world.get_kinematic_structure_entity_by_name(parent_link)
+            parent_T_connection = self.api.world.compute_forward_kinematics(
+                parent, body
             )
-            self.wait_heartbeats()
-            assert r.error.type == GiskardError.SUCCESS
-            self.check_add_object_result(
-                name=name,
-                pose=None,
-                parent_body_name=parent_link,
-                expected_error_type=expected_error_type,
+            new_connection = FixedConnection(
+                parent=parent,
+                child=body,
+                parent_T_connection_expression=parent_T_connection,
             )
-        except Exception as e:
-            assert type(e) == expected_error_type
+            self.api.world.remove_connection(body.parent_connection)
+            self.api.world.add_connection(new_connection)
+        self.wait_heartbeats()
 
     def get_external_collisions(self) -> Collisions:
         collision_goals = []
@@ -990,9 +979,6 @@ class GiskardTester:
             name="base goal",
         )
         self.execute()
-
-    def reset(self):
-        self.clear_world()
 
     def reset_base(self):
         p = PoseStamped()

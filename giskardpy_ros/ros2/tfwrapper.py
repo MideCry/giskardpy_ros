@@ -243,3 +243,14 @@ def normalize_quaternion_msg(quaternion: Quaternion) -> Quaternion:
     q.z = normalized_rotation[2]
     q.w = normalized_rotation[3]
     return q
+
+
+
+def shutdown() -> None:
+    """
+    Reset TF listener/buffer globals so that tests can re-initialize cleanly.
+    """
+    global tfBuffer, tf_listener, _node_handle
+    tf_listener = None
+    tfBuffer = None
+    _node_handle = None

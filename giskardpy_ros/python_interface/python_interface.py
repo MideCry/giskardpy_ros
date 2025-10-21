@@ -216,6 +216,10 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         default_factory=lambda: defaultdict(list)
     )
 
+    def reset(self):
+        super().reset()
+        self._collision_entries = defaultdict(list)
+
     def add_motion_goal(
         self,
         *,
