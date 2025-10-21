@@ -652,7 +652,7 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
-        pose = self.api.world.transform(
+        parent_T_pose = self.api.world.transform(
             spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
             target_frame=parent_link,
         )
@@ -666,14 +666,14 @@ class GiskardTester:
             connection = FixedConnection(
                 parent=parent_link,
                 child=box,
-                parent_T_connection_expression=pose,
+                parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(box)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
@@ -748,7 +748,7 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
-        pose = self.api.world.transform(
+        parent_T_pose = self.api.world.transform(
             spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
             target_frame=parent_link,
         )
@@ -762,14 +762,14 @@ class GiskardTester:
             connection = FixedConnection(
                 parent=parent_link,
                 child=cylinder,
-                parent_T_connection_expression=pose,
+                parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(cylinder)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
@@ -789,7 +789,7 @@ class GiskardTester:
             parent_link = self.api.world.get_kinematic_structure_entity_by_name(
                 parent_link
             )
-        pose = self.api.world.transform(
+        parent_T_pose = self.api.world.transform(
             spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
             target_frame=parent_link,
         )
@@ -803,14 +803,14 @@ class GiskardTester:
             connection = FixedConnection(
                 parent=parent_link,
                 child=mesh_body,
-                parent_T_connection_expression=pose,
+                parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
             self.api.world.add_body(mesh_body)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
-            pose=pose,
+            pose=parent_T_pose,
             parent_body_name=parent_link,
             expected_error_type=expected_error_type,
         )
