@@ -51,6 +51,7 @@ class PlotDebugExpressions(PlotTrajectory):
     def plot(self):
         trajectory = god_map.debug_expression_manager.raw_traj_to_traj(
             god_map.qp_controller.config.control_dt
+            or god_map.qp_controller.config.mpc_dt
         )
         if trajectory and len(trajectory) > 0:
             sample_period = god_map.qp_controller.config.mpc_dt

@@ -108,7 +108,7 @@ class BoxyTester(GiskardTester):
 def giskard(request, ros) -> BoxyTester:
     launch_launchfile("package://iai_boxy_description/launch/upload_boxy.launch")
     c = BoxyTester()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 

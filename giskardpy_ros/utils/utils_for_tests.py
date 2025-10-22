@@ -298,7 +298,7 @@ class GiskardTester:
 
         get_middleware().loginfo(f"saved benchmark file in {file_name}")
 
-    def tear_down(self):
+    def print_stats(self):
         giskarding_time = self.total_time_spend_giskarding
         if not GiskardBlackboard().tree_config.is_standalone():
             giskarding_time -= self.total_time_spend_moving
@@ -306,8 +306,6 @@ class GiskardTester:
         get_middleware().loginfo(
             f"total time spend moving: {self.total_time_spend_moving}"
         )
-        GiskardBlackboard().tree.shutdown()
-        get_middleware().loginfo("stopping tree")
 
     def set_env_state(self, joint_state: Dict[str, float]):
         self.api.monitors.add_set_seed_configuration(

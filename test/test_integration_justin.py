@@ -137,7 +137,7 @@ def giskard(request, ros):
     launch_launchfile("package://iai_dlr_rollin_justin/launch/justin_upload.launch")
     c = JustinTestWrapper()
     # c = JustinTestWrapperMujoco()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 

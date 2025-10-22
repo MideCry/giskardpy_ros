@@ -122,7 +122,7 @@ class DonbotTester(GiskardTester):
 def giskard(request, ros) -> DonbotTester:
     launch_launchfile("package://iai_donbot_description/launch/upload.launch")
     c = DonbotTester()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 
