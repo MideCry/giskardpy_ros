@@ -137,8 +137,6 @@ class PR2Tester(GiskardTester):
                 behavior_tree_config=StandAloneBTConfig(
                     debug_mode=True,
                     publish_tf=True,
-                    add_debug_trajectory_plotter=True,
-                    add_trajectory_plotter=True,
                 ),
                 qp_controller_config=QPControllerConfig(
                     mpc_dt=0.05,
