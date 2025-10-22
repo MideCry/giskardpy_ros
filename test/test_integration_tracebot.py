@@ -17,7 +17,7 @@ def giskard(request, ros):
     launch_launchfile("package://iai_tracy_description/launch/upload.launch")
     c = TracebotTester()
     # c = TracebotTestWrapperMujoco()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 

@@ -81,7 +81,7 @@ def giskard(request, ros):
     # launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
     c = HSRTester()
     # c = HSRTestWrapperMujoco()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 

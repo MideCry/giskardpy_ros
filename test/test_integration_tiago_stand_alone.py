@@ -30,7 +30,7 @@ from giskardpy_ros.utils.utils_for_tests import GiskardTester
 @pytest.fixture(scope="module")
 def giskard(request, ros):
     c = TiagoTester()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 

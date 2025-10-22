@@ -31,7 +31,11 @@ from giskardpy_ros.tree.composites.async_composite import AsyncBehavior
 
 
 def behavior_is_instance_of(obj: Any, type_: Type) -> bool:
-    return isinstance(obj, type_) or hasattr(obj, 'original') and isinstance(obj.original, type_)
+    return (
+        isinstance(obj, type_)
+        or hasattr(obj, "original")
+        and isinstance(obj.original, type_)
+    )
 
 
 class GiskardBT(BehaviourTree):
@@ -46,16 +50,21 @@ class GiskardBT(BehaviourTree):
     execute_traj_failure_is_success: Optional[FailureIsSuccess] = None
 
     def __init__(self):
-        self.root = Sequence('Giskard', memory=True)
+        self.root = Sequence("Giskard", memory=True)
         self.wait_for_goal = WaitForGoal()
         self.prepare_control_loop = PrepareControlLoop()
-        self.prepare_control_loop_failure_is_success = FailureIsSuccess('ignore failure',
-                                                                        self.prepare_control_loop)
+        self.prepare_control_loop_failure_is_success = FailureIsSuccess(
+            "ignore failure", self.prepare_control_loop
+        )
         self.control_loop_branch = ControlLoop()
-        self.control_loop_branch_failure_is_success = FailureIsSuccess('ignore failure', self.control_loop_branch)
+        self.control_loop_branch_failure_is_success = FailureIsSuccess(
+            "ignore failure", self.control_loop_branch
+        )
 
         self.post_processing = PostProcessing()
-        self.post_processing_failure_is_success = FailureIsSuccess('ignore failure', self.post_processing)
+        self.post_processing_failure_is_success = FailureIsSuccess(
+            "ignore failure", self.post_processing
+        )
         self.cleanup_control_loop = CleanupControlLoop()
         self.root.add_child(self.wait_for_goal)
         self.root.add_child(self.prepare_control_loop_failure_is_success)
@@ -69,48 +78,48 @@ class GiskardBT(BehaviourTree):
     def has_started(self) -> bool:
         return self.count > 1
 
-    @toggle_on('visualization_mode')
+    @toggle_on("visualization_mode")
     def turn_on_visualization(self):
         self.wait_for_goal.publish_state.add_visualization_marker_behavior()
         self.control_loop_branch.publish_state.add_visualization_marker_behavior()
 
-    @toggle_off('visualization_mode')
+    @toggle_off("visualization_mode")
     def turn_off_visualization(self):
         self.wait_for_goal.publish_state.remove_visualization_marker_behavior()
         self.control_loop_branch.publish_state.remove_visualization_marker_behavior()
 
-    @toggle_on('projection_mode')
+    @toggle_on("projection_mode")
     def switch_to_projection(self):
         GiskardBlackboard().tree_config.switch_to_projection_mode()
         self.cleanup_control_loop.add_reset_world_state()
 
-    @toggle_off('projection_mode')
+    @toggle_off("projection_mode")
     def switch_to_execution(self):
         GiskardBlackboard().tree_config.switch_to_execution_mode()
         self.cleanup_control_loop.remove_reset_world_state()
 
     def live(self):
-        get_middleware().loginfo('giskard is ready')
+        get_middleware().loginfo("giskard is ready")
         self.tick_tock(period_ms=50.0)
         rospy.spinner_thread.join()
         self.shutdown()
-        rclpy.try_shutdown()
-        get_middleware().loginfo('giskard died')
+        if rclpy.ok():
+            rclpy.try_shutdown()
 
     def render(self):
-        path = 'tmp/tree'
+        path = "tmp/tree"
         render_dot_tree(self.root, name=path)
-        print(f'rendered tree to {path}')
+        print(f"rendered tree to {path}")
 
 
 def render_dot_tree(
-        root: behaviour.Behaviour,
-        visibility_level: common.VisibilityLevel = common.VisibilityLevel.DETAIL,
-        collapse_decorators: bool = False,
-        name: Optional[str] = None,
-        target_directory: Optional[str] = None,
-        with_blackboard_variables: bool = False,
-        with_qualified_names: bool = False,
+    root: behaviour.Behaviour,
+    visibility_level: common.VisibilityLevel = common.VisibilityLevel.DETAIL,
+    collapse_decorators: bool = False,
+    name: Optional[str] = None,
+    target_directory: Optional[str] = None,
+    with_blackboard_variables: bool = False,
+    with_qualified_names: bool = False,
 ) -> Dict[str, str]:
     """
     Render the dot tree to dot, svg, png. files.
@@ -173,21 +182,21 @@ def render_dot_tree(
     return filenames
 
 
-time_function_names = ['__init__', 'setup', 'initialise', 'update']
+time_function_names = ["__init__", "setup", "initialise", "update"]
 
 
 def get_original_node(node: Behaviour) -> Behaviour:
-    if hasattr(node, 'original'):
+    if hasattr(node, "original"):
         return node.original
     return node
 
 
 def dot_tree(
-        root: behaviour.Behaviour,
-        visibility_level: common.VisibilityLevel = common.VisibilityLevel.DETAIL,
-        collapse_decorators: bool = False,
-        with_blackboard_variables: bool = False,
-        with_qualified_names: bool = False,
+    root: behaviour.Behaviour,
+    visibility_level: common.VisibilityLevel = common.VisibilityLevel.DETAIL,
+    collapse_decorators: bool = False,
+    with_blackboard_variables: bool = False,
+    with_qualified_names: bool = False,
 ) -> pydot.Dot:
     """
     Paint your tree on a pydot graph.
@@ -226,7 +235,7 @@ def dot_tree(
         elif isinstance(node, decorators.Decorator):
             attributes = ("ellipse", "ghostwhite", "black")
         elif isinstance(node, AsyncBehavior):
-            attributes = ('house', 'green', 'black')
+            attributes = ("house", "green", "black")
         else:
             attributes = ("ellipse", "gray", "black")
         try:
@@ -241,7 +250,9 @@ def dot_tree(
             pass
         return attributes
 
-    def get_node_label(node_name: str, behaviour: behaviour.Behaviour) -> Tuple[str, str]:
+    def get_node_label(
+        node_name: str, behaviour: behaviour.Behaviour
+    ) -> Tuple[str, str]:
         """
         Create a more detailed string (when applicable) to use for the node name.
 
@@ -283,13 +294,13 @@ def dot_tree(
         if with_qualified_names:
             node_label += f"\n({utilities.get_fully_qualified_name(behaviour)})"
 
-        color = 'black'
+        color = "black"
 
         # %% add run time stats to proposed dot name
         function_name_padding = 20
         entry_name_padding = 8
         number_padding = function_name_padding - entry_name_padding
-        if hasattr(behaviour, '__times'):
+        if hasattr(behaviour, "__times"):
             time_dict = behaviour.__times
         else:
             time_dict = {}
@@ -300,13 +311,15 @@ def dot_tree(
                 std_time = np.std(times)
                 total_time = np.sum(times)
                 if total_time > 1:
-                    color = 'red'
-                node_label += f'\n{function_name.ljust(function_name_padding, "-")}' \
-                              f'\n{"  #calls".ljust(entry_name_padding)}{f"={len(times)}".ljust(number_padding)}' \
-                              f'\n{"  avg".ljust(entry_name_padding)}{f"={average_time:.7f}".ljust(number_padding)}' \
-                              f'\n{"  std".ljust(entry_name_padding)}{f"={std_time:.7f}".ljust(number_padding)}' \
-                              f'\n{"  max".ljust(entry_name_padding)}{f"={max(times):.7f}".ljust(number_padding)}' \
-                              f'\n{"  sum".ljust(entry_name_padding)}{f"={total_time:.7f}".ljust(number_padding)}'
+                    color = "red"
+                node_label += (
+                    f'\n{function_name.ljust(function_name_padding, "-")}'
+                    f'\n{"  #calls".ljust(entry_name_padding)}{f"={len(times)}".ljust(number_padding)}'
+                    f'\n{"  avg".ljust(entry_name_padding)}{f"={average_time:.7f}".ljust(number_padding)}'
+                    f'\n{"  std".ljust(entry_name_padding)}{f"={std_time:.7f}".ljust(number_padding)}'
+                    f'\n{"  max".ljust(entry_name_padding)}{f"={max(times):.7f}".ljust(number_padding)}'
+                    f'\n{"  sum".ljust(entry_name_padding)}{f"={total_time:.7f}".ljust(number_padding)}'
+                )
             else:
                 node_label += f'\n{function_name.ljust(function_name_padding, "-")}'
         node_label = f'"{node_label}"'
@@ -342,11 +355,11 @@ def dot_tree(
     behaviour_id_name_map = {root.id: root.name}
 
     def add_children_and_edges(
-            root: behaviour.Behaviour,
-            root_node: pydot.Node,
-            root_dot_name: str,
-            visibility_level: common.VisibilityLevel,
-            collapse_decorators: bool,
+        root: behaviour.Behaviour,
+        root_node: pydot.Node,
+        root_dot_name: str,
+        visibility_level: common.VisibilityLevel,
+        collapse_decorators: bool,
     ) -> None:
         if isinstance(root, Decorator) and collapse_decorators:
             return
@@ -398,9 +411,7 @@ def dot_tree(
             fontcolor=blackboard_colour,
         )
 
-    def add_blackboard_nodes(
-            blackboard_id_name_map: Dict[uuid.UUID, str]
-    ) -> None:
+    def add_blackboard_nodes(blackboard_id_name_map: Dict[uuid.UUID, str]) -> None:
         data = Blackboard.storage
         metadata = Blackboard.metadata
         clients = Blackboard.clients
@@ -502,8 +513,9 @@ def dot_tree(
 
 
 def add_children_stats_to_parent(parent: Composite) -> None:
-    if ((hasattr(parent, 'children') and parent.children != [])
-            or (hasattr(parent, '_children') and parent._children != [])):
+    if (hasattr(parent, "children") and parent.children != []) or (
+        hasattr(parent, "_children") and parent._children != []
+    ):
         children = parent.children
         names2 = [c.name for c in children]
         for name, child in zip(names2, children):
@@ -511,10 +523,10 @@ def add_children_stats_to_parent(parent: Composite) -> None:
             if isinstance(original_child, (Composite, Decorator)):
                 add_children_stats_to_parent(original_child)
 
-            if not hasattr(parent, '__times'):
-                setattr(parent, '__times', defaultdict(list))
+            if not hasattr(parent, "__times"):
+                setattr(parent, "__times", defaultdict(list))
 
-            if hasattr(original_child, '__times'):
+            if hasattr(original_child, "__times"):
                 time_dict = original_child.__times
             else:
                 time_dict = {}
@@ -523,6 +535,12 @@ def add_children_stats_to_parent(parent: Composite) -> None:
                     parent_len = len(parent.__times[function_name])
                     child_len = len(time_dict[function_name])
                     max_len = max(parent_len, child_len)
-                    parent_padded = np.pad(parent.__times[function_name], (0, max_len - parent_len), 'constant')
-                    child_padded = np.pad(time_dict[function_name], (0, max_len - child_len), 'constant')
+                    parent_padded = np.pad(
+                        parent.__times[function_name],
+                        (0, max_len - parent_len),
+                        "constant",
+                    )
+                    child_padded = np.pad(
+                        time_dict[function_name], (0, max_len - child_len), "constant"
+                    )
                     parent.__times[function_name] = parent_padded + child_padded

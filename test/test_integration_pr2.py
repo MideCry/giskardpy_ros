@@ -135,7 +135,8 @@ class PR2Tester(GiskardTester):
                 robot_interface_config=PR2StandaloneInterface(),
                 collision_checker_id=CollisionCheckerLib.bpb,
                 behavior_tree_config=StandAloneBTConfig(
-                    debug_mode=True, publish_tf=True
+                    debug_mode=True,
+                    publish_tf=True,
                 ),
                 qp_controller_config=QPControllerConfig(
                     mpc_dt=0.05,
@@ -193,7 +194,7 @@ def robot():
         yield c
     finally:
         print("tear down")
-        c.tear_down()
+        c.print_stats()
 
 
 @pytest.fixture()
@@ -5391,7 +5392,7 @@ class TestWeightScaling:
                 "l_wrist_flex_joint",
                 "l_wrist_roll_joint",
             ],
-            base_joints=['odom_combined_T_base_footprint'],
+            base_joints=["odom_combined_T_base_footprint"],
         )
         giskard.api.motion_goals.add_maximize_manipulability(
             root_link="torso_lift_link", tip_link="r_gripper_tool_frame"
@@ -5402,12 +5403,12 @@ class TestWeightScaling:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
         assert (
-            god_map.debug_expression_manager.evaluated_debug_expressions[PrefixedName(name='arm_scaling', prefix='')][
-                0
-            ]
+            god_map.debug_expression_manager.evaluated_debug_expressions[
+                PrefixedName(name="arm_scaling", prefix="")
+            ][0]
             * 1000
             < god_map.debug_expression_manager.evaluated_debug_expressions[
-                PrefixedName(name="base_scaling", prefix='')
+                PrefixedName(name="base_scaling", prefix="")
             ][0]
         )
 
@@ -5421,15 +5422,17 @@ class TestWeightScaling:
         giskard.api.motion_goals.add_cartesian_pose(p, giskard.r_tip, "map")
         m_threshold = 0.16
         done = giskard.api.motion_goals.add_maximize_manipulability(
-            root_link="torso_lift_link",
-            tip_link=giskard.r_tip,
-            m_threshold=m_threshold)
+            root_link="torso_lift_link", tip_link=giskard.r_tip, m_threshold=m_threshold
+        )
         giskard.api.monitors.add_end_motion(done)
         giskard.api.monitors.add_check_trajectory_length(20)
         giskard.execute(local_min_end=False)
-        assert god_map.debug_expression_manager.evaluated_debug_expressions[
-                   PrefixedName(name=f"mIndex {giskard.r_tip}", prefix="")][
-                   0] >= m_threshold-0.01
+        assert (
+            god_map.debug_expression_manager.evaluated_debug_expressions[
+                PrefixedName(name=f"mIndex {giskard.r_tip}", prefix="")
+            ][0]
+            >= m_threshold - 0.01
+        )
 
     def test_manip2(self, giskard: PR2Tester):
         m_threshold = 0.16
@@ -5456,16 +5459,16 @@ class TestWeightScaling:
         )
         giskard.execute()
         assert (
-                god_map.debug_expression_manager.evaluated_debug_expressions[
-                    PrefixedName(name=f"mIndex {giskard.r_tip}", prefix="")
-                ][0]
-                >= m_threshold - 0.02
+            god_map.debug_expression_manager.evaluated_debug_expressions[
+                PrefixedName(name=f"mIndex {giskard.r_tip}", prefix="")
+            ][0]
+            >= m_threshold - 0.02
         )
         assert (
-                god_map.debug_expression_manager.evaluated_debug_expressions[
-                    PrefixedName(name=f"mIndex {giskard.l_tip}", prefix="")
-                ][0]
-                >= m_threshold -0.02
+            god_map.debug_expression_manager.evaluated_debug_expressions[
+                PrefixedName(name=f"mIndex {giskard.l_tip}", prefix="")
+            ][0]
+            >= m_threshold - 0.02
         )
 
 
