@@ -19,7 +19,7 @@ from tf2_py import LookupException, ExtrapolationException
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     UnknownGroupException,
     WorldException,
@@ -38,26 +38,28 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import is_in_github_workflow
-from semantic_world.adapters.urdf import URDFParser
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots.abstract_robot import AbstractRobot
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.connections import (
+from semantic_digital_twin.adapters.urdf import URDFParser
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.views.factories import GenericBodyFactory
+from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
     RevoluteConnection,
     FixedConnection,
     ActiveConnection1DOF,
 )
-from semantic_world.world_description.degree_of_freedom import DegreeOfFreedom
-from semantic_world.world_description.geometry import (
+from semantic_digital_twin.world_description.degree_of_freedom import DegreeOfFreedom
+from semantic_digital_twin.world_description.geometry import (
     Box,
     Scale,
     Sphere,
     Cylinder,
     FileMesh,
 )
-from semantic_world.world_description.world_entity import Body
+from semantic_digital_twin.world_description.shape_collection import ShapeCollection
+from semantic_digital_twin.world_description.world_entity import Body, CollisionCheckingConfig
 
 
 def compare_poses(

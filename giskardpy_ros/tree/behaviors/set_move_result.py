@@ -15,7 +15,7 @@ from giskardpy.utils.decorators import record_time
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from line_profiler import profile
 
-from semantic_world.world_description.connections import ActiveConnection
+from semantic_digital_twin.world_description.connections import ActiveConnection
 
 
 class SetMoveResult(GiskardBehavior):

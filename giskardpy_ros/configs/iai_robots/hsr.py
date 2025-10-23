@@ -9,11 +9,11 @@ from giskardpy_ros.configs.robot_interface_config import (
     StandAloneRobotInterfaceConfig,
     RobotInterfaceConfig,
 )
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots.hsrb import HSRB
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.connections import ActiveConnection, OmniDrive
-from semantic_world.world_description.world_entity import CollisionCheckingConfig
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.hsrb import HSRB
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world_description.connections import ActiveConnection, OmniDrive
+from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
 
 
 @dataclass

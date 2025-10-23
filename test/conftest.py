@@ -12,7 +12,7 @@ from giskardpy_ros.ros2 import rospy, ros2_interface
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
-from semantic_world.world_description.connections import ActiveConnection1DOF
+from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
 @pytest.fixture(scope="function")

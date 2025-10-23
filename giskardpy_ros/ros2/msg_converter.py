@@ -24,7 +24,7 @@ from rclpy_message_converter.message_converter import (
 )
 from typing_extensions import get_origin, get_args
 
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GiskardException,
     CorruptShapeException,
@@ -43,9 +43,9 @@ from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.motion_statechart.goals.goal import Goal
-from semantic_world.world_description.connections import ActiveConnection
-from semantic_world.exceptions import ViewNotFoundError
-from semantic_world.world_description.geometry import (
+from semantic_digital_twin.world_description.connections import ActiveConnection
+from semantic_digital_twin.exceptions import ViewNotFoundError
+from semantic_digital_twin.world_description.geometry import (
     Shape,
     Box,
     Cylinder,
@@ -54,15 +54,15 @@ from semantic_world.world_description.geometry import (
     Color,
     Scale,
 )
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world import World
-from semantic_world.world_description.world_entity import (
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.world_entity import (
     Body,
     KinematicStructureEntity,
     Connection,
 )
-from semantic_world.world_description.world_state import WorldState
+from semantic_digital_twin.world_description.world_state import WorldState
 
 
 # TODO probably needs some consistency check

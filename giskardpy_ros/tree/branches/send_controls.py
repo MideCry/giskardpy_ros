@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy_ros.tree.behaviors.joint_group_vel_controller_publisher import (
     JointGroupVelController,
 )

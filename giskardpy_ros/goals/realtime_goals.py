@@ -15,8 +15,8 @@ from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import MarkerArray, Marker
 
-from semantic_world.world_description.connections import OmniDrive
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.world_description.connections import OmniDrive
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     GoalInitalizationException,
     ExecutionException,
@@ -25,15 +25,15 @@ from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.monitors.monitors import Monitor, EndMotion
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.spatial_types.symbol_manager import symbol_manager
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.spatial_types.symbol_manager import symbol_manager
 from giskardpy.motion_statechart.tasks.task import (
     WEIGHT_BELOW_CA,
     WEIGHT_COLLISION_AVOIDANCE,
     Task,
 )
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.utils.decorators import clear_memo, memoize_with_counter
 from giskardpy_ros.ros2 import rospy

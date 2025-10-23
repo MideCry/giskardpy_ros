@@ -37,7 +37,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.rospy import ROS2Wrapper
 from std_msgs.msg import ColorRGBA
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.world_config import EmptyWorld
 from giskardpy.qp.qp_controller_config import QPControllerConfig

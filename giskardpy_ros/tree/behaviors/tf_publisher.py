@@ -11,7 +11,7 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from semantic_world.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 
 
 class TfPublishingModes(Enum):

@@ -21,7 +21,7 @@ from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
-from semantic_world.world_description.connections import OmniDrive
+from semantic_digital_twin.world_description.connections import OmniDrive
 
 
 class ParseActionGoal(GiskardBehavior):

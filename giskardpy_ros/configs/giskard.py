@@ -24,16 +24,16 @@ from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from semantic_world.adapters.ros.world_fetcher import FetchWorldServer
-from semantic_world.world_description.connections import ActiveConnection
-from semantic_world.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.adapters.ros.world_fetcher import FetchWorldServer
+from semantic_digital_twin.world_description.connections import ActiveConnection
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 
-from semantic_world.adapters.ros.world_synchronizer import (
+from semantic_digital_twin.adapters.ros.world_synchronizer import (
     ModelReloadSynchronizer,
     ModelSynchronizer,
     StateSynchronizer,
 )
-from semantic_world.orm.ormatic_interface import *
+from semantic_digital_twin.orm.ormatic_interface import *
 
 
 @dataclass
