@@ -426,7 +426,7 @@ class CarryMyBullshit(Goal):
             god_map.debug_expression_manager.add_debug_expression(
                 "base_V_laser_avoidance_direction", map_V_laser_avoidance_direction
             )
-            odom_y_vel = self.odom_joint.y_vel.get_symbol(Derivatives.position)
+            odom_y_vel = self.odom_joint.y_velocity.get_symbol(Derivatives.position)
 
             active = Monitor(name="too far from path")
             self.add_monitor(active)

@@ -655,19 +655,13 @@ class GiskardTester:
             target_frame=parent_link,
         )
         with self.api.world.modify_world():
-            box = Body(name=PrefixedName(name), _world=self.api.world)
-            box_shape = Box(scale=Scale(*size))
-            box.collision.append(box_shape)
-            box.visual.append(box_shape)
-            box.collision_config.buffer_zone_distance = 0.05
+            generic_body_world = GenericBodyFactory(
+                name=PrefixedName(name),
+                shape=ShapeCollection([Box(scale=Scale(*size))]),
+                collision_config=CollisionCheckingConfig(buffer_zone_distance=0.05),
+            ).create()
 
-            connection = FixedConnection(
-                parent=parent_link,
-                child=box,
-                parent_T_connection_expression=parent_T_pose,
-            )
-            self.api.world.add_connection(connection)
-            self.api.world.add_body(box)
+            self.api.world.merge_world_at_pose(generic_body_world, parent_T_pose)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,
@@ -852,16 +846,7 @@ class GiskardTester:
         with self.api.world.modify_world():
             body = self.api.world.get_kinematic_structure_entity_by_name(name)
             parent = self.api.world.get_kinematic_structure_entity_by_name(parent_link)
-            parent_T_connection = self.api.world.compute_forward_kinematics(
-                parent, body
-            )
-            new_connection = FixedConnection(
-                parent=parent,
-                child=body,
-                parent_T_connection_expression=parent_T_connection,
-            )
-            self.api.world.remove_connection(body.parent_connection)
-            self.api.world.add_connection(new_connection)
+            self.api.world.move_branch(branch_root=body, new_parent=parent)
         self.wait_heartbeats()
 
     def get_external_collisions(self) -> Collisions:

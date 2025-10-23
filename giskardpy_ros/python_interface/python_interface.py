@@ -17,7 +17,7 @@ from geometry_msgs.msg import (
 )
 from giskard_msgs.action import Move
 from giskard_msgs.action._move import Move_Result
-from giskard_msgs.msg import CollisionEntry, LinkName
+from giskard_msgs.msg import CollisionEntry
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
 from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
@@ -28,7 +28,7 @@ from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
     ExecutionException,
 )
-from giskardpy.god_map import god_map
+from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
 from giskardpy.motion_statechart.goals.cartesian_goals import (
@@ -111,6 +111,11 @@ from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
+from semantic_world.adapters.ros.world_fetcher import fetch_world_from_service
+from semantic_world.adapters.ros.world_synchronizer import (
+    ModelSynchronizer,
+    StateSynchronizer,
+)
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.robots.abstract_robot import AbstractRobot
 from semantic_world.world import World
@@ -950,8 +955,8 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
 
     def add_open_container(
         self,
-        tip_link: Union[str, LinkName],
-        environment_link: Union[str, LinkName],
+        tip_link: Union[str, PrefixedName],
+        environment_link: Union[str, PrefixedName],
         name: Optional[str] = None,
         goal_joint_state: Optional[float] = None,
         weight: Optional[float] = None,
@@ -2249,11 +2254,11 @@ class GiskardWrapper:
     motion_goals: MotionGoalWrapper = field(init=False)
 
     def __post_init__(self):
-        # TODO needs view modification pr merge
-        self.world = god_map.world
-        # self.world = fetch_world_from_service(node_handle)
-        # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
-        # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
+        get_middleware().loginfo("syncing world")
+        self.world = fetch_world_from_service(self.node_handle)
+        get_middleware().loginfo("world synced")
+        self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
+        self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
         self.monitors = MonitorWrapper(self)
         self.motion_goals = MotionGoalWrapper(self)
         giskard_topic = f"{self.giskard_node_name}/command"

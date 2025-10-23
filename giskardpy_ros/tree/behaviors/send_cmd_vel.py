@@ -29,13 +29,13 @@ class SendCmdVelTwist(GiskardBehavior):
     def solver_cmd_to_twist(self, cmd) -> Twist:
         twist = Twist()
         try:
-            twist.linear.x = cmd.free_variable_data[self.joint.x_vel.name][0]
+            twist.linear.x = cmd.free_variable_data[self.joint.x_velocity.name][0]
             if abs(twist.linear.x) < self.threshold[0]:
                 twist.linear.x = 0.0
         except:
             twist.linear.x = 0.0
         try:
-            twist.linear.y = cmd.free_variable_data[self.joint.y_vel.name][0]
+            twist.linear.y = cmd.free_variable_data[self.joint.y_velocity.name][0]
             if abs(twist.linear.y) < self.threshold[1]:
                 twist.linear.y = 0.0
         except:
