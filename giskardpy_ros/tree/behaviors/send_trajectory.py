@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     ExecutionException,
     FollowJointTrajectory_INVALID_JOINTS,
@@ -14,8 +14,8 @@ from giskardpy.data_types.exceptions import (
 )
 from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
-from semantic_world.spatial_types.derivatives import Derivatives
-from semantic_world.world_description.connections import ActiveConnection1DOF
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 try:
     import pr2_controllers_msgs.msg

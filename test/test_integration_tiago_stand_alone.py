@@ -11,7 +11,7 @@ from geometry_msgs.msg import (
     Vector3Stamped,
 )
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA

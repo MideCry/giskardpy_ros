@@ -1,4 +1,4 @@
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 
 a_T_b = cas.TransformationMatrix()
 b_T_c = cas.TransformationMatrix()

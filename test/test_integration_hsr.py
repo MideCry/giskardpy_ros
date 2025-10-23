@@ -30,7 +30,7 @@ from giskardpy_ros.configs.iai_robots.hsr import (
 )
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
-from semantic_world.world_description.connections import ActiveConnection1DOF
+from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
 class HSRTester(GiskardTester):

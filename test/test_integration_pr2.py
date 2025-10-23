@@ -23,7 +23,7 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 from shape_msgs.msg import SolidPrimitive
 
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
     UnknownGoalException,
@@ -85,14 +85,14 @@ from giskardpy_ros.utils.utils_for_tests import (
     GiskardTester,
     compare_points,
 )
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.exceptions import SymbolResolutionError
-from semantic_world.robots.abstract_robot import AbstractRobot
-from semantic_world.world_description.connections import (
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.exceptions import SymbolResolutionError
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.world_description.connections import (
     RevoluteConnection,
     PrismaticConnection,
 )
-from semantic_world.world_description.world_entity import Body
+from semantic_digital_twin.world_description.world_entity import Body
 
 
 class PR2Tester(GiskardTester):
@@ -3368,7 +3368,6 @@ class TestWorldManipulation:
         p.pose.position = Point(x=1.2, y=0.0, z=1.6)
         p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.47942554, w=0.87758256)
         giskard.add_box_to_world(object_name, size=(1.0, 1.0, 1.0), pose=p)
-        internal_object_name = god_map.world.search_for_link_name(object_name)
         giskard.update_parent_link_of_group(
             object_name,
             parent_link=giskard_msgs.LinkName(

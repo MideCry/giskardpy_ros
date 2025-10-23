@@ -5,7 +5,7 @@ import numpy as np
 from giskardpy.model.world_config import WorldWithFixedRobot
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig, StandAloneRobotInterfaceConfig
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
 
 
 class TracyWorldConfig(WorldWithFixedRobot):

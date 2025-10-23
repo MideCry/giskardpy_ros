@@ -8,7 +8,7 @@ from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy.model.trajectory import Trajectory
@@ -20,8 +20,8 @@ from giskardpy.utils.math import (
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.world_description.world_entity import Body
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.world_description.world_entity import Body
 
 
 class ROSMsgVisualization:

@@ -1,8 +1,8 @@
 import numpy as np
 
-from semantic_world.world_description.connections import RevoluteConnection
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world_description.connections import RevoluteConnection
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from giskardpy.model.world_config import WorldConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
 

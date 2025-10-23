@@ -111,9 +111,14 @@ from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.robots.abstract_robot import AbstractRobot
-from semantic_world.world import World
+from semantic_digital_twin.adapters.ros.world_fetcher import fetch_world_from_service
+from semantic_digital_twin.adapters.ros.world_synchronizer import (
+    ModelSynchronizer,
+    StateSynchronizer,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.world import World
 
 
 @dataclass

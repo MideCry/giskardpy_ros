@@ -1,7 +1,7 @@
 from itertools import chain
 from typing import List
 
-import semantic_world.spatial_types.spatial_types as cas
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
 from giskardpy.qp.constraint import (

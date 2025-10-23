@@ -7,8 +7,8 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
-from semantic_world.datastructures.prefixed_name import PrefixedName
-from semantic_world.world_description.world_state import WorldState
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.world_description.world_state import WorldState
 
 plot_lock = Lock()
 

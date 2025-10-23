@@ -3,7 +3,7 @@ from typing import List, Optional
 from py_trees.common import Status
 from py_trees.composites import Sequence
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy_ros.tree.behaviors.collision_scene_updater import CollisionSceneUpdater
 from giskardpy_ros.tree.behaviors.notify_state_change import NotifyStateChange
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior

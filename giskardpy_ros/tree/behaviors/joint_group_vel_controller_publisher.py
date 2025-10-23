@@ -5,7 +5,7 @@ from line_profiler import profile
 from py_trees.common import Status
 from std_msgs.msg import Float64MultiArray
 
-from semantic_world.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
