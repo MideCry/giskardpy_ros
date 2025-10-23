@@ -44,7 +44,7 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.motion_statechart.goals.goal import Goal
 from semantic_digital_twin.world_description.connections import ActiveConnection
-from semantic_digital_twin.exceptions import ViewNotFoundError
+from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (
     Shape,
     Box,
@@ -720,13 +720,13 @@ def collision_entry_msg_to_giskard(
         distance = msg.distance
 
     try:
-        view1 = world.get_view_by_name(msg.group1)
-    except ViewNotFoundError as e:
+        view1 = world.get_semantic_annotation_by_name(msg.group1)
+    except SemanticAnnotationNotFoundError as e:
         view1 = None
 
     try:
-        view2 = world.get_view_by_name(msg.group2)
-    except ViewNotFoundError as e:
+        view2 = world.get_semantic_annotation_by_name(msg.group2)
+    except SemanticAnnotationNotFoundError as e:
         view2 = None
 
     return CollisionViewRequest(

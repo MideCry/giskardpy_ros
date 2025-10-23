@@ -28,6 +28,7 @@ from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
     ExecutionException,
 )
+from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
@@ -111,16 +112,6 @@ from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
-from semantic_world.adapters.ros.world_fetcher import fetch_world_from_service
-from semantic_world.adapters.ros.world_synchronizer import (
-    ModelSynchronizer,
-    StateSynchronizer,
-)
-from semantic_digital_twin.adapters.ros.world_fetcher import fetch_world_from_service
-from semantic_digital_twin.adapters.ros.world_synchronizer import (
-    ModelSynchronizer,
-    StateSynchronizer,
-)
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.world import World
@@ -2260,10 +2251,11 @@ class GiskardWrapper:
 
     def __post_init__(self):
         get_middleware().loginfo("syncing world")
-        self.world = fetch_world_from_service(self.node_handle)
-        get_middleware().loginfo("world synced")
-        self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
-        self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
+        self.world = god_map.world
+        # self.world = fetch_world_from_service(self.node_handle)
+        # get_middleware().loginfo("world synced")
+        # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
+        # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
         self.monitors = MonitorWrapper(self)
         self.motion_goals = MotionGoalWrapper(self)
         giskard_topic = f"{self.giskard_node_name}/command"

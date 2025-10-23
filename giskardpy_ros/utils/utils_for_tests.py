@@ -42,7 +42,6 @@ from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.views.factories import GenericBodyFactory
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
@@ -58,8 +57,9 @@ from semantic_digital_twin.world_description.geometry import (
     Cylinder,
     FileMesh,
 )
-from semantic_digital_twin.world_description.shape_collection import ShapeCollection
-from semantic_digital_twin.world_description.world_entity import Body, CollisionCheckingConfig
+from semantic_digital_twin.world_description.world_entity import (
+    Body,
+)
 
 
 def compare_poses(
@@ -176,7 +176,8 @@ class GiskardTester:
                 SupportedQPSolver[os.environ["QP_SOLVER"]]
             )
         self.robot_names = [
-            v.name for v in god_map.world.get_views_by_type(AbstractRobot)
+            v.name
+            for v in god_map.world.get_semantic_annotations_by_type(AbstractRobot)
         ]
         self.default_root = str(god_map.world.root.name.name)
 
@@ -188,7 +189,7 @@ class GiskardTester:
         self.api = GiskardWrapperNode(node_name="tests")
 
     def get_odometry_joint(self) -> OmniDrive:
-        return god_map.world.get_views_by_type(AbstractRobot)[0].drive
+        return god_map.world.get_semantic_annotations_by_type(AbstractRobot)[0].drive
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
         root_T_tip = god_map.world.compute_forward_kinematics(
@@ -657,13 +658,19 @@ class GiskardTester:
             target_frame=parent_link,
         )
         with self.api.world.modify_world():
-            generic_body_world = GenericBodyFactory(
-                name=PrefixedName(name),
-                shape=ShapeCollection([Box(scale=Scale(*size))]),
-                collision_config=CollisionCheckingConfig(buffer_zone_distance=0.05),
-            ).create()
+            box = Body(name=PrefixedName(name), _world=self.api.world)
+            box_shape = Box(scale=Scale(*size))
+            box.collision.append(box_shape)
+            box.visual.append(box_shape)
+            box.collision_config.buffer_zone_distance = 0.05
 
-            self.api.world.merge_world_at_pose(generic_body_world, parent_T_pose)
+            connection = FixedConnection(
+                parent=parent_link,
+                child=box,
+                parent_T_connection_expression=parent_T_pose,
+            )
+            self.api.world.add_connection(connection)
+            self.api.world.add_body(box)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,

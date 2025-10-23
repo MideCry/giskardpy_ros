@@ -109,7 +109,9 @@ class Giskard:
                 self.collision_checker_id
             )
 
-            robots = self.world_config.world.get_views_by_type(AbstractRobot)
+            robots = self.world_config.world.get_semantic_annotations_by_type(
+                AbstractRobot
+            )
             self.collision_scene = CollisionWorldSynchronizer(
                 collision_detector=collision_detector,
                 world=self.world_config.world,
@@ -128,14 +130,6 @@ class Giskard:
 
         self.sanity_check()
         GiskardBlackboard().tree.setup(rospy.node)
-        # semantic_world_database_uri = os.environ.get("SEMANTIC_WORLD_DATABASE_URI")
-        # # set up an in memory database
-        # engine = create_engine(f"mysql+pymysql://{semantic_world_database_uri}")
-        # session = Session(engine)
-        # Base.metadata.create_all(engine)
-        #
-        # mrs = ModelReloadSynchronizer(node=rospy.node, world=god_map.world, session=session)
-        # mrs.publish_reload_model()
 
     def sanity_check(self):
         self._controlled_joints_sanity_check()
@@ -146,7 +140,7 @@ class Giskard:
 
     @property
     def robots(self) -> List[AbstractRobot]:
-        return self.world_config.world.get_views_by_type(AbstractRobot)
+        return self.world_config.world.get_semantic_annotations_by_type(AbstractRobot)
 
     def _controlled_joints_sanity_check(self):
         world = god_map.world
