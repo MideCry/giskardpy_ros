@@ -154,16 +154,22 @@ class ROSMsgVisualization:
                 )
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
-                    map_T_a = god_map.world.compute_fk_np(
-                        god_map.world.root.name, collision.original_body_a
+                    map_T_a = god_map.world.compute_forward_kinematics_np(
+                        god_map.world.root,
+                        god_map.world.get_kinematic_structure_entity_by_name(
+                            collision.original_body_a
+                        ),
                     )
                     map_P_pa = np.dot(map_T_a, collision.a_P_pa)
                 else:
                     map_P_pa = collision.map_P_pa
 
                 if collision.map_P_pb is None:
-                    map_T_b = god_map.world.compute_fk_np(
-                        god_map.world.root.name, collision.original_body_b
+                    map_T_b = god_map.world.compute_forward_kinematics_np(
+                        god_map.world.root,
+                        god_map.world.get_kinematic_structure_entity_by_name(
+                            collision.original_body_b
+                        ),
                     )
                     map_P_pb = np.dot(map_T_b, collision.b_P_pb)
                 else:
@@ -339,8 +345,9 @@ class ROSMsgVisualization:
             if not hasattr(expr, "reference_frame"):
                 continue
             if expr.reference_frame is not None:
-                map_T_ref = god_map.world.compute_fk_np(
-                    god_map.world.root.name, expr.reference_frame
+                map_T_ref = god_map.world.compute_forward_kinematics_np(
+                    god_map.world.root,
+                    expr.reference_frame,
                 )
             else:
                 map_T_ref = np.eye(4)
@@ -449,8 +456,9 @@ class ROSMsgVisualization:
                 if isinstance(expr, cas.Vector3):
                     ref_V_d = value
                     if expr.vis_frame is not None:
-                        map_T_vis = god_map.world.compute_fk_np(
-                            god_map.world.root.name, expr.vis_frame
+                        map_T_vis = god_map.world.compute_forward_kinematics_np(
+                            god_map.world.root,
+                            expr.vis_frame,
                         )
                     else:
                         map_T_vis = np.eye(4)
@@ -465,10 +473,10 @@ class ROSMsgVisualization:
                         m.color = self.colors[color_counter]
                     else:
                         m.color = ColorRGBA(
-                            r=expr.color.r,
-                            g=expr.color.g,
-                            b=expr.color.b,
-                            a=expr.color.a,
+                            r=expr.color.R,
+                            g=expr.color.G,
+                            b=expr.color.B,
+                            a=expr.color.A,
                         )
                     m.scale.x = width / 2.0
                     m.scale.y = width
@@ -486,10 +494,10 @@ class ROSMsgVisualization:
                         m.color = self.colors[color_counter]
                     else:
                         m.color = ColorRGBA(
-                            r=expr.color.r,
-                            g=expr.color.g,
-                            b=expr.color.b,
-                            a=expr.color.a,
+                            r=expr.color.R,
+                            g=expr.color.G,
+                            b=expr.color.B,
+                            a=expr.color.A,
                         )
                     m.scale.x = width
                     m.scale.y = width
