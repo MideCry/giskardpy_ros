@@ -49,8 +49,7 @@ RUN workon giskardpy && \
     python3 -m pip install --upgrade pip && \
     pip3 install -r requirements.txt
 
-RUN python3 --version
-RUN ls -l $(which python3)
+RUN workon giskardpy && python3 --version && ls -l $(which python3)
 
 # Install qpSWIFT
 RUN workon giskardpy &&  \
