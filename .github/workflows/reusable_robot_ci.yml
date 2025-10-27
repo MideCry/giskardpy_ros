@@ -138,7 +138,7 @@ jobs:
         with:
           path: 'giskardpy'
           repository: ${{ github.repository_owner }}/giskardpy
-          ref: giskard_library
+          ref: semantic_world_integration
       - name: install pip dependencies giskardpy
         run: |
           python3 -m pip install --upgrade pip
