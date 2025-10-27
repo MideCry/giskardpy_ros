@@ -37,7 +37,7 @@ RUN mkdir -p $WORKON_HOME && \
     echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> ~/.bashrc
 # mkvirtualenv returns exit 1, but works fine \
 # so overwriting with exit 0, so this step doesn't fail
-RUN mkvirtualenv -p /usr/bin/python3.12 giskardpy --system-site-packages; exit 0
+RUN mkvirtualenv -p /usr/bin/python3.12 giskardpy; exit 0
 RUN echo "source /root/venvs/giskardpy/bin/activate" >> ~/.bashrc
 
 # Download python-requirements
