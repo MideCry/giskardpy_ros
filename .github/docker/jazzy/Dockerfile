@@ -49,7 +49,7 @@ RUN workon giskardpy && \
     python3 -m pip install --upgrade pip && \
     pip3 install -r requirements.txt
 
-RUN workon giskardpy && python3 --version && ls -l $(which python3)
+RUN workon giskardpy && python3 --version && ls -l $(which python3) && python3 -c 'import semantic_digital_twin, sys; print(semantic_digital_twin.__file__); print(sys.path)'"
 
 # Install qpSWIFT
 RUN workon giskardpy &&  \
