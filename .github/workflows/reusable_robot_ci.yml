@@ -70,7 +70,6 @@ jobs:
         qp_solver: [qpSWIFT]
         container:
           - jazzy
-          - humble
     container: # Login and start specified container image. Ubuntu20.04 isn't supported on GitHub-Workflow as of 04.2025
       image: ghcr.io/${{ needs.to-lowercase.outputs.repo_lowercase }}:${{ matrix.container }}
       credentials:
