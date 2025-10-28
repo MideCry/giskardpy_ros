@@ -139,8 +139,6 @@ jobs:
           path: 'giskardpy'
           repository: ${{ github.repository_owner }}/giskardpy
           ref: semantic_world_integration
-      - name: Enable venv globally
-        run: echo "source /root/venvs/giskardpy/bin/activate" >> ~/.bashrc
       - name: install pip dependencies giskardpy
         run: |
           python3 -m pip install --upgrade pip
@@ -238,7 +236,7 @@ jobs:
       - name: run ${{ inputs.test1 }}
         run: |
           cd /__w/giskardpy_ros/giskardpy_ros/giskard_ws/src/giskardpy_ros/test
-          python3 -m pytest -s ${{ inputs.test1 }}
+          python3.12 -m pytest -s ${{ inputs.test1 }}
       - if: ${{ inputs.test2 != '' }}
         name: run ${{ inputs.test2 }}
         run: |
