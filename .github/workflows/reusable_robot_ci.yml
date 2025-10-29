@@ -144,6 +144,12 @@ jobs:
           pip3 install -r giskardpy/requirements.txt
           cd giskardpy
           pip3 install -e .
+      - name: install pip dependencies semantic-digital-twin
+        run: |
+          git clone https://github.com/cram2/semantic_digital_twin.git
+          cd semantic_digital_twin
+          pip3 install -r requirements.txt
+          pip3 install -e .
       #pull github deps ================================================================================================
       - name: Create workspace I
         run: |

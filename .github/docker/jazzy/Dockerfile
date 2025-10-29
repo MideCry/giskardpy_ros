@@ -25,7 +25,9 @@ RUN apt-get install -y \
             git-all \
             cmake \
             sudo \
-            pkg-config
+            pkg-config \
+            graphviz \
+            graphviz-dev
 
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc && \
     echo "source /usr/share/colcon_cd/function/colcon_cd.sh" >> ~/.bashrc
