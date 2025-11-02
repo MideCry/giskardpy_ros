@@ -15,7 +15,7 @@ from giskardpy.model.collision_world_syncer import (
 )
 from giskardpy.model.collisions import NullCollisionDetector
 from giskardpy.model.world_config import WorldConfig
-from giskardpy.motion_statechart.goals.goal import Goal
+from giskardpy.motion_statechart.graph_node import Goal
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.qp.qp_controller_config import QPControllerConfig

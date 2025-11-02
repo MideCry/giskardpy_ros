@@ -21,12 +21,11 @@ from giskardpy.data_types.exceptions import (
     GoalInitalizationException,
     ExecutionException,
 )
-from giskardpy.motion_statechart.goals.goal import Goal
+from giskardpy.motion_statechart.graph_node import Goal
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.motion_statechart.monitors.monitors import Monitor, EndMotion
+from giskardpy.motion_statechart.monitors.monitors import Monitor
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.spatial_types.symbol_manager import symbol_manager
 from giskardpy.motion_statechart.tasks.task import (
     WEIGHT_BELOW_CA,
     WEIGHT_COLLISION_AVOIDANCE,
@@ -462,15 +461,15 @@ class CarryMyBullshit(Goal):
                 cas.euclidean_distance(first_point, root_P_bf)
                 < self.traj_tracking_radius
             )
-            self.connect_end_condition_to_all_tasks(
+            self.apply_end_condition_to_nodes(
                 goal_reached.get_observation_state_expression()
             )
             end = EndMotion(name="done")
             end.start_condition = goal_reached.get_observation_state_expression()
             self.add_monitor(end)
-        self.connect_start_condition_to_all_tasks(start_condition)
+        self.apply_start_condition_to_nodes(start_condition)
         self.connect_hold_condition_to_all_tasks(hold_condition)
-        self.connect_end_condition_to_all_tasks(end_condition)
+        self.apply_end_condition_to_nodes(end_condition)
 
     def clean_up(self):
         if CarryMyBullshit.target_sub is not None:

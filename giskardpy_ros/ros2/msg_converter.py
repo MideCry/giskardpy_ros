@@ -42,7 +42,6 @@ from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
-from giskardpy.motion_statechart.goals.goal import Goal
 from semantic_digital_twin.world_description.connections import ActiveConnection
 from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (

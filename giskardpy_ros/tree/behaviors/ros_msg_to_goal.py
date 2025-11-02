@@ -143,7 +143,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
             name="BaseTrajFollower",
         )
         goal.end_condition = f"{local_min.name}"
-        goal.connect_end_condition_to_all_tasks(time_monitor.name)
+        goal.apply_end_condition_to_nodes(time_monitor.name)
         god_map.motion_statechart_manager.add_goal(goal)
         god_map.motion_statechart_manager.parse_conditions()
         return Status.SUCCESS

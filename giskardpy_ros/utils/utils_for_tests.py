@@ -720,7 +720,7 @@ class GiskardTester:
             connection = FixedConnection(
                 parent=parent_link,
                 child=sphere,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                _connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
                     pose, self.api.world
                 ),
             )
@@ -838,7 +838,7 @@ class GiskardTester:
             c_map_root = FixedConnection(
                 parent=parent_link,
                 child=world_with_pr2.root,
-                connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
+                _connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
                     pose, self.api.world
                 ),
             )
