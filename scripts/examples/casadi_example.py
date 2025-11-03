@@ -2,8 +2,8 @@ import numpy as np
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
 
-a = cas.MathVariable("a")
-b = cas.MathVariable("b")
+a = cas.FloatVariable("a")
+b = cas.FloatVariable("b")
 
 expr = a + b
 print(expr)
