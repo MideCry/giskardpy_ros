@@ -33,8 +33,9 @@ from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
-class HSRTester(GiskardTester):
-    default_pose = {
+@pytest.fixture()
+def default_joint_state():
+    return {
         "arm_flex_joint": -0.03,
         "arm_lift_joint": 0.01,
         "arm_roll_joint": 0.0,
@@ -43,7 +44,9 @@ class HSRTester(GiskardTester):
         "wrist_flex_joint": 0.0,
         "wrist_roll_joint": 0.0,
     }
-    better_pose = default_pose
+
+
+class HSRTester(GiskardTester):
 
     def __init__(self, giskard=None):
         self.tip = "hand_gripper_tool_frame"
@@ -56,7 +59,10 @@ class HSRTester(GiskardTester):
                 robot_interface_config=HSRStandaloneInterface(),
                 collision_checker_id=CollisionCheckerLib.bpb,
                 behavior_tree_config=StandAloneBTConfig(
-                    debug_mode=True, publish_tf=True, publish_js=False
+                    debug_mode=True,
+                    publish_tf=True,
+                    publish_js=False,
+                    add_debug_marker_publisher=True,
                 ),
                 qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
             )
@@ -76,25 +82,35 @@ class HSRTester(GiskardTester):
         self.execute()
 
 
-@pytest.fixture(scope="module")
-def giskard(request, ros):
-    # launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
-    c = HSRTester()
-    # c = HSRTestWrapperMujoco()
-    request.addfinalizer(c.print_stats)
-    return c
-
-
 @pytest.fixture()
-def box_setup(default_pose_giskard: HSRTester) -> HSRTester:
-    p = PoseStamped()
-    p.header.frame_id = "map"
-    p.pose.position.x = 1.2
-    p.pose.position.y = 0.0
-    p.pose.position.z = 0.1
-    p.pose.orientation.w = 1.0
-    default_pose_giskard.add_box_to_world(name="box", size=(1, 1, 1), pose=p)
-    return default_pose_giskard
+def robot():
+    c = HSRTester()
+    try:
+        yield c
+    finally:
+        print("tear down")
+        c.print_stats()
+
+
+# @pytest.fixture(scope="module")
+# def giskard(request, ros):
+#     # launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
+#     c = HSRTester()
+#     # c = HSRTestWrapperMujoco()
+#     request.addfinalizer(c.print_stats)
+#     return c
+#
+#
+# @pytest.fixture()
+# def box_setup(default_pose_giskard: HSRTester) -> HSRTester:
+#     p = PoseStamped()
+#     p.header.frame_id = "map"
+#     p.pose.position.x = 1.2
+#     p.pose.position.y = 0.0
+#     p.pose.position.z = 0.1
+#     p.pose.orientation.w = 1.0
+#     default_pose_giskard.add_box_to_world(name="box", size=(1, 1, 1), pose=p)
+#     return default_pose_giskard
 
 
 class TestJointGoals:
@@ -339,6 +355,33 @@ class TestCartGoals:
 
 
 class TestConstraints:
+
+    def test_Pointing(self, giskard: HSRTester):
+        kopf = "head_rgbd_sensor_gazebo_frame"
+
+        head_goal_point = PointStamped()
+        head_goal_point.header.frame_id = "map"
+        head_goal_point.point.x = 1.0
+        head_goal_point.point.y = -1.0
+        head_goal_point.point.z = 0.0
+
+        pointing_goal = "pointing"
+
+        pointing_axis = Vector3Stamped()
+        pointing_axis.header.frame_id = kopf
+        pointing_axis.vector.z = 1.0
+
+        giskard.api.motion_goals.add_pointing(
+            name=pointing_goal,
+            pointing_axis=pointing_axis,
+            root_link="map",
+            tip_link=kopf,
+            goal_point=head_goal_point,
+        )
+
+        giskard.api.motion_goals.allow_all_collisions()
+        giskard.api.add_default_end_motion_conditions()
+        giskard.execute(local_min_end=False)
 
     def test_PointingCone(self, default_pose_giskard: HSRTester):
         tip_link = "head_center_camera_frame"
