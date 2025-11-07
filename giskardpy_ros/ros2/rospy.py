@@ -24,7 +24,8 @@ class ROS2Wrapper(MiddlewareWrapper):
 
     def logwarn(self, msg: str):
         global node
-        node.get_logger().warn(msg)
+        # node.get_logger().warn(msg)
+        node.get_logger().warning(msg)
 
     def logerr(self, msg: str):
         global node
