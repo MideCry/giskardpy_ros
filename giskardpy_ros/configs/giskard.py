@@ -16,7 +16,6 @@ from giskardpy.model.collision_world_syncer import (
 from giskardpy.model.collisions import NullCollisionDetector
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.motion_statechart.graph_node import Goal
-from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.utils import get_all_classes_in_package
@@ -155,32 +154,32 @@ class Giskard:
                 f"but not flagged as controlled: {[c.name for c in non_controlled_joints]}."
             )
 
-    def add_goal_package_name(self, package_name: str):
-        new_goals = get_all_classes_in_package(package_name, Goal)
-        if len(new_goals) == 0:
-            raise SetupException(
-                f"No classes of type '{Goal.__name__}' found in {package_name}."
-            )
-        get_middleware().loginfo(f"Made goal classes {new_goals} available.")
-        god_map.motion_statechart_manager.add_goal_package_path(package_name)
+    # def add_goal_package_name(self, package_name: str):
+    #     new_goals = get_all_classes_in_package(package_name, Goal)
+    #     if len(new_goals) == 0:
+    #         raise SetupException(
+    #             f"No classes of type '{Goal.__name__}' found in {package_name}."
+    #         )
+    #     get_middleware().loginfo(f"Made goal classes {new_goals} available.")
+    #     god_map.motion_statechart_manager.add_goal_package_path(package_name)
 
-    def add_task_package_name(self, package_name: str):
-        new_goals = get_all_classes_in_package(package_name, Task)
-        if len(new_goals) == 0:
-            raise SetupException(
-                f"No classes of type '{Goal.__name__}' found in {package_name}."
-            )
-        get_middleware().loginfo(f"Made task classes {new_goals} available.")
-        god_map.motion_statechart_manager.add_task_package_path(package_name)
+    # def add_task_package_name(self, package_name: str):
+    #     new_goals = get_all_classes_in_package(package_name, Task)
+    #     if len(new_goals) == 0:
+    #         raise SetupException(
+    #             f"No classes of type '{Goal.__name__}' found in {package_name}."
+    #         )
+    #     get_middleware().loginfo(f"Made task classes {new_goals} available.")
+    #     god_map.motion_statechart_manager.add_task_package_path(package_name)
 
-    def add_monitor_package_name(self, package_name: str) -> None:
-        new_monitors = get_all_classes_in_package(package_name, Monitor)
-        if len(new_monitors) == 0:
-            raise SetupException(
-                f"No classes of type '{Monitor.__name__}' found in '{package_name}'."
-            )
-        get_middleware().loginfo(f"Made Monitor classes '{new_monitors}' available.")
-        god_map.motion_statechart_manager.add_monitor_package_path(package_name)
+    # def add_monitor_package_name(self, package_name: str) -> None:
+    #     new_monitors = get_all_classes_in_package(package_name, Monitor)
+    #     if len(new_monitors) == 0:
+    #         raise SetupException(
+    #             f"No classes of type '{Monitor.__name__}' found in '{package_name}'."
+    #         )
+    #     get_middleware().loginfo(f"Made Monitor classes '{new_monitors}' available.")
+    #     god_map.motion_statechart_manager.add_monitor_package_path(package_name)
 
     def live(self):
         """

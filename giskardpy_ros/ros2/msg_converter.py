@@ -36,14 +36,14 @@ from giskardpy.god_map import god_map
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
-from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from semantic_digital_twin.world_description.connections import ActiveConnection
-from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
+
+# from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (
     Shape,
     Box,
@@ -348,7 +348,7 @@ def convert_dictionary_to_ros_message(json_data):
 
 
 def motion_statechart_node_to_ros_msg(
-    motion_graph_node: Union[Monitor, Task],
+    motion_graph_node,
 ) -> giskard_msgs.MotionStatechartNode:
     msg = giskard_msgs.MotionStatechartNode()
     msg.name = str(motion_graph_node.name)

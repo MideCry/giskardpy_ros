@@ -28,11 +28,11 @@ from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import CollisionViewRequest
 from giskardpy.model.collisions import Collisions, GiskardCollision
+from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.tasks.diff_drive_goals import (
     DiffDriveTangentialToPoint,
     KeepHandInWorkspace,
 )
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
@@ -373,7 +373,10 @@ class GiskardTester:
         )
 
     def set_diff_drive_tangential_to_point(
-        self, goal_point: PointStamped, weight: float = WEIGHT_ABOVE_CA, **kwargs
+        self,
+        goal_point: PointStamped,
+        weight: float = DefaultWeights.WEIGHT_ABOVE_CA,
+        **kwargs,
     ):
         self.api.motion_goals.add_motion_goal(
             class_name=DiffDriveTangentialToPoint.__name__,
