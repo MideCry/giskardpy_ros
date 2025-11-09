@@ -55,12 +55,16 @@ from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSe
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
+from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
 from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointVelocityLimit,
     UnlimitedJointGoal,
+    JointPositionList,
+    JointState,
 )
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
@@ -316,11 +320,16 @@ class TestJointGoals:
             "l_wrist_flex_joint": -0.1,
             "l_wrist_roll_joint": -6.062015047706399,
         }
-        giskard.api.motion_goals.add_joint_position(goal_state=js)
-        giskard.api.motion_goals.allow_all_collisions()
-        done = giskard.api.monitors.add_joint_position(goal_state=js)
-        giskard.api.monitors.add_end_motion(start_condition=done)
-        giskard.execute(local_min_end=False)
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(js, giskard.api.world),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
         for joint, goal in js.items():
             connection = god_map.world.get_connection_by_name(joint)
             if (
@@ -373,10 +382,18 @@ class TestJointGoals:
         giskard.projection()
 
     def test_gripper_goal(self, giskard: PR2Tester):
-        js = {"r_gripper_l_finger_joint": 0.55}
-        giskard.api.motion_goals.add_joint_position(js)
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {"r_gripper_l_finger_joint": 0.55}, giskard.api.world
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_joint_movement1(self, giskard: PR2Tester, pocky_pose_state):
         giskard.api.motion_goals.allow_all_collisions()
@@ -384,45 +401,86 @@ class TestJointGoals:
         giskard.execute()
 
     def test_partial_joint_state_goal1(self, giskard: PR2Tester, pocky_pose_state):
-        giskard.api.motion_goals.allow_self_collision()
-        js = dict(list(pocky_pose_state.items())[:3])
-        giskard.api.motion_goals.add_joint_position(js)
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                dict(list(pocky_pose_state.items())[:3]), giskard.api.world
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_continuous_joint1(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_all_collisions()
-        js = {"r_wrist_roll_joint": -pi}
-        giskard.api.motion_goals.add_joint_position(js)
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {"r_wrist_roll_joint": -pi}, giskard.api.world
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_continuous_joint2(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_self_collision()
-        # zero_pose.set_json_goal('SetPredictionHorizon', prediction_horizon=1)
-        js = {
-            "r_wrist_roll_joint": -pi,
-            "l_wrist_roll_joint": -2.1 * pi,
-        }
-        giskard.api.motion_goals.add_joint_position(js)
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {
+                    "r_wrist_roll_joint": -pi,
+                    "l_wrist_roll_joint": -2.1 * pi,
+                },
+                world=giskard.api.world,
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_prismatic_joint1(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_all_collisions()
-        js = {
-            "torso_lift_joint": 0.1,
-            # 'torso_lift_joint': 0.1
-        }
-        giskard.api.motion_goals.add_joint_position(js)
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {
+                    "torso_lift_joint": 0.1,
+                },
+                giskard.api.world,
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_revolute_joint1(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_all_collisions()
-        js = {
-            # 'r_elbow_flex_joint': -1,
-            "l_wrist_roll_joint": -1.0,
-            "r_wrist_roll_joint": 1.0,
-        }
-        giskard.api.motion_goals.add_joint_position(name="joint task", goal_state=js)
-        giskard.execute()
+        msc = MotionStatechart(giskard.api.world)
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {
+                    # 'r_elbow_flex_joint': -1,
+                    "l_wrist_roll_joint": -1.0,
+                    "r_wrist_roll_joint": 1.0,
+                },
+                giskard.api.world,
+            ),
+        )
+        msc.add_node(joint_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = joint_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_unlimited_joint_goal(self, giskard: PR2Tester):
         giskard.api.motion_goals.allow_all_collisions()

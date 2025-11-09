@@ -76,7 +76,6 @@ def giskard_factory(init_rospy, robot: GiskardTester):
         msc.add_node(end)
         end.start_condition = done
         robot.api.execute(msc)
-        assert msc.is_end_motion()
         return robot
 
     return _create_giskard

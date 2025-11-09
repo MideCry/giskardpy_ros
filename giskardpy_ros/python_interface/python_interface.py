@@ -82,6 +82,7 @@ class GiskardWrapper:
         )
         motion_statechart.life_cycle_state.data = parsed_life_cycle_state.data
         motion_statechart.observation_state.data = parsed_observation_state.data
+        assert motion_statechart.is_end_motion()
 
     def _send_action_goal_async(self, motion_statechart: MotionStatechart) -> Future:
         goal_msg = JsonAction.Goal()
