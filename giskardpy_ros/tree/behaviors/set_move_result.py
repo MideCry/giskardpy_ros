@@ -37,9 +37,11 @@ class SetMoveResult(GiskardBehavior):
 
         trajectory = god_map.trajectory
         joints = god_map.world.get_connections_by_type(ActiveConnection)
-        sample_period = god_map.qp_controller.config.mpc_dt
         move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
-            trajectory, sample_period=sample_period, start_time=0, joints=joints
+            trajectory,
+            sample_period=GiskardBlackboard().motion_statechart.qp_controller.config.mpc_dt,
+            start_time=0,
+            joints=joints,
         )
         if isinstance(e, PreemptedException):
             get_middleware().logwarn(f"Goal preempted: '{move_result.error.msg}'.")

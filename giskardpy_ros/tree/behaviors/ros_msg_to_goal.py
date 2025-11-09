@@ -1,3 +1,4 @@
+import json
 from typing import Union
 
 from giskard_msgs.action import JsonAction
@@ -18,6 +19,10 @@ from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
+from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
+    KinematicStructureEntityKwargsTracker,
+)
+from semantic_digital_twin.exceptions import KinematicStructureEntityNotInKwargs
 from semantic_digital_twin.world_description.connections import OmniDrive
 
 
@@ -33,8 +38,11 @@ class ParseActionGoal(GiskardBehavior):
         get_middleware().loginfo(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
+        tracker = KinematicStructureEntityKwargsTracker.from_world(god_map.world)
+        kwargs = tracker.create_kwargs()
+        kwargs["world"] = god_map.world
         motion_statechart = MotionStatechart.from_json(
-            move_goal.goal, world=god_map.world
+            json.loads(move_goal.goal), **kwargs
         )
         GiskardBlackboard().motion_statechart = motion_statechart
         get_middleware().loginfo("Done parsing goal message.")
@@ -62,17 +70,17 @@ class SetExecutionMode(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        get_middleware().loginfo(
-            f"Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg), GiskardBlackboard().move_action_server.goal_msg.type)}"
-        )
-        if GiskardBlackboard().move_action_server.is_goal_msg_type_projection():
-            GiskardBlackboard().tree.switch_to_projection()
-        elif GiskardBlackboard().move_action_server.is_goal_msg_type_execute():
-            GiskardBlackboard().tree.switch_to_execution()
-        else:
-            raise InvalidGoalException(
-                f"Goal of type {god_map.goal_msg.type} is not supported."
-            )
+        # get_middleware().loginfo(
+        #     f"Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg))}"
+        # )
+        # if GiskardBlackboard().move_action_server.is_goal_msg_type_projection():
+        #     GiskardBlackboard().tree.switch_to_projection()
+        # elif GiskardBlackboard().move_action_server.is_goal_msg_type_execute():
+        #     GiskardBlackboard().tree.switch_to_execution()
+        # else:
+        #     raise InvalidGoalException(
+        #         f"Goal of type {god_map.goal_msg.type} is not supported."
+        #     )
         return Status.SUCCESS
 
 

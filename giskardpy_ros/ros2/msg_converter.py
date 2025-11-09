@@ -266,10 +266,14 @@ def trajectory_to_ros_trajectory(
 
 def world_to_tf_message(world: World, include_prefix: bool) -> tf2_msgs.TFMessage:
     tf_msg = tf2_msgs.TFMessage()
-    tf = world._fk_computer.compute_tf()
+    tf = world._forward_kinematic_manager.compute_tf()
     current_time = rospy.node.get_clock().now().to_msg()
-    tf_msg.transforms = create_tf_message_batch(len(world._fk_computer.tf))
-    for i, (parent_link_name, child_link_name) in enumerate(world._fk_computer.tf):
+    tf_msg.transforms = create_tf_message_batch(
+        len(world._forward_kinematic_manager.tf)
+    )
+    for i, (parent_link_name, child_link_name) in enumerate(
+        world._forward_kinematic_manager.tf
+    ):
         pose = tf[i]
         if not include_prefix:
             parent_link_name = parent_link_name.name

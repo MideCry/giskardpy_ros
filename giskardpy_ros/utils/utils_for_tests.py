@@ -181,7 +181,7 @@ class GiskardTester(ABC):
             v.name
             for v in god_map.world.get_semantic_annotations_by_type(AbstractRobot)
         ]
-        self.default_root = self.world.root
+        self.default_root = god_map.world.root
 
         self.original_number_of_links = len(god_map.world.bodies)
         self.heart = Thread(target=GiskardBlackboard().tree.live, name="bt ticker")

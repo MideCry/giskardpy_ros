@@ -20,42 +20,11 @@ from giskardpy_ros.tree.blackboard_utils import (
 )
 
 
-class InitQPController(GiskardBehavior):
+class CompileMotionStatechart(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        (
-            eq_constraints,
-            neq_constraints,
-            eq_derivative_constraints,
-            derivative_constraints,
-            quadratic_weight_gains,
-            linear_weight_gains,
-        ) = god_map.motion_statechart_manager.get_constraints_from_tasks()
-        try:
-            free_variables = self.get_active_free_symbols(
-                eq_constraints,
-                neq_constraints,
-                eq_derivative_constraints,
-                derivative_constraints,
-            )
-            GiskardBlackboard().tree.control_loop_branch.add_qp_controller()
-        except EmptyProblemException as e:
-            if (
-                not god_map.motion_statechart_manager.has_payload_monitors_which_are_not_end_nor_cancel()
-            ):
-                raise
-            GiskardBlackboard().tree.control_loop_branch.remove_qp_controller()
-            return Status.SUCCESS
-
-        god_map.qp_controller.init(
-            degrees_of_freedom=free_variables,
-            equality_constraints=eq_constraints,
-            inequality_constraints=neq_constraints,
-            eq_derivative_constraints=eq_derivative_constraints,
-            derivative_constraints=derivative_constraints,
-            quadratic_weight_gains=quadratic_weight_gains,
-            linear_weight_gains=linear_weight_gains,
+        GiskardBlackboard().motion_statechart.compile(
+            controller_config=GiskardBlackboard().giskard.qp_controller_config
         )
-
         return Status.SUCCESS

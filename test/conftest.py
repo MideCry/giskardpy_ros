@@ -49,10 +49,10 @@ def init_rospy():
 def giskard_factory(init_rospy, robot: GiskardTester):
     def _create_giskard(seed_joint_state: Dict[str, float]) -> GiskardTester:
         parse_seed_joint_state = {
-            robot.world.get_connection_by_name(name): target
+            robot.api.world.get_connection_by_name(name): target
             for name, target in seed_joint_state.items()
         }
-        msc = MotionStatechart(robot.world)
+        msc = MotionStatechart(robot.api.world)
 
         initial_config = SetSeedConfiguration(
             name=PrefixedName("initial configuration"),

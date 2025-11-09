@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from threading import Thread
 from time import sleep
@@ -60,25 +61,25 @@ class GiskardWrapper:
     def robot_name(self) -> PrefixedName:
         return self.world.get_semantic_annotations_by_type(AbstractRobot)[0].name
 
-    def execute_async(self) -> Future:
-        return self._send_action_goal_async(Move.Goal.EXECUTE)
+    def execute_async(self, motion_statechart: MotionStatechart) -> Future:
+        return self._send_action_goal_async(motion_statechart)
 
     def execute(self, motion_statechart: MotionStatechart) -> JsonAction.Result:
         """
         :return: result from giskard
         """
-        return self._send_action_goal(Move.Goal.EXECUTE)
+        return self._send_action_goal(motion_statechart)
 
     def _send_action_goal_async(self, motion_statechart: MotionStatechart) -> Future:
         goal_msg = JsonAction.Goal()
-        goal_msg.goal = motion_statechart.to_json()
+        goal_msg.goal = json.dumps(motion_statechart.to_json())
         return self._client.send_goal_async(goal_msg)
 
     def _send_action_goal(
         self, motion_statechart: MotionStatechart
     ) -> JsonAction_Result:
         goal_msg = JsonAction.Goal()
-        goal_msg.goal = motion_statechart.to_json()
+        goal_msg.goal = json.dumps(motion_statechart.to_json())
         return self._client.send_goal(goal_msg)
 
     def cancel_goal_async(self) -> Future:

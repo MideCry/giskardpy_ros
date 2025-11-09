@@ -25,27 +25,63 @@ def giskard_state_to_execution_state() -> ExecutionState:
     msg.header.stamp = rospy.node.get_clock().now().to_msg()
     msg.goal_id = GiskardBlackboard().move_action_server.goal_id
 
-    msg.tasks = [msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t._plot]
-    msg.task_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in tasks if node._plot]
+    msg.tasks = [
+        msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t._plot
+    ]
+    msg.task_parents = [
+        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
+        for node in tasks
+        if node._plot
+    ]
     try:
-        msg.task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0][task_filter].tolist()
-        msg.task_life_cycle_state = god_map.motion_statechart_manager.task_state_history[-1][1][1][task_filter].tolist()
+        msg.task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0][
+            task_filter
+        ].tolist()
+        msg.task_life_cycle_state = (
+            god_map.motion_statechart_manager.task_state_history[-1][1][1][
+                task_filter
+            ].tolist()
+        )
     except IndexError as e:
         pass
 
-    msg.monitors = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m._plot]
-    msg.monitor_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in monitors if node._plot]
+    msg.monitors = [
+        msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m._plot
+    ]
+    msg.monitor_parents = [
+        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
+        for node in monitors
+        if node._plot
+    ]
     try:
-        msg.monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][0][monitor_filter].tolist()
-        msg.monitor_life_cycle_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][1][monitor_filter].tolist()
+        msg.monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][
+            1
+        ][0][monitor_filter].tolist()
+        msg.monitor_life_cycle_state = (
+            god_map.motion_statechart_manager.monitor_state_history[-1][1][1][
+                monitor_filter
+            ].tolist()
+        )
     except IndexError as e:
         pass
 
-    msg.goals = [msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m._plot]
-    msg.goal_parents = [god_map.motion_statechart_manager.get_parent_node_name_of_node(node) for node in goals if node._plot]
+    msg.goals = [
+        msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m._plot
+    ]
+    msg.goal_parents = [
+        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
+        for node in goals
+        if node._plot
+    ]
     try:
-        msg.goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0][goal_filter].tolist()
-        msg.goal_life_cycle_state = god_map.motion_statechart_manager.goal_state_history[-1][1][1][goal_filter].tolist()
+        msg.goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0][
+            goal_filter
+        ].tolist()
+        msg.goal_life_cycle_state = (
+            god_map.motion_statechart_manager.goal_state_history[-1][1][1][
+                goal_filter
+            ].tolist()
+        )
     except IndexError as e:
         pass
     return msg
@@ -64,11 +100,15 @@ def did_state_change() -> bool:
     task_state = god_map.motion_statechart_manager.task_state_history[-1][1][1]
     if np.any(last_task_state != task_state):
         return True
-    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][0]
+    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][
+        0
+    ]
     monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][0]
     if np.any(last_monitor_state != monitor_state):
         return True
-    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][1]
+    last_monitor_state = god_map.motion_statechart_manager.monitor_state_history[-2][1][
+        1
+    ]
     monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][1][1]
     if np.any(last_monitor_state != monitor_state):
         return True
@@ -84,23 +124,24 @@ def did_state_change() -> bool:
 
 
 class PublishFeedback(GiskardBehavior):
-    
+
     def __init__(self, name: Optional[str] = None, topic_name: Optional[str] = None):
         if name is None:
             name = self.__class__.__name__
         if topic_name is None:
-            topic_name = f'{rospy.node.get_name()}/state'
+            topic_name = f"{rospy.node.get_name()}/state"
         super().__init__(name)
         self.cmd_topic = topic_name
-        self.pub = rospy.node.create_publisher(ExecutionState,
-                                         self.cmd_topic,
-                                         QoSProfile(depth=10,
-                                                        durability=QoSDurabilityPolicy.TRANSIENT_LOCAL))
+        self.pub = rospy.node.create_publisher(
+            ExecutionState,
+            self.cmd_topic,
+            QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
+        )
 
     @record_time
-    
     def update(self):
-        if did_state_change():
-            msg = giskard_state_to_execution_state()
-            self.pub.publish(msg)
+        # FIXME
+        # if did_state_change():
+        #     msg = giskard_state_to_execution_state()
+        #     self.pub.publish(msg)
         return Status.SUCCESS

@@ -117,7 +117,6 @@ class Giskard:
                 robots=robots,
             )
             god_map.collision_scene = self.collision_scene
-            self.qp_controller_config.setup()
 
             self.behavior_tree_config.setup()
 
