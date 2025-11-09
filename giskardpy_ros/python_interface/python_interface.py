@@ -19,7 +19,11 @@ from giskardpy.data_types.exceptions import (
 )
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.motion_statechart import (
+    MotionStatechart,
+    LifeCycleState,
+    ObservationState,
+)
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
@@ -64,11 +68,20 @@ class GiskardWrapper:
     def execute_async(self, motion_statechart: MotionStatechart) -> Future:
         return self._send_action_goal_async(motion_statechart)
 
-    def execute(self, motion_statechart: MotionStatechart) -> JsonAction.Result:
+    def execute(self, motion_statechart: MotionStatechart):
         """
-        :return: result from giskard
+        Executes a MotionStatechart and syncs its state with the result of Giskard.
         """
-        return self._send_action_goal(motion_statechart)
+        result = self._send_action_goal(motion_statechart)
+        result_json = json.loads(result.result)
+        parsed_life_cycle_state = LifeCycleState.from_json(
+            result_json["life_cycle_state"], motion_statechart=motion_statechart
+        )
+        parsed_observation_state = ObservationState.from_json(
+            result_json["observation_state"], motion_statechart=motion_statechart
+        )
+        motion_statechart.life_cycle_state.data = parsed_life_cycle_state.data
+        motion_statechart.observation_state.data = parsed_observation_state.data
 
     def _send_action_goal_async(self, motion_statechart: MotionStatechart) -> Future:
         goal_msg = JsonAction.Goal()

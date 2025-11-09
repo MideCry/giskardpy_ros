@@ -1,3 +1,5 @@
+import json
+
 from giskard_msgs.action import Move, JsonAction
 from py_trees.common import Status
 from line_profiler import profile
@@ -20,7 +22,7 @@ from semantic_digital_twin.world_description.connections import ActiveConnection
 
 class SetMoveResult(GiskardBehavior):
 
-    def __init__(self, name, context, print=True):
+    def __init__(self, name, context: str, print=True):
         self.print = print
         self.context = context
         super().__init__(name)
@@ -45,16 +47,18 @@ class SetMoveResult(GiskardBehavior):
         #     start_time=0,
         #     joints=joints,
         # )
+
+        result = {
+            "life_cycle_state": GiskardBlackboard().motion_statechart.life_cycle_state.to_json(),
+            "observation_state": GiskardBlackboard().motion_statechart.observation_state.to_json(),
+        }
+
+        move_result.result = json.dumps(result)
         if isinstance(e, PreemptedException):
-            get_middleware().logwarn(f"Goal preempted: '{move_result.error.msg}'.")
+            get_middleware().logwarn(f"Goal preempted.")
         else:
             if self.print:
-                if move_result.error.type == GiskardError.SUCCESS:
-                    get_middleware().loginfo(f"{self.context} succeeded.")
-                else:
-                    get_middleware().logwarn(
-                        f"{self.context} failed: {move_result.error.msg}."
-                    )
+                get_middleware().loginfo(f"{self.context} succeeded.")
 
         # move_result.execution_state = giskard_state_to_execution_state()
         GiskardBlackboard().move_action_server.result_msg = move_result
