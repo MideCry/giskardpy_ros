@@ -1,7 +1,6 @@
-import traceback
 from typing import Union
 
-from giskard_msgs.action import Move
+from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import InvalidGoalException
@@ -11,11 +10,9 @@ from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollowe
 from giskardpy.motion_statechart.monitors.monitors import (
     TimeAbove,
     LocalMinimumReached,
-    EndMotion,
-    CancelMotion,
 )
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2.msg_converter import create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
@@ -32,51 +29,16 @@ class ParseActionGoal(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        move_goal: Move.Goal = GiskardBlackboard().move_action_server.goal_msg
+        move_goal: JsonAction.Goal = GiskardBlackboard().move_action_server.goal_msg
         get_middleware().loginfo(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
-        try:
-            self.parse_motion_graph(move_goal)
-        except AttributeError:
-            traceback.print_exc()
-            raise InvalidGoalException("Couldn't parse goal msg")
-        except Exception as e:
-            raise e
-        self.sanity_check()
-        # if god_map.is_collision_checking_enabled():
-        #     god_map.motion_statechart_manager.parse_collision_entries(move_goal.collisions)
+        motion_statechart = MotionStatechart.from_json(
+            move_goal.goal, world=god_map.world
+        )
+        GiskardBlackboard().motion_statechart = motion_statechart
         get_middleware().loginfo("Done parsing goal message.")
         return Status.SUCCESS
-
-    def parse_motion_graph(self, move_goal: Move.Goal) -> None:
-        for msg_node in move_goal.nodes:
-            get_middleware().loginfo(f"Adding node of type: '{msg_node.class_name}'")
-
-            node = create_node(msg_node, god_map.world)
-            god_map.motion_statechart_manager.add_node(node)
-
-            node.start_condition = msg_node.start_condition
-            node.pause_condition = msg_node.pause_condition
-            node.end_condition = msg_node.end_condition
-            node.reset_condition = msg_node.reset_condition
-
-        god_map.motion_statechart_manager.parse_conditions()
-
-    def sanity_check(self) -> None:
-        if (
-            not god_map.motion_statechart_manager.has_end_motion_monitor()
-            and not god_map.motion_statechart_manager.has_cancel_motion_monitor()
-        ):
-            get_middleware().logwarn(
-                f"No {EndMotion.__name__} or {CancelMotion.__name__} monitor specified. "
-                f"Motion will not stop unless cancelled externally."
-            )
-            return
-        if not god_map.motion_statechart_manager.has_end_motion_monitor():
-            get_middleware().logwarn(
-                f"No {EndMotion.__name__} monitor specified. Motion can't end successfully."
-            )
 
 
 def get_ros_msgs_constant_name_by_value(

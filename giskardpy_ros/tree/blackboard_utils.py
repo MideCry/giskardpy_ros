@@ -1,12 +1,14 @@
 from __future__ import annotations
 import traceback
 import typing
+from dataclasses import dataclass
 from functools import wraps
 from typing import TypeVar, Callable, TYPE_CHECKING, Optional
 
 from py_trees.common import Status, Access
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 
 if TYPE_CHECKING:
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
@@ -21,12 +23,10 @@ class GiskardBlackboard:
     tree_config: BehaviorTreeConfig
     runtime: float
     move_action_server: ActionServerHandler
-    world_action_server: ActionServerHandler
     ros_visualizer: ROSMsgVisualization
     fill_trajectory_velocity_values: bool
-    control_loop_max_hz: float
-    simulation_max_hz: float
     exception: Optional[Exception]
+    motion_statechart: MotionStatechart
     __shared_state = {}
 
     def __init__(self):
@@ -62,6 +62,7 @@ T = TypeVar("T", bound=Callable)
 def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
     def decorator(func):
         if skip_on_exception:
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 if has_blackboard_exception():
@@ -73,8 +74,10 @@ def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
                         traceback.print_exc()
                     raise_to_blackboard(e)
                     return Status.FAILURE
+
             return wrapper
         else:
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 try:
@@ -85,6 +88,7 @@ def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
                     if not has_blackboard_exception():
                         raise_to_blackboard(e)
                     return Status.FAILURE
+
             return wrapper
 
     if function is None:

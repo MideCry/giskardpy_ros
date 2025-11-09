@@ -1,6 +1,7 @@
 from __future__ import division
 
 from copy import deepcopy
+from dataclasses import dataclass
 from time import sleep
 from typing import Optional, Set
 
@@ -49,6 +50,7 @@ from giskardpy.model.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.model.utils import hacky_urdf_parser_fix
+from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
@@ -59,11 +61,6 @@ from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResol
 from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointVelocityLimit,
     UnlimitedJointGoal,
-)
-from giskardpy.motion_statechart.tasks.task import (
-    WEIGHT_BELOW_CA,
-    WEIGHT_ABOVE_CA,
-    WEIGHT_COLLISION_AVOIDANCE,
 )
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
@@ -86,7 +83,6 @@ from giskardpy_ros.utils.utils_for_tests import (
     compare_points,
 )
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.exceptions import SymbolResolutionError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.world_description.connections import (
     RevoluteConnection,
@@ -95,6 +91,7 @@ from semantic_digital_twin.world_description.connections import (
 from semantic_digital_twin.world_description.world_entity import Body
 
 
+@dataclass
 class PR2Tester(GiskardTester):
 
     better_pose_right = {
@@ -117,34 +114,32 @@ class PR2Tester(GiskardTester):
         "l_wrist_roll_joint": 0,
     }
 
-    def __init__(self, giskard: Optional[Giskard] = None):
-        self.r_tip = "r_gripper_tool_frame"
-        self.l_tip = "l_gripper_tool_frame"
-        self.l_gripper_group = "left_gripper"
-        self.r_gripper_group = "right_gripper"
-        # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
-        # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
-        self.odom_root = "odom_combined"
-        drive_joint_name = "brumbrum"
+    r_tip = "r_gripper_tool_frame"
+    l_tip = "l_gripper_tool_frame"
+    l_gripper_group = "left_gripper"
+    r_gripper_group = "right_gripper"
+    # r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
+    # l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
+    odom_root = "odom_combined"
+
+    def setup_giskard(self) -> Giskard:
         robot_desc = load_xacro(
             "package://iai_pr2_description/robots/pr2_with_ft2_cableguide.xacro"
         )
-        if giskard is None:
-            giskard = Giskard(
-                world_config=WorldWithPR2Config(urdf=robot_desc),
-                robot_interface_config=PR2StandaloneInterface(),
-                collision_checker_id=CollisionCheckerLib.bpb,
-                behavior_tree_config=StandAloneBTConfig(
-                    debug_mode=True, publish_tf=True, add_debug_marker_publisher=False
-                ),
-                qp_controller_config=QPControllerConfig(
-                    mpc_dt=0.05,
-                    control_dt=None,
-                    retries_with_relaxed_constraints=15,
-                    qp_formulation=QPFormulation(),
-                ),
-            )
-        super().__init__(giskard)
+        return Giskard(
+            world_config=WorldWithPR2Config(urdf=robot_desc),
+            robot_interface_config=PR2StandaloneInterface(),
+            collision_checker_id=CollisionCheckerLib.bpb,
+            behavior_tree_config=StandAloneBTConfig(
+                debug_mode=True, publish_tf=True, add_debug_marker_publisher=False
+            ),
+            qp_controller_config=QPControllerConfig(
+                mpc_dt=0.05,
+                control_dt=None,
+                retries_with_relaxed_constraints=15,
+                qp_formulation=QPFormulation(),
+            ),
+        )
 
     @property
     def robot(self) -> AbstractRobot:
@@ -1537,7 +1532,7 @@ class TestConstraints:
             name="goal",
             joint_name="torso_lift_joint",
         )
-        giskard.execute(expected_error_type=SymbolResolutionError)
+        giskard.execute(expected_error_type=ExecutionException)
 
     def test_SetSeedConfiguration(self, giskard: PR2Tester, better_pose):
         giskard.api.monitors.add_set_seed_configuration(seed_configuration=better_pose)
@@ -1634,7 +1629,7 @@ class TestConstraints:
             spring_threshold=0.5,
             # max_linear_velocity=1,
             object_link_name="kitchen_island",
-            weight=WEIGHT_COLLISION_AVOIDANCE,
+            weight=DefaultWeights.WEIGHT_COLLISION_AVOIDANCE,
             avoidance_hint=avoidance_hint,
         )
         kitchen_setup.api.motion_goals.add_joint_position(better_pose)
@@ -1643,7 +1638,7 @@ class TestConstraints:
             goal_pose=base_pose,
             tip_link=tip,
             root_link="map",
-            weight=WEIGHT_BELOW_CA,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
             reference_linear_velocity=0.5,
         )
         # kitchen_setup.api.motion_goals.allow_all_collisions()
@@ -1932,7 +1927,7 @@ class TestConstraints:
             root_link="map",
             reference_linear_velocity=eef_linear_velocity,
             reference_angular_velocity=eef_angular_velocity,
-            weight=WEIGHT_BELOW_CA,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
         )
         giskard.execute()
 
@@ -2104,7 +2099,7 @@ class TestConstraints:
             goal_pose=r_goal,
             tip_link=kitchen_setup.r_tip,
             root_link="base_footprint",
-            weight=WEIGHT_BELOW_CA,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
         )
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.execute()
@@ -2434,7 +2429,7 @@ class TestConstraints:
             root_link="map",
             tip_normal=tip_axis,
             goal_normal=env_axis,
-            weight=WEIGHT_ABOVE_CA,
+            weight=DefaultWeights.WEIGHT_ABOVE_CA,
         )
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.execute()
@@ -2503,7 +2498,7 @@ class TestConstraints:
             root_link="map",
             tip_normal=tip_axis,
             goal_normal=env_axis,
-            weight=WEIGHT_ABOVE_CA,
+            weight=DefaultWeights.WEIGHT_ABOVE_CA,
         )
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.execute()
@@ -2518,7 +2513,7 @@ class TestConstraints:
             root_link="map",
             tip_normal=tip_axis,
             goal_normal=env_axis,
-            weight=WEIGHT_ABOVE_CA,
+            weight=DefaultWeights.WEIGHT_ABOVE_CA,
         )
         kitchen_setup.api.motion_goals.allow_all_collisions()
         kitchen_setup.execute()
@@ -3098,8 +3093,8 @@ class TestCartGoals:
     #                                                                   [0, 0, 0, 1.]])
     #     r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3)
     #
-    #     kitchen_setup.api.motion_goals.add_cartesian_pose(l_goal, kitchen_setup.l_tip, weight=WEIGHT_BELOW_CA)
-    #     kitchen_setup.api.motion_goals.add_cartesian_pose(r_goal, kitchen_setup.r_tip, weight=WEIGHT_BELOW_CA)
+    #     kitchen_setup.api.motion_goals.add_cartesian_pose(l_goal, kitchen_setup.l_tip, weight=DefaultWeights.WEIGHT_BELOW_CA)
+    #     kitchen_setup.api.motion_goals.add_cartesian_pose(r_goal, kitchen_setup.r_tip, weight=DefaultWeights.WEIGHT_BELOW_CA)
     #     # kitchen_setup.api.motion_goals.allow_collision([], tray_name, [])
     #     # kitchen_setup.api.motion_goals.allow_all_collisions()
     #     kitchen_setup.api.motion_goals.add_limit_cartesian_velocity(tip_link='base_footprint',
@@ -3999,7 +3994,7 @@ class TestCollisionAvoidanceGoals:
     #     base_goal.pose.position.x = -1.
     #     base_goal.pose.orientation.w = 1.
     #     box_setup.api.motion_goals.allow_self_collision()
-    #     box_setup.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map', weight=WEIGHT_BELOW_CA,
+    #     box_setup.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map', weight=DefaultWeights.WEIGHT_BELOW_CA,
     #                             check=False)
     #     box_setup.execute()
     #     box_setup.check_cpi_geq(['base_link'], 0.09)
@@ -4291,7 +4286,7 @@ class TestCollisionAvoidanceGoals:
         )
         base_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         kitchen_setup.api.motion_goals.add_joint_position(
-            better_pose, weight=WEIGHT_ABOVE_CA
+            better_pose, weight=DefaultWeights.WEIGHT_ABOVE_CA
         )
         kitchen_setup.api.motion_goals.add_cartesian_pose(
             goal_pose=base_pose, tip_link="base_footprint", root_link="map"
@@ -4431,7 +4426,10 @@ class TestCollisionAvoidanceGoals:
         p.pose.position.x = 0.05
         p.pose.orientation.w = 1.0
         box_setup.api.motion_goals.add_cartesian_pose(
-            p, box_setup.r_tip, box_setup.default_root, weight=WEIGHT_BELOW_CA
+            p,
+            box_setup.r_tip,
+            box_setup.default_root,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
         )
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)

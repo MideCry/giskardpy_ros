@@ -1,7 +1,9 @@
 import asyncio
 import csv
 import os
+from abc import ABC, abstractmethod
 from copy import deepcopy
+from dataclasses import dataclass, field
 from threading import Thread
 from time import time, sleep
 from typing import Tuple, Optional, List, Dict, Union, Iterable
@@ -42,6 +44,7 @@ from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
@@ -150,21 +153,20 @@ def position_dict_to_joint_states(joint_state_dict: Dict[str, float]) -> JointSt
     return js
 
 
-class GiskardTester:
-    default_pose: Dict[str, float]
-    better_pose = Dict[str, float]
-    odom_root = "odom"
-    api: GiskardWrapperNode
-    giskard: Giskard
+@dataclass
+class GiskardTester(ABC):
+    api: GiskardWrapperNode = field(init=False)
+    giskard: Giskard = field(init=False)
+    world: World = field(init=False)
 
-    def __init__(self, giskard: Giskard):
+    total_time_spend_giskarding: int = 0
+    total_time_spend_moving: int = 0
+    default_env_name: Optional[str] = None
+    robot_names: List[PrefixedName] = field(default_factory=list)
+
+    def __post_init__(self):
         self.async_loop = asyncio.new_event_loop()
-        self.total_time_spend_giskarding = 0
-        self.total_time_spend_moving = 0
-        self.default_env_name: Optional[str] = None
-        self.env_joint_state_pubs: Dict[str, Publisher] = {}
-
-        self.giskard = giskard
+        self.giskard = self.setup_giskard()
         self.giskard.setup()
         if is_in_github_workflow():
             get_middleware().loginfo(
@@ -179,14 +181,16 @@ class GiskardTester:
             v.name
             for v in god_map.world.get_semantic_annotations_by_type(AbstractRobot)
         ]
-        self.default_root = str(god_map.world.root.name.name)
+        self.default_root = self.world.root
 
-        # rospy.sleep(1)
         self.original_number_of_links = len(god_map.world.bodies)
         self.heart = Thread(target=GiskardBlackboard().tree.live, name="bt ticker")
         self.heart.start()
         self.wait_heartbeats(1)
         self.api = GiskardWrapperNode(node_name="tests")
+
+    @abstractmethod
+    def setup_giskard(self) -> Giskard: ...
 
     def get_odometry_joint(self) -> OmniDrive:
         return god_map.world.get_semantic_annotations_by_type(AbstractRobot)[0].drive

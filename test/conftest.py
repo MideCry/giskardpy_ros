@@ -7,11 +7,21 @@ from geometry_msgs.msg import PoseStamped, Quaternion
 import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+from giskardpy.motion_statechart.graph_node import EndMotion
+from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
+    SetSeedConfiguration,
+    SetOdometry,
+)
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.tasks.joint_tasks import JointState
 from giskardpy.utils.math import quaternion_from_axis_angle
 from giskardpy_ros.ros2 import rospy, ros2_interface
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.spatial_types import TransformationMatrix
+from semantic_digital_twin.spatial_types.spatial_types import trinary_logic_and
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
@@ -38,22 +48,34 @@ def init_rospy():
 @pytest.fixture()
 def giskard_factory(init_rospy, robot: GiskardTester):
     def _create_giskard(seed_joint_state: Dict[str, float]) -> GiskardTester:
-        seed_joint_state_reached = robot.api.monitors.add_set_seed_configuration(
-            seed_joint_state, name="initial joint state"
+        parse_seed_joint_state = {
+            robot.world.get_connection_by_name(name): target
+            for name, target in seed_joint_state.items()
+        }
+        msc = MotionStatechart(robot.world)
+
+        initial_config = SetSeedConfiguration(
+            name=PrefixedName("initial configuration"),
+            seed_configuration=JointState(parse_seed_joint_state),
         )
+        msc.add_node(initial_config)
+
         if robot.has_odometry_joint():
-            zero = PoseStamped()
-            zero.header.frame_id = "map"
-            zero.pose.orientation.w = 1.0
-            base_pose_reached = robot.api.monitors.add_set_seed_odometry(
-                zero, name="initial pose"
+            base_goal = TransformationMatrix(reference_frame=msc.world.root)
+            base_pose_reached = SetOdometry(
+                name=PrefixedName("initial pose"), base_pose=base_goal
             )
-            done = f"{seed_joint_state_reached} and {base_pose_reached}"
+            msc.add_node(base_pose_reached)
+            done = trinary_logic_and(
+                initial_config.observation_variable,
+                base_pose_reached.observation_variable,
+            )
         else:
-            done = seed_joint_state_reached
-        robot.api.motion_goals.allow_all_collisions()
-        robot.api.monitors.add_end_motion(start_condition=done)
-        robot.execute()
+            done = initial_config.observation_variable
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = done
+        robot.api.execute(msc)
         return robot
 
     return _create_giskard
