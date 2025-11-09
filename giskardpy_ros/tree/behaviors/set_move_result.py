@@ -1,4 +1,4 @@
-from giskard_msgs.action import Move
+from giskard_msgs.action import Move, JsonAction
 from py_trees.common import Status
 from line_profiler import profile
 
@@ -29,20 +29,22 @@ class SetMoveResult(GiskardBehavior):
     def update(self):
         e = self.get_blackboard_exception()
         if e is None:
-            move_result = Move.Result()
+            move_result = JsonAction.Result()
             GiskardBlackboard().move_action_server.set_succeeded()
         else:
-            move_result = Move.Result(error=msg_converter.exception_to_error_msg(e))
+            move_result = JsonAction.Result(
+                error=msg_converter.exception_to_error_msg(e)
+            )
             GiskardBlackboard().move_action_server.set_aborted()
 
-        trajectory = god_map.trajectory
-        joints = god_map.world.get_connections_by_type(ActiveConnection)
-        move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
-            trajectory,
-            sample_period=GiskardBlackboard().motion_statechart.qp_controller.config.mpc_dt,
-            start_time=0,
-            joints=joints,
-        )
+        # trajectory = god_map.trajectory
+        # joints = god_map.world.get_connections_by_type(ActiveConnection)
+        # move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
+        #     trajectory,
+        #     sample_period=GiskardBlackboard().giskard.qp_controller_config.mpc_dt,
+        #     start_time=0,
+        #     joints=joints,
+        # )
         if isinstance(e, PreemptedException):
             get_middleware().logwarn(f"Goal preempted: '{move_result.error.msg}'.")
         else:
@@ -54,7 +56,7 @@ class SetMoveResult(GiskardBehavior):
                         f"{self.context} failed: {move_result.error.msg}."
                     )
 
-        move_result.execution_state = giskard_state_to_execution_state()
+        # move_result.execution_state = giskard_state_to_execution_state()
         GiskardBlackboard().move_action_server.result_msg = move_result
-        move_result.execution_state = giskard_state_to_execution_state()
+        # move_result.execution_state = giskard_state_to_execution_state()
         return Status.SUCCESS
