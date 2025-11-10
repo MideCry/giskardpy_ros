@@ -90,16 +90,6 @@ class Giskard:
         """
         Initialize the behavior tree and world. You usually don't need to call this.
         """
-        god_map.model_synchronizer = ModelSynchronizer(
-            world=self.world_config.world, node=rospy.node
-        )
-        god_map.model_synchronizer.pause()
-        god_map.state_synchronizer = StateSynchronizer(
-            world=self.world_config.world, node=rospy.node
-        )
-        god_map.world_fetcher = FetchWorldServer(
-            node=rospy.node, world=self.world_config.world
-        )
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
             god_map.world = self.world_config.world
@@ -127,6 +117,16 @@ class Giskard:
             self.collision_scene.sync()
 
         self.sanity_check()
+        god_map.model_synchronizer = ModelSynchronizer(
+            world=self.world_config.world, node=rospy.node
+        )
+        god_map.model_synchronizer.pause()
+        god_map.state_synchronizer = StateSynchronizer(
+            world=self.world_config.world, node=rospy.node
+        )
+        god_map.world_fetcher = FetchWorldServer(
+            node=rospy.node, world=self.world_config.world
+        )
         GiskardBlackboard().tree.setup(rospy.node)
 
     def sanity_check(self):
