@@ -8,6 +8,7 @@ from typing import Optional, Set
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
 import pytest
+from docutils.nodes import field
 from geometry_msgs.msg import (
     PoseStamped,
     Point,
@@ -59,6 +60,11 @@ from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.tasks.cartesian_tasks import (
+    CartesianPose,
+    CartesianPosition,
+    CartesianOrientation,
+)
 from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
 from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointVelocityLimit,
@@ -88,11 +94,15 @@ from giskardpy_ros.utils.utils_for_tests import (
 )
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.spatial_types import TransformationMatrix, Point3
 from semantic_digital_twin.world_description.connections import (
     RevoluteConnection,
     PrismaticConnection,
 )
-from semantic_digital_twin.world_description.world_entity import Body
+from semantic_digital_twin.world_description.world_entity import (
+    Body,
+    KinematicStructureEntity,
+)
 
 
 @dataclass
@@ -118,13 +128,24 @@ class PR2Tester(GiskardTester):
         "l_wrist_roll_joint": 0,
     }
 
-    r_tip = "r_gripper_tool_frame"
-    l_tip = "l_gripper_tool_frame"
-    l_gripper_group = "left_gripper"
-    r_gripper_group = "right_gripper"
-    # r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
-    # l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
-    odom_root = "odom_combined"
+    r_tip: KinematicStructureEntity = field(init=False)
+    l_tip: KinematicStructureEntity = field(init=False)
+    odom_combined: KinematicStructureEntity = field(init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.l_tip = self.api.world.get_kinematic_structure_entity_by_name(
+            "l_gripper_tool_frame"
+        )
+        self.r_tip = self.api.world.get_kinematic_structure_entity_by_name(
+            "r_gripper_tool_frame"
+        )
+        self.odom_combined = self.api.world.get_kinematic_structure_entity_by_name(
+            "odom_combined"
+        )
+        self.base_footprint = self.api.world.get_kinematic_structure_entity_by_name(
+            "base_footprint"
+        )
 
     def setup_giskard(self) -> Giskard:
         robot_desc = load_xacro(
@@ -1704,16 +1725,21 @@ class TestConstraints:
 
     def test_CartesianPosition(self, giskard: PR2Tester):
         tip = giskard.r_tip
-        p = PointStamped()
-        p.header.stamp = rospy.node.get_clock().now().to_msg()
-        p.header.frame_id = tip
-        p.point = Point(x=-0.4, y=-0.2, z=-0.3)
 
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.motion_goals.add_cartesian_position(
-            root_link=giskard.default_root, tip_link=tip, goal_point=p
+        tip_goal = Point3(-0.4, -0.2, -0.3, reference_frame=tip)
+
+        msc = MotionStatechart(giskard.api.world)
+        cart_goal = CartesianPosition(
+            name=PrefixedName("cart_goal"),
+            root_link=giskard.default_root,
+            tip_link=tip,
+            goal_point=tip_goal,
         )
-        giskard.execute()
+        msc.add_node(cart_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = cart_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_CartesianPosition1(self, giskard: PR2Tester):
         pocky = "box"
@@ -1836,18 +1862,25 @@ class TestConstraints:
         #     joint_goal, decimal=2)
 
     def test_CartesianOrientation(self, giskard: PR2Tester):
-        tip = "base_footprint"
-        root = giskard.odom_root
-        qs = QuaternionStamped()
-        qs.header.frame_id = tip
-        q = quaternion_from_axis_angle([0, 0, 1], 4.0)
-        qs.quaternion = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+        tip = giskard.base_footprint
+        root = giskard.odom_combined
 
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.motion_goals.add_cartesian_orientation(
-            root_link=root, tip_link=tip, goal_orientation=qs
+        tip_goal = cas.RotationMatrix.from_axis_angle(
+            cas.Vector3.Z(), 4.0, reference_frame=tip
         )
-        giskard.execute()
+
+        msc = MotionStatechart(giskard.api.world)
+        cart_goal = CartesianOrientation(
+            name=PrefixedName("cart_goal"),
+            root_link=root,
+            tip_link=tip,
+            goal_orientation=tip_goal,
+        )
+        msc.add_node(cart_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = cart_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_CartesianPoseStraight1(self, giskard: PR2Tester):
         giskard.close_l_gripper()
@@ -2955,15 +2988,28 @@ class TestCartGoals:
         giskard.execute()
 
     def test_cart_goal_1eef(self, giskard: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = giskard.r_tip
-        p.pose.position.x = -0.2
-        p.pose.orientation.w = 1.0
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link=giskard.r_tip, root_link="base_footprint"
+        tip = giskard.api.world.get_kinematic_structure_entity_by_name(
+            "r_gripper_tool_frame"
         )
-        giskard.execute()
+        root = giskard.api.world.get_kinematic_structure_entity_by_name(
+            "base_footprint"
+        )
+        tip_goal = TransformationMatrix.from_xyz_quaternion(
+            pos_x=-0.2, reference_frame=tip
+        )
+
+        msc = MotionStatechart(giskard.api.world)
+        cart_goal = CartesianPose(
+            name=PrefixedName("cart_goal"),
+            root_link=root,
+            tip_link=tip,
+            goal_pose=tip_goal,
+        )
+        msc.add_node(cart_goal)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = cart_goal.observation_variable
+        giskard.api.execute(msc)
 
     def test_cart_goal_1eef_and_base(self, giskard: PR2Tester):
         eef_goal = PoseStamped()
