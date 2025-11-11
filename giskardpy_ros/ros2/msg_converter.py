@@ -43,8 +43,8 @@ from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.motion_statechart.goals.goal import Goal
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.world_description.connections import ActiveConnection
-from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (
     Shape,
     Box,
@@ -267,10 +267,14 @@ def trajectory_to_ros_trajectory(
 
 def world_to_tf_message(world: World, include_prefix: bool) -> tf2_msgs.TFMessage:
     tf_msg = tf2_msgs.TFMessage()
-    tf = world._fk_computer.compute_tf()
+    tf = world._forward_kinematic_manager.compute_tf()
     current_time = rospy.node.get_clock().now().to_msg()
-    tf_msg.transforms = create_tf_message_batch(len(world._fk_computer.tf))
-    for i, (parent_link_name, child_link_name) in enumerate(world._fk_computer.tf):
+    tf_msg.transforms = create_tf_message_batch(
+        len(world._forward_kinematic_manager.tf)
+    )
+    for i, (parent_link_name, child_link_name) in enumerate(
+        world._forward_kinematic_manager.tf
+    ):
         pose = tf[i]
         if not include_prefix:
             parent_link_name = parent_link_name.name
@@ -721,12 +725,12 @@ def collision_entry_msg_to_giskard(
 
     try:
         view1 = world.get_semantic_annotation_by_name(msg.group1)
-    except SemanticAnnotationNotFoundError as e:
+    except WorldEntityNotFoundError as e:
         view1 = None
 
     try:
         view2 = world.get_semantic_annotation_by_name(msg.group2)
-    except SemanticAnnotationNotFoundError as e:
+    except WorldEntityNotFoundError as e:
         view2 = None
 
     return CollisionViewRequest(
