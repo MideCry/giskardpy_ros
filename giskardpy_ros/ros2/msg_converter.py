@@ -41,6 +41,7 @@ from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.world_description.connections import ActiveConnection
 
 # from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
@@ -724,12 +725,12 @@ def collision_entry_msg_to_giskard(
 
     try:
         view1 = world.get_semantic_annotation_by_name(msg.group1)
-    except SemanticAnnotationNotFoundError as e:
+    except WorldEntityNotFoundError as e:
         view1 = None
 
     try:
         view2 = world.get_semantic_annotation_by_name(msg.group2)
-    except SemanticAnnotationNotFoundError as e:
+    except WorldEntityNotFoundError as e:
         view2 = None
 
     return CollisionViewRequest(
