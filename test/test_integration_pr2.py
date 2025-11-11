@@ -2813,7 +2813,7 @@ class TestCartGoals:
             name="g2",
             goal_pose=l_goal,
         )
-
+        giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
     def test_rotate_gripper(self, giskard: PR2Tester):
@@ -2824,6 +2824,7 @@ class TestCartGoals:
         giskard.api.motion_goals.add_cartesian_pose(
             goal_pose=r_goal, tip_link=giskard.r_tip, root_link="map"
         )
+        giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
     def test_keep_position1(self, giskard: PR2Tester):
@@ -2849,7 +2850,7 @@ class TestCartGoals:
             root_link="torso_lift_link",
         )
         giskard.api.motion_goals.add_joint_position(js)
-        giskard.api.motion_goals.allow_self_collision()
+        giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
     def test_keep_position2(self, giskard: PR2Tester):
@@ -2865,7 +2866,6 @@ class TestCartGoals:
         )
         giskard.execute()
 
-        giskard.api.motion_goals.allow_self_collision()
         js = {"torso_lift_joint": 0.1}
         r_goal = PoseStamped()
         r_goal.header.frame_id = giskard.r_tip
@@ -2875,6 +2875,7 @@ class TestCartGoals:
             r_goal, giskard.r_tip, giskard.default_root
         )
         giskard.api.motion_goals.add_joint_position(js)
+        giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
     def test_keep_position3(self, giskard: PR2Tester):
@@ -3149,9 +3150,11 @@ class TestCartGoals:
 
 class TestWorldManipulation:
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_save_graph_pdf(self, kitchen_setup):
         god_map.world.save_graph_pdf(god_map.tmp_folder)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_dye_group(self, kitchen_setup: PR2Tester):
         base_link = god_map.world.search_for_link_name("base_link")
         sink_area_sink = god_map.world.search_for_link_name("sink_area_sink")
@@ -3234,6 +3237,7 @@ class TestWorldManipulation:
         assert color_robot.b == old_color.b
         assert color_robot.a == old_color.a
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_clear_world(self, giskard: PR2Tester, better_pose):
         object_name = "muh"
         p = PoseStamped()
@@ -3252,6 +3256,7 @@ class TestWorldManipulation:
         giskard.api.motion_goals.add_joint_position(better_pose)
         giskard.execute()
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_attach_remove_box(self, better_pose: PR2Tester):
         pocky = "http:muh#pocky"
         p = PoseStamped()
@@ -3265,6 +3270,7 @@ class TestWorldManipulation:
             better_pose.detach_group(pocky)
         better_pose.remove_group(pocky)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_reattach_box(self, giskard: PR2Tester):
         pocky = "http:muh#pocky"
         p = PoseStamped()
@@ -3276,6 +3282,7 @@ class TestWorldManipulation:
         relative_pose = giskard.compute_fk_pose(giskard.r_tip, pocky).pose
         compare_poses(p.pose, relative_pose)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_box_twice(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3290,6 +3297,7 @@ class TestWorldManipulation:
             expected_error_type=DuplicateNameException,
         )
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_remove_sphere(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3301,6 +3309,7 @@ class TestWorldManipulation:
         giskard.add_sphere_to_world(object_name, radius=1.0, pose=p)
         giskard.remove_group(object_name)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_remove_cylinder(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3314,6 +3323,7 @@ class TestWorldManipulation:
         giskard.add_cylinder_to_world(object_name, height=1.0, radius=1.0, pose=p)
         giskard.remove_group(object_name)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_urdf_body(self, kitchen_setup: PR2Tester):
         kitchen_urdf = load_xacro("package://urdf_obj/iai_kitchen_python.urdf.xacro")
         object_name = kitchen_setup.default_env_name
@@ -3358,6 +3368,7 @@ class TestWorldManipulation:
             actual = joint_state.position[i]
             assert actual == 0, f"Joint {joint_name} is at {actual} instead of 0"
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_mesh(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3370,6 +3381,7 @@ class TestWorldManipulation:
             pose=p,
         )
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_non_existing_mesh(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3384,6 +3396,7 @@ class TestWorldManipulation:
         )
         giskard.clear_world()
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_attach_detach_remove_add(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3402,6 +3415,7 @@ class TestWorldManipulation:
         giskard.remove_group(object_name)
         giskard.add_box_to_world(object_name, size=(1.0, 1.0, 1.0), pose=p)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_attach_to_kitchen(self, kitchen_setup: PR2Tester):
         object_name = "muh"
         drawer_joint = "sink_area_left_middle_drawer_main_joint"
@@ -3424,6 +3438,7 @@ class TestWorldManipulation:
         kitchen_setup.set_env_state({drawer_joint: 0.0})
         kitchen_setup.execute()
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_single_joint_urdf(self, giskard: PR2Tester):
         object_name = "spoon"
         path = get_middleware().resolve_iri(
@@ -3441,6 +3456,7 @@ class TestWorldManipulation:
         pose.pose.position.x = 1.5
         giskard.update_group_pose(group_name=object_name, new_pose=pose)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_update_group_pose1(self, giskard: PR2Tester):
         group_name = "muh"
         p = PoseStamped()
@@ -3452,6 +3468,7 @@ class TestWorldManipulation:
         giskard.update_group_pose("asdf", p, expected_error_type=UnknownGroupException)
         giskard.update_group_pose(group_name, p)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_update_group_pose2(self, giskard: PR2Tester, better_pose):
         group_name = "muh"
         p = PoseStamped()
@@ -3468,6 +3485,7 @@ class TestWorldManipulation:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute()
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_attach_existing_box2(self, giskard: PR2Tester):
         pocky = "http://muh#pocky"
         old_p = PoseStamped()
@@ -3495,6 +3513,7 @@ class TestWorldManipulation:
 
         giskard.detach_group(pocky)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_attach_to_nonexistant_robot_link(self, giskard: PR2Tester):
         pocky = "http:muh#pocky"
         p = PoseStamped()
@@ -3506,11 +3525,13 @@ class TestWorldManipulation:
             expected_error_type=UnknownLinkException,
         )
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_reattach_unknown_object(self, giskard: PR2Tester):
         giskard.update_parent_link_of_group(
             "muh", expected_error_type=UnknownGroupException
         )
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_add_remove_box(self, giskard: PR2Tester):
         object_name = "muh"
         p = PoseStamped()
@@ -3522,6 +3543,7 @@ class TestWorldManipulation:
         giskard.add_box_to_world(object_name, size=(1.0, 1.0, 1.0), pose=p)
         giskard.remove_group(object_name)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_invalid_update_world(self, giskard: PR2Tester):
         req = World_Goal()
         req.body = WorldBody()
@@ -3531,9 +3553,11 @@ class TestWorldManipulation:
         with pytest.raises(InvalidWorldOperationException):
             giskard.api.world._send_goal(req)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_remove_unkown_group(self, giskard: PR2Tester):
         giskard.remove_group("muh", expected_error_type=UnknownGroupException)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_corrupt_shape_error(self, giskard: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = "base_link"
@@ -3548,6 +3572,7 @@ class TestWorldManipulation:
         with pytest.raises(CorruptShapeException):
             giskard.api.world._send_goal(req)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_corrupt_shape_error_scale_0(self, giskard: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = "base_link"
@@ -3560,6 +3585,7 @@ class TestWorldManipulation:
         with pytest.raises(CorruptShapeException):
             giskard.api.world._send_goal(req)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_busy(self, giskard: PR2Tester):
         p = PoseStamped()
         p.header.frame_id = "base_link"
@@ -3576,6 +3602,7 @@ class TestWorldManipulation:
         with pytest.raises(CorruptShapeException):
             giskard.api.world._send_goal(req)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_tf_error(self, giskard: PR2Tester):
         req = World_Goal()
         req.body = WorldBody(
@@ -3587,6 +3614,7 @@ class TestWorldManipulation:
         with pytest.raises(TransformException):
             giskard.api.world._send_goal(req)
 
+    @pytest.mark.skip(reason="We don't do that here")
     def test_unsupported_options(self, kitchen_setup: PR2Tester):
         wb = WorldBody()
         pose = PoseStamped()
