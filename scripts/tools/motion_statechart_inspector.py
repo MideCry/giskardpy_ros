@@ -1,6 +1,11 @@
 import json
 import sys
-from PyQt5.QtGui import QPainter, QTransform, QKeySequence
+from typing import List, Dict, Optional, Any
+
+from PyQt5.QtCore import QMutex, QMutexLocker
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QPainter, QKeySequence
+from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -12,19 +17,18 @@ from PyQt5.QtWidgets import (
     QLabel,
     QGraphicsView,
     QGraphicsScene,
-    QGraphicsItem,
     QShortcut,
 )
-from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
-from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
-from giskard_msgs.action import JsonAction
-from pygraphviz import ItemAttribute
+from giskard_msgs.action._json_action import JsonAction_FeedbackMessage
 from giskard_msgs.msg import ExecutionState
-from PyQt5.QtCore import QMutex, QMutexLocker
 
-from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.motion_statechart import (
+    MotionStatechart,
+    LifeCycleState,
+    ObservationState,
+)
+from giskardpy.motion_statechart.plotters.graphviz import MotionStatechartGraphviz
 from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.tree.behaviors.plot_motion_graph import ExecutionStateToDotParser
 from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
     KinematicStructureEntityKwargsTracker,
 )
@@ -78,19 +82,67 @@ class SvgGrahpicsView(QGraphicsView):
 class DotGraphViewer(QWidget):
     # Add this signal to communicate between threads
     new_message_signal: pyqtSignal = pyqtSignal(object)
-    last_goal_id: int
-    motion_statechart: MotionStatechart
+    last_goal_id: Optional[int]
+    graphs_by_goal: Dict[int, List[Any]]
+    motion_statechart: Optional[MotionStatechart]
 
     def __init__(self):
         super().__init__()
-        self.last_goal_id = -1
+        self.last_goal_id = None
+        self.motion_statechart = None
+
         # Connect the signal to the slot
         self.new_message_signal.connect(self.handle_new_message)
 
         # Initialize the ROS node
-        rospy.init_node("motion_statechart_viewer")
+        rospy.init_node("motion_statechart_inspector")
 
-        # Set up the GUI components
+        self.setup_qt()
+
+        # Initialize graph history and goal tracking
+        self.graphs_by_goal = {}
+        self.goals = []
+        self.current_goal_index = -1
+        self.current_message_index = -1
+
+    def setup_qt(self):
+        self.setup_gui_components()
+        self.add_keyboard_shortcuts()
+        self.setup_layout()
+        self.setup_topic_refresh_timer()
+
+    def setup_topic_refresh_timer(self):
+        self.topic_refresh_timer = QTimer(self)
+        self.topic_refresh_timer.timeout.connect(self.refresh_topics)
+        self.topic_refresh_timer.start(1000)  # Refresh every 5 seconds
+        self.refresh_topics()
+
+    def setup_layout(self):
+        # Layout for topic selection
+        top_layout = QHBoxLayout()
+        top_layout.addWidget(self.topic_selector)
+
+        # Layout for navigation buttons and position label
+        nav_layout = QHBoxLayout()
+        nav_layout.addWidget(self.first_button)
+        nav_layout.addWidget(self.prev_goal_button)
+        nav_layout.addWidget(self.prev_button)
+        nav_layout.addWidget(self.position_label)
+        nav_layout.addWidget(self.next_button)
+        nav_layout.addWidget(self.next_goal_button)
+        nav_layout.addWidget(self.latest_button)
+
+        # Main layout
+        layout = QVBoxLayout()
+        layout.addLayout(top_layout)
+        layout.addWidget(self.svg_widget)
+        layout.addLayout(nav_layout)
+        self.setLayout(layout)
+
+        self.setWindowTitle("Motion Statechart Inspector")
+        self.resize(800, 600)
+
+    def setup_gui_components(self):
         self.svg_widget = SvgGrahpicsView(self)
         self.svg_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.svg_widget.setMinimumSize(600, 400)
@@ -98,26 +150,35 @@ class DotGraphViewer(QWidget):
         self.topic_selector = QComboBox(self)
         self.topic_selector.activated.connect(self.on_topic_selector_clicked)
 
-        # Navigation buttons
-        self.first_button = QPushButton("First")
-        self.prev_goal_button = QPushButton("Prev Goal")
-        self.prev_button = QPushButton("<")
-        self.next_button = QPushButton(">")
-        self.next_goal_button = QPushButton("Next Goal")
-        self.latest_button = QPushButton("Last")
-
-        # Position label
         self.position_label = QLabel(self)
+        self.setup_navigation_buttons()
 
-        # Connect navigation buttons to their functions
+    def setup_navigation_buttons(self):
+        self.first_button = QPushButton("First")
         self.first_button.clicked.connect(self.show_first_image)
-        self.prev_goal_button.clicked.connect(self.show_prev_goal)
-        self.prev_button.clicked.connect(self.show_previous_image)
-        self.next_button.clicked.connect(self.show_next_image)
-        self.next_goal_button.clicked.connect(self.show_next_goal)
-        self.latest_button.clicked.connect(self.show_latest_image)
+        self.first_button.setToolTip("Home/(Shift + LeftArrow)")
 
-        # Add keyboard shortcuts
+        self.prev_goal_button = QPushButton("Prev Goal")
+        self.prev_goal_button.clicked.connect(self.show_prev_goal)
+        self.prev_goal_button.setToolTip("(Ctrl + PageDown)/(Ctrl + LeftArrow)")
+
+        self.prev_button = QPushButton("<")
+        self.prev_button.clicked.connect(self.show_previous_image)
+        self.prev_button.setToolTip("PageDown/LeftArrow")
+
+        self.next_button = QPushButton(">")
+        self.next_button.clicked.connect(self.show_next_image)
+        self.next_button.setToolTip("PageUp/RightArrow")
+
+        self.next_goal_button = QPushButton("Next Goal")
+        self.next_goal_button.clicked.connect(self.show_next_goal)
+        self.next_goal_button.setToolTip("(Ctrl + PageUp)/(Ctrl + RightArrow)")
+
+        self.latest_button = QPushButton("Last")
+        self.latest_button.clicked.connect(self.show_latest_image)
+        self.latest_button.setToolTip("End/(Shift + RightArrow)")
+
+    def add_keyboard_shortcuts(self):
         self.left_shortcut = QShortcut(QKeySequence(Qt.Key_Left), self)
         self.left_shortcut.activated.connect(self.show_previous_image)
         self.right_shortcut = QShortcut(QKeySequence(Qt.Key_Right), self)
@@ -155,52 +216,6 @@ class DotGraphViewer(QWidget):
         self.end_shortcut = QShortcut(QKeySequence(Qt.Key_End), self)
         self.end_shortcut.activated.connect(self.show_latest_image)
 
-        # Add Tooltips for Shortcuts
-        self.next_button.setToolTip("PageUp/RightArrow")
-        self.prev_button.setToolTip("PageDown/LeftArrow")
-        self.next_goal_button.setToolTip("(Ctrl + PageUp)/(Ctrl + RightArrow)")
-        self.prev_goal_button.setToolTip("(Ctrl + PageDown)/(Ctrl + LeftArrow)")
-        self.latest_button.setToolTip("End/(Shift + RightArrow)")
-        self.first_button.setToolTip("Home/(Shift + LeftArrow)")
-
-        # Layout for topic selection
-        top_layout = QHBoxLayout()
-        top_layout.addWidget(self.topic_selector)
-
-        # Layout for navigation buttons and position label
-        nav_layout = QHBoxLayout()
-        nav_layout.addWidget(self.first_button)
-        nav_layout.addWidget(self.prev_goal_button)
-        nav_layout.addWidget(self.prev_button)
-        nav_layout.addWidget(self.position_label)
-        nav_layout.addWidget(self.next_button)
-        nav_layout.addWidget(self.next_goal_button)
-        nav_layout.addWidget(self.latest_button)
-
-        # Main layout
-        layout = QVBoxLayout()
-        layout.addLayout(top_layout)
-        layout.addWidget(self.svg_widget)
-        layout.addLayout(nav_layout)
-        self.setLayout(layout)
-
-        self.setWindowTitle("Motion Statechart Viewer")
-        self.resize(800, 600)
-
-        # Initialize graph history and goal tracking
-        self.graphs_by_goal = {}
-        self.goals = []
-        self.current_goal_index = -1
-        self.current_message_index = -1
-
-        # Timer for periodically refreshing topics
-        self.topic_refresh_timer = QTimer(self)
-        self.topic_refresh_timer.timeout.connect(self.refresh_topics)
-        self.topic_refresh_timer.start(1000)  # Refresh every 5 seconds
-
-        # Populate the dropdown with available topics if none is selected
-        self.refresh_topics()
-
     def refresh_topics(self) -> None:
         if self.topic_selector.currentText() == "":
             # Find all topics of type ExecutionState
@@ -225,62 +240,81 @@ class DotGraphViewer(QWidget):
         topic_name = self.topic_selector.currentText()
         if topic_name:
             rospy.node.create_subscription(
-                msg_type=ExecutionState,
+                msg_type=JsonAction_FeedbackMessage,
                 topic=topic_name,
                 callback=self.on_new_message_received,
                 qos_profile=10,
             )
 
     def on_new_message_received(self, msg: ExecutionState) -> None:
-        # Emit signal to handle in main thread
         self.new_message_signal.emit(msg)
 
-    def handle_new_message(self, msg: JsonAction.Feedback) -> None:
+    def handle_new_message(self, msg: JsonAction_FeedbackMessage) -> None:
         # This runs in the main thread
-        json_data = json.loads(msg.feedback)
-        goal_id = json_data["goal_id"]
-        motion_statechart_data = json_data.get("motion_statechart")
-        if motion_statechart_data is not None:
-            tracker = KinematicStructureEntityKwargsTracker()
-            kwargs = tracker.create_kwargs()
-            self.motion_statechart = MotionStatechart.from_json(
-                motion_statechart_data, **kwargs
-            )
+        json_data = json.loads(msg.feedback.feedback)
+        msg_goal_id = json_data["goal_id"]
+
+        self.parse_new_motion_statechart(json_data)
+        self.parse_state(json_data)
+
+        at_last_msg = True
         if len(self.goals) > 0:
-            navigator_at_end = (
+            at_last_msg = (
                 self.current_goal_index == self.goals[-1]
                 and self.current_message_index
                 == len(self.graphs_by_goal[self.goals[-1]]) - 1
             )
-        else:
-            navigator_at_end = True
+
         # Extract goal_id and group graphs by goal_id
-        if self.last_goal_id == goal_id:
+        if self.last_goal_id == msg_goal_id:
             goal_id = self.goals[-1]
         else:
-            self.last_goal_id = goal_id
+            self.last_goal_id = msg_goal_id
             goal_id = len(self.goals)
             self.graphs_by_goal[goal_id] = []
             self.goals.append(goal_id)
 
-        parser = ExecutionStateToDotParser(msg, compact=compact)
-        graph = parser.to_dot_graph()
-
-        self.graphs_by_goal[goal_id].append(graph)
+        self.plot_motion_statechart(goal_id)
 
         # Update the display to show the latest graph
-        if navigator_at_end:
+        if at_last_msg:
             self.current_goal_index = len(self.goals) - 1
             self.current_message_index = len(self.graphs_by_goal[goal_id]) - 1
 
         self.update_position_label()
 
-        if navigator_at_end:
+        if at_last_msg:
             self.display_graph(
                 self.current_goal_index,
                 self.current_message_index,
                 update_position_label=False,
             )
+
+    def plot_motion_statechart(self, goal_id: int):
+        graph = MotionStatechartGraphviz(self.motion_statechart).to_dot_graph()
+        self.graphs_by_goal[goal_id].append(graph)
+
+    def parse_new_motion_statechart(self, json_data: Dict[str, Any]):
+        motion_statechart_data = json_data.get("motion_statechart")
+        if motion_statechart_data is not None:
+            tracker = KinematicStructureEntityKwargsTracker()
+            kwargs = tracker.create_kwargs()
+            self.motion_statechart = MotionStatechart.from_json(
+                motion_statechart_data, world=World(), **kwargs
+            )
+            self.motion_statechart._add_transitions()
+
+    def parse_state(self, json_data: Dict[str, Any]):
+        life_cycle_data = json_data.get("life_cycle_state")
+        life_cycle_state = LifeCycleState.from_json(
+            life_cycle_data, motion_statechart=self.motion_statechart
+        )
+        observation_data = json_data.get("observation_state")
+        observation_state = ObservationState.from_json(
+            observation_data, motion_statechart=self.motion_statechart
+        )
+        self.motion_statechart.life_cycle_state.data = life_cycle_state.data
+        self.motion_statechart.observation_state.data = observation_state.data
 
     def display_graph(
         self, goal_index: int, message_index: int, update_position_label: bool = True

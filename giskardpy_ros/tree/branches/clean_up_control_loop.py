@@ -10,7 +10,9 @@ from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
 from giskardpy_ros.tree.behaviors.plot_debug_expressions import PlotDebugExpressions
 from giskardpy_ros.tree.behaviors.plot_goal_gantt_chart import PlotGanttChart
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
-from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback
+from giskardpy_ros.tree.behaviors.publish_feedback import (
+    ForcePublishFeedback,
+)
 from giskardpy_ros.tree.behaviors.reset_joint_state import ResetWorldState
 from giskardpy_ros.tree.behaviors.visualization import VisualizeTrajectory
 
@@ -20,7 +22,7 @@ class CleanupControlLoop(Sequence):
 
     def __init__(self, name: str = "clean up control loop"):
         super().__init__(name, memory=True)
-        # self.add_child(PublishFeedback())
+        self.add_child(ForcePublishFeedback())
         self.add_child(SetZeroVelocity("set zero vel 1"))
         self.add_child(LogTrajPlugin("log post processing"))
         self.reset_world_state = ResetWorldState()
