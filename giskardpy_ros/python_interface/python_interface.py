@@ -2369,7 +2369,7 @@ class GiskardWrapper:
 
     @property
     def robot_name(self) -> PrefixedName:
-        return self.world.get_views_by_type(AbstractRobot)[0].name
+        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0].name
 
     def clear_motion_goals_and_monitors(self):
         """

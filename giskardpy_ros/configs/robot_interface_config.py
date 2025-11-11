@@ -42,7 +42,7 @@ class RobotInterfaceConfig(ABC):
 
     @property
     def robot(self) -> AbstractRobot:
-        return self.world.get_views_by_type(AbstractRobot)[0]
+        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0]
 
     @property
     def tree(self) -> GiskardBT:
