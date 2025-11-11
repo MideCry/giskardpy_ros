@@ -148,19 +148,23 @@ class PR2Tester(GiskardTester):
 
     @property
     def robot(self) -> AbstractRobot:
-        return god_map.world.get_view_by_name(self.api.robot_name)
+        return god_map.world.get_semantic_annotation_by_name(self.api.robot_name)
 
     def get_l_gripper_links(self) -> Set[Body]:
         return set(
             b
-            for b in god_map.world.get_view_by_name(self.l_gripper_group).bodies
+            for b in god_map.world.get_semantic_annotation_by_name(
+                self.l_gripper_group
+            ).bodies
             if b.has_collision()
         )
 
     def get_r_gripper_links(self) -> Set[Body]:
         return set(
             b
-            for b in god_map.world.get_view_by_name(self.r_gripper_group).bodies
+            for b in god_map.world.get_semantic_annotation_by_name(
+                self.r_gripper_group
+            ).bodies
             if b.has_collision()
         )
 
