@@ -8,7 +8,10 @@ import pydot
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
 from py_trees.common import Status
 
-from giskardpy.motion_statechart.data_types import LifeCycleValues, ObservationState
+from giskardpy.motion_statechart.data_types import (
+    LifeCycleValues,
+    ObservationStateValues,
+)
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.graph_node import EndMotion, CancelMotion
@@ -71,26 +74,26 @@ ConditionFont = "monospace"
 
 ResetSymbol = "⟲"
 
-ObservationStateToColor: Dict[ObservationState, str] = {
-    ObservationState.unknown: ResetCondColor,
-    ObservationState.true: MonitorTrueGreen,
-    ObservationState.false: MonitorFalseRed,
+ObservationStateToColor: Dict[ObservationStateValues, str] = {
+    ObservationStateValues.unknown: ResetCondColor,
+    ObservationStateValues.true: MonitorTrueGreen,
+    ObservationStateValues.false: MonitorFalseRed,
 }
 
-ObservationStateToSymbol: Dict[ObservationState, str] = {
-    ObservationState.unknown: "?",
-    ObservationState.true: "True",
-    ObservationState.false: "False",
+ObservationStateToSymbol: Dict[ObservationStateValues, str] = {
+    ObservationStateValues.unknown: "?",
+    ObservationStateValues.true: "True",
+    ObservationStateValues.false: "False",
 }
 
-ObservationStateToEdgeStyle: Dict[ObservationState, Dict[str, str]] = {
-    ObservationState.unknown: {
+ObservationStateToEdgeStyle: Dict[ObservationStateValues, Dict[str, str]] = {
+    ObservationStateValues.unknown: {
         "penwidth": (LineWidth * 1.5) / 2,
         # 'label': '<<FONT FACE="monospace"><B>?</B></FONT>>',
         "fontsize": Fontsize * 1.333,
     },
-    ObservationState.true: {"penwidth": LineWidth * 1.5},
-    ObservationState.false: {"style": "dashed", "penwidth": LineWidth * 1.5},
+    ObservationStateValues.true: {"penwidth": LineWidth * 1.5},
+    ObservationStateValues.false: {"style": "dashed", "penwidth": LineWidth * 1.5},
 }
 
 LiftCycleStateToColor: Dict[LifeCycleValues, str] = {
@@ -136,7 +139,7 @@ class ExecutionStateToDotParser:
     def format_motion_graph_node_msg(
         self,
         msg: giskard_msgs.MotionStatechartNode,
-        obs_state: ObservationState,
+        obs_state: ObservationStateValues,
         life_cycle_state: LifeCycleValues,
     ) -> str:
         start_condition = format_condition(msg.start_condition)
@@ -164,7 +167,7 @@ class ExecutionStateToDotParser:
         pause_condition: Optional[str],
         end_condition: Optional[str],
         reset_condition: Optional[str],
-        obs_state: ObservationState,
+        obs_state: ObservationStateValues,
         life_cycle_state: LifeCycleValues,
     ) -> str:
         line_color = "black"
@@ -272,7 +275,7 @@ class ExecutionStateToDotParser:
         node_msg: giskard_msgs.MotionStatechartNode,
         style: str,
         shape: str,
-        obs_state: ObservationState,
+        obs_state: ObservationStateValues,
         life_cycle_state: LifeCycleValues,
     ) -> pydot.Node:
         num_extra_boarders = 0
@@ -318,14 +321,14 @@ class ExecutionStateToDotParser:
         return name[8:]
 
     def to_dot_graph(self) -> pydot.Graph:
-        obs_states: Dict[str, ObservationState] = {}
+        obs_states: Dict[str, ObservationStateValues] = {}
         self.add_goal_cluster(self.graph, obs_states)
         return self.graph
 
     def add_goal_cluster(
         self,
         parent_cluster: Union[pydot.Graph, pydot.Cluster],
-        obs_states: Dict[str, ObservationState],
+        obs_states: Dict[str, ObservationStateValues],
     ):
         my_tasks: List[MotionStatechartNode] = []
         for i, task in enumerate(self.execution_state.tasks):
@@ -397,7 +400,7 @@ class ExecutionStateToDotParser:
         tasks: List[MotionStatechartNode],
         monitors: List[MotionStatechartNode],
         goals: List[MotionStatechartNode],
-        obs_states: Dict[str, ObservationState],
+        obs_states: Dict[str, ObservationStateValues],
     ) -> pydot.Graph:
         all_nodes = tasks + monitors + goals
         all_node_name = [
