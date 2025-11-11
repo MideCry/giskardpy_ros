@@ -15,9 +15,6 @@ from giskardpy.motion_statechart.graph_node import EndMotion, CancelMotion
 from giskardpy.utils.decorators import record_time
 from giskardpy.utils.utils import create_path
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy_ros.tree.behaviors.publish_feedback import (
-    giskard_state_to_execution_state,
-)
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
@@ -511,15 +508,15 @@ class PlotMotionGraph(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        file_name = (
-            god_map.tmp_folder
-            + f"task_graphs/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf"
-        )
-        execution_state = giskard_state_to_execution_state()
-        parser = ExecutionStateToDotParser(execution_state)
-        graph = parser.to_dot_graph()
-        create_path(file_name)
-        graph.write_pdf(file_name)
+        # file_name = (
+        #     god_map.tmp_folder
+        #     + f"task_graphs/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf"
+        # )
+        # execution_state = giskard_state_to_execution_state()
+        # parser = ExecutionStateToDotParser(execution_state)
+        # graph = parser.to_dot_graph()
+        # create_path(file_name)
+        # graph.write_pdf(file_name)
         # graph.write_dot(file_name + '.dot')
-        get_middleware().loginfo(f"Saved task graph at {file_name}.")
+        # get_middleware().loginfo(f"Saved task graph at {file_name}.")
         return Status.SUCCESS

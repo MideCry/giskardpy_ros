@@ -20,7 +20,7 @@ class CleanupControlLoop(Sequence):
 
     def __init__(self, name: str = "clean up control loop"):
         super().__init__(name, memory=True)
-        self.add_child(PublishFeedback())
+        # self.add_child(PublishFeedback())
         self.add_child(SetZeroVelocity("set zero vel 1"))
         self.add_child(LogTrajPlugin("log post processing"))
         self.reset_world_state = ResetWorldState()

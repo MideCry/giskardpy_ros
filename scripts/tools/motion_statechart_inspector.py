@@ -1,3 +1,4 @@
+import json
 import sys
 from PyQt5.QtGui import QPainter, QTransform, QKeySequence
 from PyQt5.QtWidgets import (
@@ -16,13 +17,18 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtSvg import QSvgWidget, QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtCore import Qt, QTimer, QRectF, pyqtSignal
+from giskard_msgs.action import JsonAction
 from pygraphviz import ItemAttribute
 from giskard_msgs.msg import ExecutionState
 from PyQt5.QtCore import QMutex, QMutexLocker
 
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plot_motion_graph import ExecutionStateToDotParser
-
+from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
+    KinematicStructureEntityKwargsTracker,
+)
+from semantic_digital_twin.world import World
 
 compact = False
 
@@ -73,6 +79,7 @@ class DotGraphViewer(QWidget):
     # Add this signal to communicate between threads
     new_message_signal: pyqtSignal = pyqtSignal(object)
     last_goal_id: int
+    motion_statechart: MotionStatechart
 
     def __init__(self):
         super().__init__()
@@ -198,7 +205,7 @@ class DotGraphViewer(QWidget):
         if self.topic_selector.currentText() == "":
             # Find all topics of type ExecutionState
             topics = rospy.node.get_topic_names_and_types()
-            target_type = "giskard_msgs/msg/ExecutionState"
+            target_type = "giskard_msgs/action/JsonAction_FeedbackMessage"
             execution_state_topics = [
                 name for name, types in topics if target_type in types
             ]
@@ -228,8 +235,17 @@ class DotGraphViewer(QWidget):
         # Emit signal to handle in main thread
         self.new_message_signal.emit(msg)
 
-    def handle_new_message(self, msg: ExecutionState) -> None:
+    def handle_new_message(self, msg: JsonAction.Feedback) -> None:
         # This runs in the main thread
+        json_data = json.loads(msg.feedback)
+        goal_id = json_data["goal_id"]
+        motion_statechart_data = json_data.get("motion_statechart")
+        if motion_statechart_data is not None:
+            tracker = KinematicStructureEntityKwargsTracker()
+            kwargs = tracker.create_kwargs()
+            self.motion_statechart = MotionStatechart.from_json(
+                motion_statechart_data, **kwargs
+            )
         if len(self.goals) > 0:
             navigator_at_end = (
                 self.current_goal_index == self.goals[-1]
@@ -239,10 +255,10 @@ class DotGraphViewer(QWidget):
         else:
             navigator_at_end = True
         # Extract goal_id and group graphs by goal_id
-        if self.last_goal_id == msg.goal_id:
+        if self.last_goal_id == goal_id:
             goal_id = self.goals[-1]
         else:
-            self.last_goal_id = msg.goal_id
+            self.last_goal_id = goal_id
             goal_id = len(self.goals)
             self.graphs_by_goal[goal_id] = []
             self.goals.append(goal_id)

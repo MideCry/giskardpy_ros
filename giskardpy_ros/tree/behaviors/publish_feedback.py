@@ -1,4 +1,7 @@
+import json
 from typing import Optional
+
+from giskard_msgs.action import JsonAction
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import numpy as np
@@ -11,80 +14,6 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-
-
-def giskard_state_to_execution_state() -> ExecutionState:
-    tasks = god_map.motion_statechart_manager.task_state.nodes
-    monitors = god_map.motion_statechart_manager.monitor_state.nodes
-    goals = god_map.motion_statechart_manager.goal_state.nodes
-    task_filter = np.array([task._plot for task in tasks])
-    monitor_filter = np.array([monitor._plot for monitor in monitors])
-    goal_filter = np.array([goal._plot for goal in goals])
-
-    msg = ExecutionState()
-    msg.header.stamp = rospy.node.get_clock().now().to_msg()
-    msg.goal_id = GiskardBlackboard().move_action_server.goal_id
-
-    msg.tasks = [
-        msg_converter.motion_statechart_node_to_ros_msg(t) for t in tasks if t._plot
-    ]
-    msg.task_parents = [
-        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
-        for node in tasks
-        if node._plot
-    ]
-    try:
-        msg.task_state = god_map.motion_statechart_manager.task_state_history[-1][1][0][
-            task_filter
-        ].tolist()
-        msg.task_life_cycle_state = (
-            god_map.motion_statechart_manager.task_state_history[-1][1][1][
-                task_filter
-            ].tolist()
-        )
-    except IndexError as e:
-        pass
-
-    msg.monitors = [
-        msg_converter.motion_statechart_node_to_ros_msg(m) for m in monitors if m._plot
-    ]
-    msg.monitor_parents = [
-        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
-        for node in monitors
-        if node._plot
-    ]
-    try:
-        msg.monitor_state = god_map.motion_statechart_manager.monitor_state_history[-1][
-            1
-        ][0][monitor_filter].tolist()
-        msg.monitor_life_cycle_state = (
-            god_map.motion_statechart_manager.monitor_state_history[-1][1][1][
-                monitor_filter
-            ].tolist()
-        )
-    except IndexError as e:
-        pass
-
-    msg.goals = [
-        msg_converter.motion_statechart_node_to_ros_msg(m) for m in goals if m._plot
-    ]
-    msg.goal_parents = [
-        god_map.motion_statechart_manager.get_parent_node_name_of_node(node)
-        for node in goals
-        if node._plot
-    ]
-    try:
-        msg.goal_state = god_map.motion_statechart_manager.goal_state_history[-1][1][0][
-            goal_filter
-        ].tolist()
-        msg.goal_life_cycle_state = (
-            god_map.motion_statechart_manager.goal_state_history[-1][1][1][
-                goal_filter
-            ].tolist()
-        )
-    except IndexError as e:
-        pass
-    return msg
 
 
 def did_state_change() -> bool:
@@ -132,16 +61,28 @@ class PublishFeedback(GiskardBehavior):
             topic_name = f"{rospy.node.get_name()}/state"
         super().__init__(name)
         self.cmd_topic = topic_name
+        self.move_action_server = GiskardBlackboard().move_action_server
         self.pub = rospy.node.create_publisher(
             ExecutionState,
             self.cmd_topic,
             QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL),
         )
+        self.last_goal_id = -1
 
     @record_time
     def update(self):
         # FIXME
         # if did_state_change():
-        #     msg = giskard_state_to_execution_state()
-        #     self.pub.publish(msg)
+        data = {
+            "life_cycle_state": GiskardBlackboard().motion_statechart.life_cycle_state.to_json(),
+            "observation_state": GiskardBlackboard().motion_statechart.observation_state.to_json(),
+        }
+        if self.last_goal_id != self.move_action_server.goal_id:
+            self.last_goal_id = self.move_action_server.goal_id
+            data["motion_statechart"] = GiskardBlackboard().motion_statechart.to_json()
+        data["goal_id"] = self.last_goal_id
+
+        msg = JsonAction.Feedback()
+        msg.feedback = json.dumps(data)
+        self.move_action_server.send_feedback(msg)
         return Status.SUCCESS

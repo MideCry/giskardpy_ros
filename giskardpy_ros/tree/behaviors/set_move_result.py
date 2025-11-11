@@ -1,23 +1,14 @@
 import json
 
-from giskard_msgs.action import Move, JsonAction
+from giskard_msgs.action import JsonAction
 from py_trees.common import Status
-from line_profiler import profile
 
-from giskard_msgs.msg import GiskardError
-from giskardpy.data_types.exceptions import *
-from giskardpy.god_map import god_map
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.middleware import get_middleware
-from giskardpy_ros.tree.behaviors.publish_feedback import (
-    giskard_state_to_execution_state,
-)
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy.utils.decorators import record_time
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from line_profiler import profile
-
-from semantic_digital_twin.world_description.connections import ActiveConnection
+from giskardpy.data_types.exceptions import *
+from giskardpy.middleware import get_middleware
+from giskardpy.utils.decorators import record_time
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class SetMoveResult(GiskardBehavior):
