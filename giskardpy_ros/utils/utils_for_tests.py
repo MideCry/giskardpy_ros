@@ -659,7 +659,7 @@ class GiskardTester:
             target_frame=parent_link,
         )
         with self.api.world.modify_world():
-            box = Body(name=PrefixedName(name), _world=self.api.world)
+            box = Body(name=PrefixedName(name))
             box_shape = Box(scale=Scale(*size))
             box.collision.append(box_shape)
             box.visual.append(box_shape)
@@ -671,7 +671,6 @@ class GiskardTester:
                 parent_T_connection_expression=parent_T_pose,
             )
             self.api.world.add_connection(connection)
-            self.api.world.add_body(box)
         self.wait_heartbeats()
         self.check_add_object_result(
             name=name,

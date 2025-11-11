@@ -86,8 +86,8 @@ class ROSMsgVisualization:
         clear_memo(self.link_to_marker)
 
     def has_world_changed(self) -> bool:
-        if self.world_version != god_map.world._model_manager.version:
-            self.world_version = god_map.world._model_manager.version
+        if self.world_version != god_map.world.get_world_model_manager().version:
+            self.world_version = god_map.world.get_world_model_manager().version
             return True
         return False
 
