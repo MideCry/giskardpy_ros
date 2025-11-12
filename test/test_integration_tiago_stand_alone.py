@@ -11,10 +11,10 @@ from geometry_msgs.msg import (
     Vector3Stamped,
 )
 
+from giskardpy.motion_statechart.data_types import DefaultWeights
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -354,7 +354,7 @@ class TestCollisionAvoidance:
             left_pose,
             tip_link=l_tcp,
             root_link=apartment_setup.default_root,
-            weight=WEIGHT_ABOVE_CA * 10,
+            weight=DefaultWeights.WEIGHT_ABOVE_CA * 10,
         )
         goal_point = PointStamped()
         goal_point.header.frame_id = "cabinet1_door_top_left"
@@ -364,7 +364,7 @@ class TestCollisionAvoidance:
         apartment_setup.execute()
 
         apartment_setup.set_diff_drive_tangential_to_point(
-            goal_point=goal_point, weight=WEIGHT_BELOW_CA
+            goal_point=goal_point, weight=DefaultWeights.WEIGHT_BELOW_CA
         )
         apartment_setup.api.motion_goals.add_cartesian_pose(
             left_pose, tip_link=l_tcp, root_link=apartment_setup.default_root
@@ -691,7 +691,7 @@ class TestJointGoals:
         js1 = {"arm_right_5_joint": 3.0, "arm_left_5_joint": -3.0}
         # zero_pose.set_seed_configuration(start_state)
         default_pose_giskard.api.motion_goals.add_joint_position(
-            js1, weight=WEIGHT_ABOVE_CA
+            js1, weight=DefaultWeights.WEIGHT_ABOVE_CA
         )
         default_pose_giskard.api.motion_goals.allow_all_collisions()
         default_pose_giskard.execute()

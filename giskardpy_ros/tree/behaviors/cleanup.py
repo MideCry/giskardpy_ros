@@ -1,18 +1,15 @@
-from line_profiler import profile
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray, Marker
 
-from giskardpy.debug_expression_manager import DebugExpressionManager
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
+from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
-from line_profiler import profile
 
 
 class CleanUp(GiskardBehavior):

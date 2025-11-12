@@ -156,7 +156,7 @@ class PR2Tester(GiskardTester):
             robot_interface_config=PR2StandaloneInterface(),
             collision_checker_id=CollisionCheckerLib.bpb,
             behavior_tree_config=StandAloneBTConfig(
-                debug_mode=True, publish_tf=True, add_debug_marker_publisher=False
+                debug_mode=True, publish_tf=True, add_debug_marker_publisher=True
             ),
             qp_controller_config=QPControllerConfig(
                 mpc_dt=0.05,

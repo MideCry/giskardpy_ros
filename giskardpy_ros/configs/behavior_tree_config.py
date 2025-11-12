@@ -3,16 +3,18 @@ from typing import Optional
 
 from py_trees.decorators import FailureIsSuccess
 
-from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
-from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
-
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy.god_map import god_map
-from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.ros_msg_visualization import (
+    ROSMsgVisualization,
+    DebugMarkerVisualizer,
+)
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
+from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
 from giskardpy_ros.utils.utils import is_in_github_workflow
 
 
@@ -161,6 +163,9 @@ class BehaviorTreeConfig:
         """
         Publishes debug expressions defined in goals.
         """
+        GiskardBlackboard().debug_marker_visualizer = DebugMarkerVisualizer(
+            node_handle=rospy.node
+        )
         self.add_evaluate_debug_expressions()
         self.tree.control_loop_branch.publish_state.add_debug_marker_publisher()
 
