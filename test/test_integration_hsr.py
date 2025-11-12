@@ -15,8 +15,8 @@ from giskardpy.data_types.exceptions import EmptyProblemException
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
-from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.tasks.pointing import PointingCone
+from giskardpy.motion_statechart.test_nodes.test_nodes import TrueMonitor
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -626,7 +626,8 @@ class TestConstraints:
             name="open door",
         )
         reset = kitchen_setup.api.monitors.add_monitor(
-            class_name=TrueMonitor.__name__, name="The Great Reset"
+            class_name=TrueMonitor.__name__,
+            name="The Great Reset",
         )
 
         kitchen_setup.api.update_start_condition(

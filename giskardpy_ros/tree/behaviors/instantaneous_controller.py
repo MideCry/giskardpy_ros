@@ -15,7 +15,7 @@ class ControllerPlugin(GiskardBehavior):
     @record_time
     @profile
     def update(self):
-        GiskardBlackboard().motion_statechart.tick()
+        GiskardBlackboard().executor.tick()
         if GiskardBlackboard().motion_statechart.is_end_motion():
             return Status.SUCCESS
         return Status.RUNNING

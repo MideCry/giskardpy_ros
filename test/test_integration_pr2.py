@@ -57,7 +57,6 @@ from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoid
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion
-from giskardpy.motion_statechart.monitors.monitors import TrueMonitor
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import (
@@ -72,6 +71,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointPositionList,
     JointState,
 )
+from giskardpy.motion_statechart.test_nodes.test_nodes import TrueMonitor
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import (
@@ -3002,7 +3002,7 @@ class TestCartGoals:
             pos_x=-0.2, reference_frame=tip
         )
 
-        msc = MotionStatechart(giskard.api.world)
+        msc = MotionStatechart()
         cart_goal = CartesianPose(
             name=PrefixedName("cart_goal"),
             root_link=root,

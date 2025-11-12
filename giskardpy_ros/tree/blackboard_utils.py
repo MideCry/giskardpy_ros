@@ -8,6 +8,7 @@ from typing import TypeVar, Callable, TYPE_CHECKING, Optional
 from py_trees.common import Status, Access
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
+from giskardpy.executor import Executor
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 
 if TYPE_CHECKING:
@@ -30,8 +31,12 @@ class GiskardBlackboard:
     debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
-    motion_statechart: MotionStatechart
+    executor: Executor
     __shared_state = {}
+
+    @property
+    def motion_statechart(self):
+        return self.executor.motion_statechart
 
     def __init__(self):
         self.__dict__ = self.__shared_state

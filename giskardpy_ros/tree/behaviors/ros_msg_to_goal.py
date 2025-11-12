@@ -5,6 +5,7 @@ from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import InvalidGoalException
+from giskardpy.executor import Executor
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
@@ -44,7 +45,11 @@ class ParseActionGoal(GiskardBehavior):
         motion_statechart = MotionStatechart.from_json(
             json.loads(move_goal.goal), **kwargs
         )
-        GiskardBlackboard().motion_statechart = motion_statechart
+        GiskardBlackboard().executor = Executor(
+            motion_statechart=motion_statechart,
+            world=god_map.world,
+            controller_config=GiskardBlackboard().giskard.qp_controller_config,
+        )
         get_middleware().loginfo("Done parsing goal message.")
         return Status.SUCCESS
 

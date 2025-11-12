@@ -52,7 +52,7 @@ def giskard_factory(init_rospy, robot: GiskardTester):
             robot.api.world.get_connection_by_name(name): target
             for name, target in seed_joint_state.items()
         }
-        msc = MotionStatechart(robot.api.world)
+        msc = MotionStatechart()
 
         initial_config = SetSeedConfiguration(
             name=PrefixedName("initial configuration"),
@@ -61,7 +61,7 @@ def giskard_factory(init_rospy, robot: GiskardTester):
         msc.add_node(initial_config)
 
         if robot.has_odometry_joint():
-            base_goal = TransformationMatrix(reference_frame=msc.world.root)
+            base_goal = TransformationMatrix(reference_frame=robot.api.world.root)
             base_pose_reached = SetOdometry(
                 name=PrefixedName("initial pose"), base_pose=base_goal
             )

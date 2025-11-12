@@ -24,7 +24,5 @@ class CompileMotionStatechart(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        GiskardBlackboard().motion_statechart.compile(
-            controller_config=GiskardBlackboard().giskard.qp_controller_config
-        )
+        GiskardBlackboard().executor.compile()
         return Status.SUCCESS
