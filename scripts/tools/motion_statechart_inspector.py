@@ -1,4 +1,5 @@
 import json
+import signal
 import sys
 from typing import List, Dict, Optional, Any
 
@@ -29,10 +30,6 @@ from giskardpy.motion_statechart.motion_statechart import (
 )
 from giskardpy.motion_statechart.plotters.graphviz import MotionStatechartGraphviz
 from giskardpy_ros.ros2 import rospy
-from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
-    KinematicStructureEntityKwargsTracker,
-)
-from semantic_digital_twin.world import World
 
 compact = False
 
@@ -297,11 +294,7 @@ class DotGraphViewer(QWidget):
     def parse_new_motion_statechart(self, json_data: Dict[str, Any]):
         motion_statechart_data = json_data.get("motion_statechart")
         if motion_statechart_data is not None:
-            tracker = KinematicStructureEntityKwargsTracker()
-            kwargs = tracker.create_kwargs()
-            self.motion_statechart = MotionStatechart.from_json(
-                motion_statechart_data, world=World(), **kwargs
-            )
+            self.motion_statechart = MotionStatechart.from_json(motion_statechart_data)
             self.motion_statechart._add_transitions()
 
     def parse_state(self, json_data: Dict[str, Any]):
@@ -398,6 +391,9 @@ class DotGraphViewer(QWidget):
 
 def main():
     app = QApplication(sys.argv)
+
+    signal.signal(signal.SIGINT, lambda *args: app.quit())
+
     viewer = DotGraphViewer()
     viewer.show()
     sys.exit(app.exec_())

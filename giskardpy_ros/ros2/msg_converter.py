@@ -28,20 +28,20 @@ import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GiskardException,
     CorruptShapeException,
-    UnknownLinkException,
-    UnknownJointException,
     UnknownGoalException,
 )
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
-from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import ActiveConnection
 
 # from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
@@ -54,9 +54,6 @@ from semantic_digital_twin.world_description.geometry import (
     Color,
     Scale,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.world_entity import (
     Body,
     KinematicStructureEntity,

@@ -4,6 +4,7 @@ from typing import Optional
 from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
+from giskardpy.motion_statechart.context import BuildContext
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -34,7 +35,9 @@ class PublishFeedback(GiskardBehavior):
         data = {}
         if self.has_new_goal():
             self.last_goal_id = self.move_action_server.goal_id
-            data["motion_statechart"] = GiskardBlackboard().motion_statechart.to_json()
+            data["motion_statechart"] = (
+                GiskardBlackboard().motion_statechart.create_compressed_copy().to_json()
+            )
         data["goal_id"] = self.last_goal_id
 
         data["life_cycle_state"] = (
