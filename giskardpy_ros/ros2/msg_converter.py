@@ -37,6 +37,29 @@ from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy.motion_statechart.goals.goal import Goal
+<<<<<<< Updated upstream
+=======
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
+from semantic_digital_twin.world_description.connections import ActiveConnection
+from semantic_digital_twin.world_description.geometry import (
+    Shape,
+    Box,
+    Cylinder,
+    Sphere,
+    Mesh,
+    Color,
+    Scale, TriangleMesh, FileMesh,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.world_entity import (
+    Body,
+    KinematicStructureEntity,
+    Connection,
+)
+from semantic_digital_twin.world_description.world_state import WorldState
+>>>>>>> Stashed changes
 
 
 # TODO probably needs some consistency check
@@ -126,12 +149,23 @@ def link_geometry_mesh_to_visualization_marker(data: MeshGeometry, mode: Visuali
     marker = link_geometry_to_visualization_marker(data)
     marker.type = visualization_msgs.Marker.MESH_RESOURCE
     if mode.is_collision_decomposed():
+<<<<<<< Updated upstream
         marker.mesh_resource = 'file://' + data.collision_file_name_absolute
     else:
         marker.mesh_resource = 'file://' + data.file_name_absolute
     marker.scale.x = data.scale[0]
     marker.scale.y = data.scale[1]
     marker.scale.z = data.scale[2]
+=======
+        marker.mesh_resource = "file://" + data.collision_file_name_absolute
+    elif isinstance(data, TriangleMesh):
+        marker.mesh_resource = "file://" + data.file.name
+    elif isinstance(data, FileMesh):
+        marker.mesh_resource = "file://" + data.filename
+    marker.scale.x = data.scale.x
+    marker.scale.y = data.scale.y
+    marker.scale.z = data.scale.z
+>>>>>>> Stashed changes
     marker.mesh_use_embedded_materials = False
     return marker
 
