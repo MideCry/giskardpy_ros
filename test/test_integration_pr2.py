@@ -53,7 +53,6 @@ from giskardpy.model.collision_world_syncer import (
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
-from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidanceHint
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion
@@ -345,7 +344,7 @@ class TestJointGoals:
             "l_wrist_flex_joint": -0.1,
             "l_wrist_roll_joint": -6.062015047706399,
         }
-        msc = MotionStatechart(giskard.api.world)
+        msc = MotionStatechart()
         joint_goal = JointPositionList(
             name=PrefixedName("joint_goal"),
             goal_state=JointState.from_str_dict(js, giskard.api.world),
@@ -1678,61 +1677,12 @@ class TestConstraints:
         dt = god_map.qp_controller.config.mpc_dt
         assert len(result.trajectory._points) * dt > new_length + 1.0
 
-    @pytest.mark.skip(reason="future problem")
-    def test_CollisionAvoidanceHint(self, kitchen_setup: PR2Tester, better_pose):
-        tip = "base_footprint"
-        base_pose = PoseStamped()
-        base_pose.header.frame_id = "map"
-        base_pose.pose.position.x = 0.0
-        base_pose.pose.position.y = 1.5
-        q = quaternion_from_axis_angle(
-            [0, 0, 1],
-            np.pi,
-        )
-        base_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        kitchen_setup.teleport_base(goal_pose=base_pose)
-        base_pose = PoseStamped()
-        base_pose.header.frame_id = tip
-        base_pose.pose.position.x = 2.3
-        q = quaternion_from_axis_angle(
-            [0, 0, 1],
-            0,
-        )
-        base_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-
-        avoidance_hint = Vector3Stamped()
-        avoidance_hint.header.frame_id = "map"
-        avoidance_hint.vector.y = -1.0
-        kitchen_setup.api.motion_goals.avoid_all_collisions(0.1)
-        kitchen_setup.api.motion_goals.add_motion_goal(
-            class_name=CollisionAvoidanceHint.__name__,
-            name="goal",
-            tip_link="base_link",
-            max_threshold=0.4,
-            spring_threshold=0.5,
-            # max_linear_velocity=1,
-            object_link_name="kitchen_island",
-            weight=DefaultWeights.WEIGHT_COLLISION_AVOIDANCE,
-            avoidance_hint=avoidance_hint,
-        )
-        kitchen_setup.api.motion_goals.add_joint_position(better_pose)
-
-        kitchen_setup.api.motion_goals.add_cartesian_pose(
-            goal_pose=base_pose,
-            tip_link=tip,
-            root_link="map",
-            weight=DefaultWeights.WEIGHT_BELOW_CA,
-            reference_linear_velocity=0.5,
-        )
-        # kitchen_setup.api.motion_goals.allow_all_collisions()
-        kitchen_setup.execute()
-
     def test_CartesianPosition(self, giskard: PR2Tester):
         tip = giskard.r_tip
 
         tip_goal = Point3(-0.4, -0.2, -0.3, reference_frame=tip)
 
-        msc = MotionStatechart(giskard.api.world)
+        msc = MotionStatechart()
         cart_goal = CartesianPosition(
             name=PrefixedName("cart_goal"),
             root_link=giskard.default_root,
