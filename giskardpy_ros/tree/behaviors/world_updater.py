@@ -53,14 +53,7 @@ class ProcessWorldUpdate(GiskardBehavior):
             get_middleware().loginfo(f'Processing world goal #{GiskardBlackboard().world_action_server.goal_id}.')
             self.worker_thread = Thread(target=self.process_goal, name=self.name)
             self.worker_thread.start()
-<<<<<<< Updated upstream
-            self.started = True
-        if self.worker_thread.is_alive():
-            return Status.RUNNING
-        self.started = False
-        get_middleware().loginfo(f'Finished world goal #{GiskardBlackboard().world_action_server.goal_id}.')
-        return Status.SUCCESS
-=======
+
         else:
             if not self.worker_thread.is_alive():
                 self.worker_thread = None
@@ -69,7 +62,6 @@ class ProcessWorldUpdate(GiskardBehavior):
                 )
                 return Status.SUCCESS
         return Status.RUNNING
->>>>>>> Stashed changes
 
     def process_goal(self):
         req = self.action_server.goal_msg

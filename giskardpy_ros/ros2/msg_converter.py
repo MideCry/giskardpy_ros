@@ -6,6 +6,7 @@ from typing import Optional, Union, List, Dict, Any
 
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
+import giskardpy.casadi_wrapper as cas
 import numpy as np
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
@@ -14,52 +15,31 @@ import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
 from giskard_msgs.msg import GiskardError, MotionStatechartNode
+from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
+from giskardpy.model.joints import MovableJoint
+from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
+from giskardpy.model.world import WorldTree
 from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy_message_converter.message_converter import \
     convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
+from semantic_digital_twin.world_description.geometry import (
+    TriangleMesh, FileMesh,
+)
 
-import giskardpy.casadi_wrapper as cas
-from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
 from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
     UnknownJointException, UnknownGoalException
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionEntry
-from giskardpy.model.joints import MovableJoint
-from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
 from giskardpy.model.trajectory import Trajectory
-from giskardpy.model.world import WorldTree
+from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
-from giskardpy.motion_statechart.goals.goal import Goal
-<<<<<<< Updated upstream
-=======
-from semantic_digital_twin.exceptions import WorldEntityNotFoundError
-from semantic_digital_twin.world_description.connections import ActiveConnection
-from semantic_digital_twin.world_description.geometry import (
-    Shape,
-    Box,
-    Cylinder,
-    Sphere,
-    Mesh,
-    Color,
-    Scale, TriangleMesh, FileMesh,
-)
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.world import World
-from semantic_digital_twin.world_description.world_entity import (
-    Body,
-    KinematicStructureEntity,
-    Connection,
-)
-from semantic_digital_twin.world_description.world_state import WorldState
->>>>>>> Stashed changes
 
 
 # TODO probably needs some consistency check
@@ -149,14 +129,6 @@ def link_geometry_mesh_to_visualization_marker(data: MeshGeometry, mode: Visuali
     marker = link_geometry_to_visualization_marker(data)
     marker.type = visualization_msgs.Marker.MESH_RESOURCE
     if mode.is_collision_decomposed():
-<<<<<<< Updated upstream
-        marker.mesh_resource = 'file://' + data.collision_file_name_absolute
-    else:
-        marker.mesh_resource = 'file://' + data.file_name_absolute
-    marker.scale.x = data.scale[0]
-    marker.scale.y = data.scale[1]
-    marker.scale.z = data.scale[2]
-=======
         marker.mesh_resource = "file://" + data.collision_file_name_absolute
     elif isinstance(data, TriangleMesh):
         marker.mesh_resource = "file://" + data.file.name
@@ -165,7 +137,6 @@ def link_geometry_mesh_to_visualization_marker(data: MeshGeometry, mode: Visuali
     marker.scale.x = data.scale.x
     marker.scale.y = data.scale.y
     marker.scale.z = data.scale.z
->>>>>>> Stashed changes
     marker.mesh_use_embedded_materials = False
     return marker
 
@@ -277,6 +248,7 @@ def world_to_tf_message(world: WorldTree, include_prefix: bool) -> tf2_msgs.TFMe
         p_T_c.transform.rotation.z = pose[5]
         p_T_c.transform.rotation.w = pose[6]
     return tf_msg
+
 
 def json_str_to_giskard_kwargs(json_str: str, world: WorldTree) -> Dict[str, Any]:
     ros_kwargs = json_str_to_ros_kwargs(json_str)
@@ -466,6 +438,7 @@ def ros_msg_to_giskard_obj(msg, world: WorldTree):
         return create_node(msg, world)
     return msg
 
+
 def create_node(msg_node: MotionStatechartNode, world: WorldTree):
     parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, world)
     if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
@@ -480,6 +453,7 @@ def create_node(msg_node: MotionStatechartNode, world: WorldTree):
     else:
         raise UnknownGoalException(f'unknown task type: \'{msg_node.class_name}\'.')
     return node
+
 
 def ros_joint_state_to_giskard_joint_state(msg: sensor_msgs.JointState, prefix: Optional[str] = None) -> JointStates:
     js = JointStates()
