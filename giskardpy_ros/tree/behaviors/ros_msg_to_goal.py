@@ -49,6 +49,7 @@ class ParseActionGoal(GiskardBehavior):
             motion_statechart=motion_statechart,
             world=god_map.world,
             controller_config=GiskardBlackboard().giskard.qp_controller_config,
+            collision_checker=GiskardBlackboard().giskard.collision_checker_id,
         )
         get_middleware().loginfo("Done parsing goal message.")
         return Status.SUCCESS

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 import numpy as np
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Vector3
 from rclpy.node import Node
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import MarkerArray, Marker
@@ -290,7 +290,7 @@ class ROSMsgVisualization:
                 if self.frame_locked:
                     marker.frame_locked = True
                 else:
-                    marker.pose = god_map.collision_scene.get_map_T_geometry(
+                    marker.pose = GiskardBlackboard().executor.collision_scene.collision_detector.get_map_T_geometry(
                         body.name, j
                     )
                 markers.append(marker)
@@ -298,7 +298,9 @@ class ROSMsgVisualization:
 
     def create_collision_markers(self, name_space: str = "collisions") -> List[Marker]:
         try:
-            collisions: Collisions = god_map.closest_point
+            collisions: Collisions = (
+                GiskardBlackboard().executor.collision_scene.closest_points
+            )
         except AttributeError as e:
             # no collisions
             return []
@@ -404,7 +406,7 @@ class ROSMsgVisualization:
                         VisualizationMode.Visuals,
                         VisualizationMode.VisualsFrameLocked,
                     ]:
-                        god_map.collision_scene.sync()
+                        GiskardBlackboard().executor.collision_scene.sync()
                     markers = self.create_world_markers(
                         name_space=namespace, marker_id_offset=len(marker_array.markers)
                     )

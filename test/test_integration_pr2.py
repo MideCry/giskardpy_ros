@@ -47,15 +47,18 @@ from giskardpy.data_types.exceptions import (
 )
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
+from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
+from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion
+from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached
 from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import (
@@ -92,7 +95,7 @@ from giskardpy_ros.utils.utils_for_tests import (
     compare_points,
 )
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot, ParallelGripper
 from semantic_digital_twin.spatial_types import TransformationMatrix, Point3
 from semantic_digital_twin.world_description.connections import (
     RevoluteConnection,
@@ -169,23 +172,19 @@ class PR2Tester(GiskardTester):
     def robot(self) -> AbstractRobot:
         return god_map.world.get_semantic_annotation_by_name(self.api.robot_name)
 
+    @property
+    def l_gripper_annotation(self) -> ParallelGripper:
+        return next(sa for sa in self.robot.manipulators if "left" in str(sa.name))
+
+    @property
+    def r_gripper_annotation(self) -> ParallelGripper:
+        return next(sa for sa in self.robot.manipulators if "right" in str(sa.name))
+
     def get_l_gripper_links(self) -> Set[Body]:
-        return set(
-            b
-            for b in god_map.world.get_semantic_annotation_by_name(
-                self.l_gripper_group
-            ).bodies
-            if b.has_collision()
-        )
+        return set(b for b in self.l_gripper_annotation.bodies if b.has_collision())
 
     def get_r_gripper_links(self) -> Set[Body]:
-        return set(
-            b
-            for b in god_map.world.get_semantic_annotation_by_name(
-                self.r_gripper_group
-            ).bodies
-            if b.has_collision()
-        )
+        return set(b for b in self.r_gripper_annotation.bodies if b.has_collision())
 
     def get_r_forearm_links(self):
         return [
@@ -4139,21 +4138,35 @@ class TestCollisionAvoidanceGoals:
         )
 
     def test_avoid_collision_go_around_corner(self, fake_table_setup: PR2Tester):
-        r_goal = PoseStamped()
-        r_goal.header.frame_id = "map"
-        r_goal.pose.position.x = 0.8
-        r_goal.pose.position.y = -0.38
-        r_goal.pose.position.z = 0.84
-        q = quaternion_from_axis_angle(
-            [0, 1, 0],
-            np.pi / 2,
+        msc = MotionStatechart()
+
+        cart_goal = CartesianPose(
+            name=PrefixedName("cart goal"),
+            root_link=fake_table_setup.default_root,
+            tip_link=fake_table_setup.r_tip,
+            goal_pose=cas.TransformationMatrix.from_xyz_axis_angle(
+                x=0.8,
+                y=-0.38,
+                z=0.84,
+                axis=cas.Vector3.Y(),
+                angle=np.pi / 2.0,
+                reference_frame=fake_table_setup.default_root,
+            ),
         )
-        r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        fake_table_setup.api.motion_goals.avoid_all_collisions(0.1)
-        fake_table_setup.api.motion_goals.add_cartesian_pose(
-            goal_pose=r_goal, tip_link=fake_table_setup.r_tip, root_link="map"
+        msc.add_node(cart_goal)
+
+        collision_avoidance = CollisionAvoidance(
+            name=PrefixedName("collision avoidance"),
+            collision_entries=[CollisionRequest.avoid_all_collision(0.1)],
         )
-        fake_table_setup.execute()
+        msc.add_node(collision_avoidance)
+        local_min = LocalMinimumReached(name=PrefixedName("local min"))
+        msc.add_node(local_min)
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = local_min.observation_variable
+
+        fake_table_setup.api.execute(msc)
         fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.05)
         fake_table_setup.check_cpi_leq(
             [

@@ -33,7 +33,7 @@ from giskardpy.data_types.exceptions import (
     UnknownGoalException,
 )
 from giskardpy.god_map import god_map
-from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.motion_statechart.tasks.task import Task
@@ -717,7 +717,7 @@ def quaternion_stamped_to_quaternion(
 
 def collision_entry_msg_to_giskard(
     msg: giskard_msgs.CollisionEntry, world: World
-) -> CollisionViewRequest:
+) -> CollisionRequest:
     if msg.distance == -1:
         distance = None
     else:
@@ -733,8 +733,11 @@ def collision_entry_msg_to_giskard(
     except WorldEntityNotFoundError as e:
         view2 = None
 
-    return CollisionViewRequest(
-        type_=msg.type, distance=distance, view1=view1, view2=view2
+    return CollisionRequest(
+        type_=msg.type,
+        distance=distance,
+        semantic_annotation1=view1,
+        semantic_annotation2=view2,
     )
 
 

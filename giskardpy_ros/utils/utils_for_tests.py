@@ -28,7 +28,10 @@ from giskardpy.data_types.exceptions import (
 )
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collision_matrix_manager import (
+    CollisionRequest,
+    CollisionAvoidanceTypes,
+)
 from giskardpy.model.collisions import Collisions, GiskardCollision
 from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.tasks.diff_drive_goals import (
@@ -868,18 +871,18 @@ class GiskardTester(ABC):
         collision_goals = []
         for robot_name in self.robot_names:
             collision_goals.append(
-                CollisionViewRequest(
-                    type_=CollisionViewRequest.AVOID_COLLISION,
+                CollisionRequest(
+                    type_=CollisionRequest.AVOID_COLLISION,
                     distance=None,
-                    view1=robot_name,
+                    semantic_annotation1=robot_name,
                 )
             )
             collision_goals.append(
-                CollisionViewRequest(
-                    type_=CollisionViewRequest.ALLOW_COLLISION,
+                CollisionRequest(
+                    type_=CollisionRequest.ALLOW_COLLISION,
                     distance=None,
-                    view1=robot_name,
-                    view2=robot_name,
+                    semantic_annotation1=robot_name,
+                    semantic_annotation2=robot_name,
                 )
             )
         return self.compute_collisions(collision_goals)
@@ -888,17 +891,17 @@ class GiskardTester(ABC):
         if group_name is None:
             group_name = self.robot_names[0]
         collision_entries = [
-            CollisionViewRequest(
-                type_=CollisionViewRequest.AVOID_COLLISION,
+            CollisionRequest(
+                type_=CollisionRequest.AVOID_COLLISION,
                 distance=None,
-                view1=group_name,
-                view2=group_name,
+                semantic_annotation1=group_name,
+                semantic_annotation2=group_name,
             )
         ]
         return self.compute_collisions(collision_entries)
 
     def compute_collisions(
-        self, collision_entries: List[CollisionViewRequest]
+        self, collision_entries: List[CollisionRequest]
     ) -> Collisions:
         god_map.collision_scene.collision_detector.reset_cache()
         god_map.collision_scene.matrix_manager.parse_collision_requests(
@@ -912,8 +915,8 @@ class GiskardTester(ABC):
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [
-            CollisionViewRequest(
-                type_=CollisionViewRequest.AVOID_COLLISION, distance=None
+            CollisionRequest(
+                type_=CollisionAvoidanceTypes.AVOID_COLLISION, distance=None
             )
         ]
         return self.compute_collisions(collision_entries)
