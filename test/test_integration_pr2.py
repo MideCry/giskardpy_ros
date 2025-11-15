@@ -3773,27 +3773,47 @@ class TestSelfCollisionAvoidance:
         giskard.check_cpi_geq(giskard.get_l_gripper_links(), 0.047)
 
     def test_avoid_self_collision_with_l_arm(self, giskard: PR2Tester):
-        goal_js = {
-            "r_elbow_flex_joint": -1.43286344265,
-            "r_forearm_roll_joint": -1.26465060073,
-            "r_shoulder_lift_joint": 0.47990329056,
-            "r_shoulder_pan_joint": -0.281272240139,
-            "r_upper_arm_roll_joint": -0.528415402668,
-            "r_wrist_flex_joint": -1.18811419869,
-            "r_wrist_roll_joint": 2.26884630124,
-        }
-        giskard.api.monitors.add_set_seed_configuration(goal_js)
-        giskard.execute()
-
-        p = PoseStamped()
-        p.header.frame_id = giskard.r_tip
-        p.header.stamp = rospy.node.get_clock().now().to_msg()
-        p.pose.position.x = 0.2
-        p.pose.orientation.w = 1.0
-        giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link=giskard.r_tip, root_link="base_footprint"
+        msc = MotionStatechart()
+        joint_goal = JointPositionList(
+            name=PrefixedName("joint_goal"),
+            goal_state=JointState.from_str_dict(
+                {
+                    "r_elbow_flex_joint": -1.43286344265,
+                    "r_forearm_roll_joint": -1.26465060073,
+                    "r_shoulder_lift_joint": 0.47990329056,
+                    "r_shoulder_pan_joint": -0.281272240139,
+                    "r_upper_arm_roll_joint": -0.528415402668,
+                    "r_wrist_flex_joint": -1.18811419869,
+                    "r_wrist_roll_joint": 2.26884630124,
+                },
+                world=giskard.api.world,
+            ),
         )
-        giskard.execute()
+        msc.add_node(joint_goal)
+        joint_goal.end_condition = joint_goal.observation_variable
+
+        cart_goal = CartesianPose(
+            name=PrefixedName("cart_goal"),
+            root_link=giskard.base_footprint,
+            tip_link=giskard.r_tip,
+            goal_pose=TransformationMatrix.from_xyz_rpy(
+                0.2, reference_frame=giskard.r_tip
+            ),
+        )
+        msc.add_node(cart_goal)
+        cart_goal.start_condition = joint_goal.observation_variable
+
+        collision_avoidance = CollisionAvoidance(
+            name=PrefixedName("collision_avoidance"),
+            collision_entries=[CollisionRequest.avoid_all_collision()],
+        )
+        msc.add_node(collision_avoidance)
+
+        end = EndMotion(name=PrefixedName("end"))
+        msc.add_node(end)
+        end.start_condition = cart_goal.observation_variable
+
+        giskard.api.execute(msc)
         giskard.check_cpi_geq(giskard.get_r_gripper_links(), 0.048)
 
     def test_avoid_self_collision_specific_link(self, giskard: PR2Tester):
