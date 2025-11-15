@@ -4152,6 +4152,7 @@ class TestCollisionAvoidanceGoals:
                 angle=np.pi / 2.0,
                 reference_frame=fake_table_setup.default_root,
             ),
+            weight=DefaultWeights.WEIGHT_ABOVE_CA,
         )
         msc.add_node(cart_goal)
 
