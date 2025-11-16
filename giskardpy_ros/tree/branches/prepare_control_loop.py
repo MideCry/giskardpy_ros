@@ -1,9 +1,6 @@
 from py_trees.composites import Sequence
 
 from giskardpy_ros.tree.behaviors.cleanup import CleanUpPlanning
-from giskardpy_ros.tree.behaviors.compile_debug_expressions import (
-    CompileDebugExpressions,
-)
 from giskardpy_ros.tree.behaviors.new_trajectory import NewTrajectory
 from giskardpy_ros.tree.behaviors.plot_motion_graph import PlotMotionGraph
 from giskardpy_ros.tree.behaviors.ros_msg_to_goal import (
@@ -31,7 +28,6 @@ class PrepareControlLoop(Sequence):
 
     def add_compile_debug_expressions(self):
         if not self.has_compile_debug_expressions:
-            self.add_child(CompileDebugExpressions())
             self.has_compile_debug_expressions = True
 
 
@@ -50,5 +46,4 @@ class PrepareBaseTrajControlLoop(Sequence):
 
     def add_compile_debug_expressions(self):
         if not self.has_compile_debug_expressions:
-            self.add_child(CompileDebugExpressions())
             self.has_compile_debug_expressions = True

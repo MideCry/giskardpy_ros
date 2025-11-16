@@ -1,11 +1,7 @@
 from py_trees.decorators import FailureIsRunning, SuccessIsRunning
 
-from giskardpy.god_map import god_map
 from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.collision_checker import CollisionChecker
-from giskardpy_ros.tree.behaviors.evaluate_debug_expressions import (
-    EvaluateDebugExpressions,
-)
 from giskardpy_ros.tree.behaviors.goal_canceled import GoalCanceled
 from giskardpy_ros.tree.behaviors.instantaneous_controller import ControllerPlugin
 from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
@@ -120,5 +116,4 @@ class ControlLoop(AsyncBehavior):
 
     def add_evaluate_debug_expressions(self, log_traj: bool):
         if not self.debug_added:
-            self.insert_child(EvaluateDebugExpressions(log_traj=log_traj), 3)
             self.debug_added = True

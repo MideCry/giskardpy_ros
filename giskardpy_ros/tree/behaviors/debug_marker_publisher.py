@@ -34,13 +34,4 @@ class DebugMarkerPublisherTrajectory(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        debug_exprs = god_map.debug_expression_manager.debug_expressions
-        if len(debug_exprs) > 0:
-            debug_traj = god_map.debug_expression_manager._raw_debug_trajectory
-            GiskardBlackboard().ros_visualizer.publish_debug_trajectory(
-                debug_expressions=debug_exprs,
-                raw_debug_trajectory=debug_traj,
-                joint_space_traj=god_map.trajectory,
-                every_x=self.every_x,
-            )
-        return Status.SUCCESS
+        return Status.FAILURE

@@ -1,17 +1,14 @@
 from dataclasses import dataclass
 
 import numpy as np
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from line_profiler import profile
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 
-from giskardpy.god_map import god_map
 from giskardpy.qp.qp_controller import QPController
+from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.utils.decorators import record_time
-from line_profiler import profile
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 @dataclass
@@ -75,7 +72,7 @@ class PublishDebugExpressions(GiskardBehavior):
             for (
                 name,
                 value,
-            ) in god_map.debug_expression_manager.evaluated_debug_expressions.items():
+            ) in debug_expression_manager.evaluated_debug_expressions.items():
                 if isinstance(value, np.ndarray):
                     if len(value) > 1:
                         if len(value.shape) == 2:
@@ -83,6 +80,7 @@ class PublishDebugExpressions(GiskardBehavior):
                                 for y in range(value.shape[1]):
                                     tmp_name = f"{name}|{x}_{y}"
                                     msg.name.append(tmp_name)
+
                                     msg.position.append(value[x, y])
                         else:
                             for x in range(value.shape[0]):
@@ -164,6 +162,7 @@ class PublishDebugExpressions(GiskardBehavior):
 
     @record_time
     def update(self):
+        raise NotImplementedError("needs fixing")
         qp_controller: QPController = GiskardBlackboard().executor.qp_controller
         msg = self.create_msg(qp_controller)
         self.publisher.publish(msg)

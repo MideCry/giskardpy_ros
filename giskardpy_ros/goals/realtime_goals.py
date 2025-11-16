@@ -422,7 +422,7 @@ class CarryMyBullshit(Goal):
             map_V_laser_avoidance_direction.vis_frame = (
                 context.world.search_for_link_name(self.laser_frame)
             )
-            god_map.debug_expression_manager.add_debug_expression(
+            context.debug_expression_manager.add_debug_expression(
                 "base_V_laser_avoidance_direction", map_V_laser_avoidance_direction
             )
             odom_y_vel = self.odom_joint.y_velocity.get_symbol(Derivatives.position)
