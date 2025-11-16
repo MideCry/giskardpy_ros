@@ -102,10 +102,10 @@ class Giskard:
             GiskardBlackboard().executor.collision_scene.sync()
 
         self.sanity_check()
-        god_map.model_synchronizer = ModelSynchronizer(
+        GiskardBlackboard().model_synchronizer = ModelSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
-        god_map.model_synchronizer.pause()
+        GiskardBlackboard().model_synchronizer.pause()
         god_map.state_synchronizer = StateSynchronizer(
             world=self.world_config.world, node=rospy.node
         )

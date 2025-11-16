@@ -10,6 +10,10 @@ from py_trees.common import Status, Access
 from giskardpy.data_types.exceptions import DontPrintStackTrace
 from giskardpy.executor import Executor
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from semantic_digital_twin.adapters.ros.world_synchronizer import (
+    StateSynchronizer,
+    ModelSynchronizer,
+)
 
 if TYPE_CHECKING:
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
@@ -32,6 +36,8 @@ class GiskardBlackboard:
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
     executor: Executor
+    model_synchronizer: ModelSynchronizer
+    state_synchronizer: StateSynchronizer
     __shared_state = {}
 
     @property
