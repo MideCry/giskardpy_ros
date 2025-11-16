@@ -40,8 +40,6 @@ class CleanUp(GiskardBehavior):
             GiskardBlackboard().ros_visualizer.publish_markers(force=True)
         god_map.world.compiled_all_fks = None
         GiskardBlackboard().executor.collision_scene.reset_cache()
-        god_map.time = 0
-        god_map.control_cycle_counter = 1
 
         self.get_blackboard().runtime = None
 

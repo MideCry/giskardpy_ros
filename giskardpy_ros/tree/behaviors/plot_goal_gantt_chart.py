@@ -74,7 +74,12 @@ class PlotGanttChart(GiskardBehavior):
 
         cm_per_second = cm_to_inch(2.5)
         figure_height = 0.7 + num_bars * 0.19
-        plt.figure(figsize=(god_map.time * cm_per_second + 2.5, figure_height))
+        plt.figure(
+            figsize=(
+                GiskardBlackboard().executor._time * cm_per_second + 2.5,
+                figure_height,
+            )
+        )
         plt.grid(True, axis="x", zorder=-1)
 
         self.plot_history(task_history, tasks, task_plot_filter, task_positions)
@@ -87,7 +92,7 @@ class PlotGanttChart(GiskardBehavior):
 
         plt.xlabel("Time [s]")
         plt.xlim(0, monitor_history[-1][0])
-        plt.xticks(np.arange(0, god_map.time, 1))
+        plt.xticks(np.arange(0, GiskardBlackboard().executor._time, 1))
 
         plt.ylabel("Tasks | Monitors")
         plt.ylim(-0.8, num_bars - 1 + 0.8)
@@ -162,7 +167,8 @@ class PlotGanttChart(GiskardBehavior):
 
         # add Nones to make sure all bars gets "ended"
         new_end_time = (
-            god_map.time + GiskardBlackboard().executor.qp_controller.config.mpc_dt
+            GiskardBlackboard().executor._time
+            + GiskardBlackboard().executor.qp_controller.config.mpc_dt
         )
 
         task_history = copy(god_map.motion_statechart_manager.task_state_history)

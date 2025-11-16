@@ -58,7 +58,6 @@ class Giskard:
             "package://giskardpy_ros/tmp/"
         )
         GiskardBlackboard().giskard = self
-        god_map.hack = 0
 
     def create_collision_detector(self, collision_checker: CollisionCheckerLib):
         if collision_checker not in CollisionCheckerLib:
