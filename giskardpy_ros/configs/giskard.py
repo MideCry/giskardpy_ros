@@ -7,10 +7,10 @@ from typing import List
 import rclpy
 
 from giskardpy.data_types.exceptions import SetupException
+from giskardpy.executor import Executor
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import (
-    CollisionWorldSynchronizer,
     CollisionCheckerLib,
 )
 from giskardpy.model.collisions import NullCollisionDetector
@@ -88,27 +88,19 @@ class Giskard:
             self.world_config.setup_world()
             god_map.world = self.world_config.world
 
-            collision_detector = self.create_collision_detector(
-                self.collision_checker_id
-            )
-
-            robots = self.world_config.world.get_semantic_annotations_by_type(
-                AbstractRobot
-            )
-            self.collision_scene = CollisionWorldSynchronizer(
-                collision_detector=collision_detector,
+            GiskardBlackboard().executor = Executor(
                 world=self.world_config.world,
-                robots=robots,
+                controller_config=self.qp_controller_config,
+                collision_checker=self.collision_checker_id,
             )
-            god_map.collision_scene = self.collision_scene
 
             self.behavior_tree_config.setup()
 
             self.robot_interface_config.setup()
             self.world_config.setup_collision_config()
 
-        if god_map.collision_scene.is_collision_checking_enabled():
-            self.collision_scene.sync()
+        if GiskardBlackboard().executor.collision_scene.is_collision_checking_enabled():
+            GiskardBlackboard().executor.collision_scene.sync()
 
         self.sanity_check()
         god_map.model_synchronizer = ModelSynchronizer(

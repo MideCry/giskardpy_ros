@@ -64,7 +64,7 @@ class ControlLoop(AsyncBehavior):
             success_is_running=False,
         )
 
-        if god_map.collision_scene.is_collision_checking_enabled():
+        if GiskardBlackboard().executor.collision_scene.is_collision_checking_enabled():
             self.add_child(CollisionChecker("collision checker"))
 
         self.controller_plugin = ControllerPlugin("controller")

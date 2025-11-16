@@ -4,7 +4,6 @@ from giskardpy_ros.tree.behaviors.cleanup import CleanUpPlanning
 from giskardpy_ros.tree.behaviors.compile_debug_expressions import (
     CompileDebugExpressions,
 )
-from giskardpy_ros.tree.behaviors.init_qp_controller import CompileMotionStatechart
 from giskardpy_ros.tree.behaviors.new_trajectory import NewTrajectory
 from giskardpy_ros.tree.behaviors.plot_motion_graph import PlotMotionGraph
 from giskardpy_ros.tree.behaviors.ros_msg_to_goal import (
@@ -25,7 +24,6 @@ class PrepareControlLoop(Sequence):
         self.add_child(NewTrajectory("NewTrajectory"))
         self.add_child(SetExecutionMode())
         self.add_child(ParseActionGoal("RosMsgToGoal"))
-        self.add_child(CompileMotionStatechart("CompileMotionStatechart"))
         self.add_child(SetTrackingStartTime("start tracking time"))
 
     def add_plot_goal_graph(self):
@@ -45,7 +43,6 @@ class PrepareBaseTrajControlLoop(Sequence):
         self.has_compile_debug_expressions = False
         self.add_child(CleanUpPlanning("CleanUpPlanning"))
         self.add_child(AddBaseTrajFollowerGoal())
-        self.add_child(CompileMotionStatechart("CompileMotionStatechart"))
         self.add_child(SetTrackingStartTime("start tracking time"))
 
     def add_plot_goal_graph(self):

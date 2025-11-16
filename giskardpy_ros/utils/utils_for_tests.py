@@ -606,7 +606,10 @@ class GiskardTester(ABC):
             for old_joint_name in old_joint_names:
                 assert old_joint_name not in god_map.world.joint_names
             # links removed from collision scene
-            for link_a, link_b in god_map.collision_scene.self_collision_matrix:
+            for (
+                link_a,
+                link_b,
+            ) in GiskardBlackboard().executor.collision_scene.self_collision_matrix:
                 try:
                     assert link_a not in old_link_names
                     assert link_b not in old_link_names
@@ -903,15 +906,17 @@ class GiskardTester(ABC):
     def compute_collisions(
         self, collision_entries: List[CollisionRequest]
     ) -> Collisions:
-        god_map.collision_scene.collision_detector.reset_cache()
-        god_map.collision_scene.matrix_manager.parse_collision_requests(
+        GiskardBlackboard().executor.collision_scene.collision_detector.reset_cache()
+        GiskardBlackboard().executor.collision_scene.matrix_manager.parse_collision_requests(
             collision_entries
         )
         collision_matrix = (
-            god_map.collision_scene.matrix_manager.compute_collision_matrix()
+            GiskardBlackboard().executor.collision_scene.matrix_manager.compute_collision_matrix()
         )
-        god_map.collision_scene.set_collision_matrix(collision_matrix)
-        return god_map.collision_scene.check_collisions()
+        GiskardBlackboard().executor.collision_scene.set_collision_matrix(
+            collision_matrix
+        )
+        return GiskardBlackboard().executor.collision_scene.check_collisions()
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [
