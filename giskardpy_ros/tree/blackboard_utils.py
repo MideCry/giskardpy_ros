@@ -9,6 +9,7 @@ from py_trees.common import Status, Access
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
 from giskardpy.executor import Executor
+from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
     StateSynchronizer,
@@ -39,6 +40,7 @@ class GiskardBlackboard:
     model_synchronizer: ModelSynchronizer
     state_synchronizer: StateSynchronizer
     motion_start_time: float
+    trajectory: Trajectory
     __shared_state = {}
 
     @property

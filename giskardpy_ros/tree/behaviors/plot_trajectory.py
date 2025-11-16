@@ -34,7 +34,7 @@ class PlotTrajectory(GiskardBehavior):
         self.plot_thread.start()
 
     def plot(self):
-        trajectory = god_map.trajectory
+        trajectory = GiskardBlackboard().trajectory
         if trajectory:
             sample_period = GiskardBlackboard().executor.qp_controller.config.mpc_dt
             try:

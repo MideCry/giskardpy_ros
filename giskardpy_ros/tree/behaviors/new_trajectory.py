@@ -17,7 +17,7 @@ class NewTrajectory(GiskardBehavior):
         current_js = deepcopy(GiskardBlackboard().executor.world.state)
         trajectory = Trajectory()
         trajectory.append(current_js)
-        god_map.trajectory = trajectory
+        GiskardBlackboard().trajectory = trajectory
 
     def update(self):
         return Status.SUCCESS

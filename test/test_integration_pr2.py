@@ -607,7 +607,7 @@ class TestMonitors:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(local_min_end=False)
         assert (
-            len(god_map.trajectory)
+            len(GiskardBlackboard().trajectory)
             * GiskardBlackboard().executor.qp_controller.config.mpc_dt
             > 4
         )
@@ -1227,7 +1227,7 @@ class TestMonitors:
         giskard.api.monitors.add_check_trajectory_length(120)
         giskard.execute(local_min_end=False)
         assert (
-            len(god_map.trajectory)
+            len(GiskardBlackboard().trajectory)
             * GiskardBlackboard().executor.qp_controller.config.mpc_dt
             > 6
         )
@@ -1770,7 +1770,7 @@ class TestConstraints:
         np.testing.assert_almost_equal(
             giskard.api.world.state[joint].position, joint_goal, decimal=3
         )
-        for joint_state in god_map.trajectory:
+        for joint_state in GiskardBlackboard().trajectory:
             assert np.less_equal(joint_state[joint].velocity, vel_limit + 1e-4)
 
     def test_JointPosition_kitchen(self, kitchen_setup: PR2Tester):

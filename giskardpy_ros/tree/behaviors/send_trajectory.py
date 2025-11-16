@@ -116,7 +116,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
     @record_time
     def initialise(self):
         super().initialise()
-        trajectory = god_map.trajectory
+        trajectory = GiskardBlackboard().trajectory
         goal = FollowJointTrajectoryGoal()
         start_time = GiskardBlackboard().motion_start_time
         fill_velocity_values = GiskardBlackboard().fill_trajectory_velocity_values

@@ -9,5 +9,5 @@ from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 class LogTrajPlugin(GiskardBehavior):
     @record_time
     def update(self):
-        god_map.trajectory.append(GiskardBlackboard().executor.world.state)
+        GiskardBlackboard().trajectory.append(GiskardBlackboard().executor.world.state)
         return Status.SUCCESS

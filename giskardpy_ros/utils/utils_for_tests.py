@@ -505,7 +505,7 @@ class GiskardTester(ABC):
             diff = time() - time_spend_giskarding
             self.total_time_spend_giskarding += diff
             self.total_time_spend_moving += (
-                len(god_map.trajectory)
+                len(GiskardBlackboard().trajectory)
                 * GiskardBlackboard().executor.qp_controller.config.mpc_dt
             )
             get_middleware().logwarn(f"Goal processing took {diff}")
@@ -524,7 +524,7 @@ class GiskardTester(ABC):
         return r
 
     def sync_world_with_trajectory(self):
-        t = god_map.trajectory
+        t = GiskardBlackboard().trajectory
         whole_last_joint_state = t[-1].to_position_dict()
         for group_name in self.env_joint_state_pubs:
             group_joints = self.api.world.get_group_info(group_name).joint_state.name
@@ -536,7 +536,7 @@ class GiskardTester(ABC):
             self.set_env_state(group_last_joint_state, group_name)
 
     def get_result_trajectory_position(self):
-        trajectory = god_map.trajectory
+        trajectory = GiskardBlackboard().trajectory
         trajectory2 = {}
         for joint_name in trajectory[0].keys():
             trajectory2[joint_name] = np.array(
@@ -545,7 +545,7 @@ class GiskardTester(ABC):
         return trajectory2
 
     def get_result_trajectory_velocity(self):
-        trajectory = god_map.trajectory
+        trajectory = GiskardBlackboard().trajectory
         trajectory2 = {}
         for joint_name in trajectory[0].keys():
             trajectory2[joint_name] = np.array(

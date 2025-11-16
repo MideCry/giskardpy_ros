@@ -17,7 +17,7 @@ class ResetWorldState(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        js = god_map.trajectory[0]
+        js = GiskardBlackboard().trajectory[0]
         GiskardBlackboard().executor.world.state = js
         GiskardBlackboard().executor.world.notify_state_change()
         return Status.SUCCESS

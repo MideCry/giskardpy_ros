@@ -101,7 +101,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
         god_map.motion_statechart_manager.add_monitor(local_min)
 
         time_monitor = TimeAbove(
-            threshold=len(god_map.trajectory)
+            threshold=len(GiskardBlackboard().trajectory)
             * GiskardBlackboard().executor.qp_controller.config.mpc_dt,
             name="timeout",
         )
