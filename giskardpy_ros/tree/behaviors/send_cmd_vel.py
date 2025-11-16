@@ -55,7 +55,7 @@ class SendCmdVelTwist(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     def update(self):
-        cmd = god_map.qp_solver_solution
+        cmd = GiskardBlackboard().executor.qp_solver_solution
         twist = self.solver_cmd_to_twist(cmd)
         self.vel_pub.publish(twist)
         return Status.RUNNING
