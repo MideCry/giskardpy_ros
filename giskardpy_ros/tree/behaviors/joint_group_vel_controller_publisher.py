@@ -11,7 +11,10 @@ from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
+from giskardpy_ros.tree.blackboard_utils import (
+    catch_and_raise_to_blackboard,
+    GiskardBlackboard,
+)
 from line_profiler import profile
 
 
@@ -27,7 +30,7 @@ class JointGroupVelController(GiskardBehavior):
 
         # self.joint_names = self.get_joints()
         self.joint_names = joints
-        god_map.world.register_controlled_joints(self.joint_names)
+        GiskardBlackboard().executor.world.register_controlled_joints(self.joint_names)
         self.msg = None
         get_middleware().loginfo(
             f"Created publisher for {self.cmd_topic} for {self.joint_names}"
@@ -38,7 +41,9 @@ class JointGroupVelController(GiskardBehavior):
     def update(self):
         msg = Float64MultiArray()
         for i, joint_name in enumerate(self.joint_names):
-            msg.data.append(god_map.world.state[joint_name].velocity)
+            msg.data.append(
+                GiskardBlackboard().executor.world.state[joint_name].velocity
+            )
         self.cmd_pub.publish(msg)
         return Status.RUNNING
 

@@ -39,9 +39,11 @@ class ParseActionGoal(GiskardBehavior):
         get_middleware().loginfo(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
-        tracker = KinematicStructureEntityKwargsTracker.from_world(god_map.world)
+        tracker = KinematicStructureEntityKwargsTracker.from_world(
+            GiskardBlackboard().executor.world
+        )
         kwargs = tracker.create_kwargs()
-        kwargs["world"] = god_map.world
+        kwargs["world"] = GiskardBlackboard().executor.world
         motion_statechart = MotionStatechart.from_json(
             json.loads(move_goal.goal), **kwargs
         )
@@ -88,7 +90,7 @@ class SetExecutionMode(GiskardBehavior):
 class AddBaseTrajFollowerGoal(GiskardBehavior):
     def __init__(self, name: str = "add base traj goal"):
         super().__init__(name)
-        joints = god_map.world.get_connections_by_type(OmniDrive)
+        joints = GiskardBlackboard().executor.world.get_connections_by_type(OmniDrive)
         assert len(joints) == 1
         self.joint = joints[0]
 

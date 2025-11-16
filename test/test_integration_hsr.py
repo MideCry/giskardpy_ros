@@ -116,7 +116,9 @@ def robot():
 class TestJointGoals:
 
     def test_mimic_joints(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = god_map.world.get_connection_by_name("arm_lift_joint")
+        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+            "arm_lift_joint"
+        )
         default_pose_giskard.open_gripper()
         hand_T_finger_current = default_pose_giskard.compute_fk_pose(
             "hand_palm_link", "hand_l_distal_link"
@@ -137,7 +139,9 @@ class TestJointGoals:
         default_pose_giskard.api.motion_goals.allow_all_collisions()
         default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            god_map.world.state[arm_lift_joint.dof.name].position, 0.2, decimal=2
+            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            0.2,
+            decimal=2,
         )
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = "base_footprint"
@@ -154,7 +158,9 @@ class TestJointGoals:
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
     def test_mimic_joints2(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = god_map.world.get_connection_by_name("arm_lift_joint")
+        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+            "arm_lift_joint"
+        )
         default_pose_giskard.open_gripper()
 
         tip = "hand_gripper_tool_frame"
@@ -168,7 +174,9 @@ class TestJointGoals:
         default_pose_giskard.api.motion_goals.allow_all_collisions()
         default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            god_map.world.state[arm_lift_joint.dof.name].position, 0.2, decimal=2
+            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            0.2,
+            decimal=2,
         )
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = "base_footprint"
@@ -185,7 +193,9 @@ class TestJointGoals:
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
     def test_mimic_joints3(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = god_map.world.get_connection_by_name("arm_lift_joint")
+        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+            "arm_lift_joint"
+        )
         default_pose_giskard.open_gripper()
         tip = "head_pan_link"
         p = PoseStamped()
@@ -197,7 +207,9 @@ class TestJointGoals:
         )
         default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            god_map.world.state[arm_lift_joint.dof.name].position, 0.3, decimal=2
+            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            0.3,
+            decimal=2,
         )
         base_T_torso = PoseStamped()
         base_T_torso.header.frame_id = "base_footprint"
@@ -214,13 +226,15 @@ class TestJointGoals:
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
     def test_mimic_joints4(self, default_pose_giskard: HSRTester):
-        arm_lift_joints: ActiveConnection1DOF = god_map.world.get_connection_by_name(
-            "arm_lift_joint"
+        arm_lift_joints: ActiveConnection1DOF = (
+            default_pose_giskard.apdefault_pose_giskard.apdefault_pose_giskard.apdefault_pose_giskard.api.world.get_connection_by_name(
+                "arm_lift_joint"
+            )
         )
         assert arm_lift_joints.dof.lower_limits.velocity == -0.15
         assert arm_lift_joints.dof.upper_limits.velocity == 0.15
-        torso_lift_joints: ActiveConnection1DOF = god_map.world.get_connection_by_name(
-            "torso_lift_joint"
+        torso_lift_joints: ActiveConnection1DOF = (
+            default_pose_giskard.api.world.get_connection_by_name("torso_lift_joint")
         )
         assert torso_lift_joints.dof.lower_limits.velocity == -0.075
         assert torso_lift_joints.dof.upper_limits.velocity == 0.075
@@ -229,7 +243,9 @@ class TestJointGoals:
         default_pose_giskard.api.motion_goals.allow_all_collisions()
         default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            god_map.world.state[arm_lift_joints.dof.name].position, 0.5, decimal=2
+            default_pose_giskard.api.world.state[arm_lift_joints.dof.name].position,
+            0.5,
+            decimal=2,
         )
 
 
@@ -323,10 +339,12 @@ class TestCartGoals:
         )
         default_pose_giskard.execute()
 
-        hpl = god_map.world.search_for_link_name(
-            link_name="hand_gripper_tool_frame", group_name="hsrb"
+        hpl = (
+            default_pose_giskard.apdefault_pose_giskard.api.world.search_for_link_name(
+                link_name="hand_gripper_tool_frame", group_name="hsrb"
+            )
         )
-        root_link = god_map.world.search_for_link_name(link_name="map")
+        root_link = default_pose_giskard.api.world.search_for_link_name(link_name="map")
         hole_point = PointStamped()
         hole_point.header.frame_id = "map"
         hole_point.point.x = 0.5
@@ -862,7 +880,9 @@ class TestCollisionAvoidanceGoals:
         default_pose_giskard.execute(
             expected_error_type=EmptyProblemException, local_min_end=False
         )
-        current_state = {k.name: v[0] for k, v in god_map.world.state.items()}
+        current_state = {
+            k.name: v[0] for k, v in default_pose_giskard.api.world.state.items()
+        }
         default_pose_giskard.compare_joint_state(
             current_state, default_pose_giskard.default_pose
         )

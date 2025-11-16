@@ -22,7 +22,10 @@ from giskardpy_ros.ros2.ros2_interface import (
 )
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from semantic_digital_twin.world_description.connections import OmniDrive, ActiveConnection
+from semantic_digital_twin.world_description.connections import (
+    OmniDrive,
+    ActiveConnection,
+)
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
@@ -38,7 +41,7 @@ class RobotInterfaceConfig(ABC):
 
     @property
     def world(self) -> World:
-        return god_map.world
+        return GiskardBlackboard().executor.world
 
     @property
     def robot(self) -> AbstractRobot:
@@ -246,7 +249,9 @@ class RobotInterfaceConfig(ABC):
         """
         internal_joint_names: List[PrefixedName] = []
         for i in range(len(joints)):
-            internal_joint_names.append(god_map.world.search_for_joint_name(joints[i]))
+            internal_joint_names.append(
+                GiskardBlackboard().executor.world.search_for_joint_name(joints[i])
+            )
         self.tree.control_loop_branch.send_controls.add_joint_velocity_group_controllers(
             cmd_topic=cmd_topic, joints=internal_joint_names
         )

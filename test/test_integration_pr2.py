@@ -169,7 +169,9 @@ class PR2Tester(GiskardTester):
 
     @property
     def robot(self) -> AbstractRobot:
-        return god_map.world.get_semantic_annotation_by_name(self.api.robot_name)
+        return GiskardBlackboard().executor.world.get_semantic_annotation_by_name(
+            self.api.robot_name
+        )
 
     @property
     def l_gripper_annotation(self) -> ParallelGripper:
@@ -353,20 +355,22 @@ class TestJointGoals:
         end.start_condition = joint_goal.observation_variable
         giskard.api.execute(msc)
         for joint, goal in js.items():
-            connection = god_map.world.get_connection_by_name(joint)
+            connection = giskard.api.world.get_connection_by_name(joint)
             if (
                 isinstance(connection, RevoluteConnection)
                 and not connection.dof.has_position_limits()
             ):
                 assert (
                     cas.shortest_angular_distance(
-                        god_map.world.state[connection.dof.name].position, goal
+                        giskard.api.world.state[connection.dof.name].position, goal
                     ).to_np()[0]
                     < 0.01
                 )
             else:
                 assert np.isclose(
-                    god_map.world.state[connection.dof.name].position, goal, atol=1e-2
+                    giskard.api.world.state[connection.dof.name].position,
+                    goal,
+                    atol=1e-2,
                 )
 
     def test_joint_goal_projection(self, giskard: PR2Tester, better_pose):
@@ -519,22 +523,22 @@ class TestJointGoals:
     def test_hard_joint_limits(self, giskard: PR2Tester):
         giskard.api.motion_goals.allow_self_collision()
 
-        r_elbow_flex_joint_limits_lower = god_map.world.get_connection_by_name(
+        r_elbow_flex_joint_limits_lower = giskard.api.world.get_connection_by_name(
             "r_elbow_flex_joint"
         ).dof.lower_limits.position
-        r_elbow_flex_joint_limits_upper = god_map.world.get_connection_by_name(
+        r_elbow_flex_joint_limits_upper = giskard.api.world.get_connection_by_name(
             "r_elbow_flex_joint"
         ).dof.upper_limits.position
-        torso_lift_joint_limits_lower = god_map.world.get_connection_by_name(
+        torso_lift_joint_limits_lower = giskard.api.world.get_connection_by_name(
             "torso_lift_joint"
         ).dof.lower_limits.position
-        torso_lift_joint_limits_upper = god_map.world.get_connection_by_name(
+        torso_lift_joint_limits_upper = giskard.api.world.get_connection_by_name(
             "torso_lift_joint"
         ).dof.upper_limits.position
-        head_pan_joint_limits_lower = god_map.world.get_connection_by_name(
+        head_pan_joint_limits_lower = giskard.api.world.get_connection_by_name(
             "head_pan_joint"
         ).dof.lower_limits.position
-        head_pan_joint_limits_upper = god_map.world.get_connection_by_name(
+        head_pan_joint_limits_upper = giskard.api.world.get_connection_by_name(
             "head_pan_joint"
         ).dof.upper_limits.position
 
@@ -1750,7 +1754,7 @@ class TestConstraints:
         compare_points(expected.pose.position, new_pose.pose.position)
 
     def test_JointVelocityRevolute(self, giskard: PR2Tester):
-        joint = god_map.world.get_connection_by_name("r_shoulder_lift_joint").name
+        joint = giskard.api.world.get_connection_by_name("r_shoulder_lift_joint").name
         vel_limit = 0.4
         joint_goal = 1.0
         giskard.api.motion_goals.allow_all_collisions()
@@ -1764,7 +1768,7 @@ class TestConstraints:
         giskard.api.motion_goals.add_joint_position(goal_state={joint: joint_goal})
         giskard.execute()
         np.testing.assert_almost_equal(
-            god_map.world.state[joint].position, joint_goal, decimal=3
+            giskard.api.world.state[joint].position, joint_goal, decimal=3
         )
         for joint_state in god_map.trajectory:
             assert np.less_equal(joint_state[joint].velocity, vel_limit + 1e-4)
@@ -2004,7 +2008,7 @@ class TestConstraints:
             and j.dof.has_position_limits()
         ]
 
-        current_joint_state = god_map.world.state.to_position_dict()
+        current_joint_state = giskard.api.world.state.to_position_dict()
         percentage *= (
             0.95  # it will not reach the exact percentage, because the weight is so low
         )
@@ -2038,7 +2042,7 @@ class TestConstraints:
         giskard.api.motion_goals.allow_self_collision()
         giskard.execute()
 
-        current_joint_state = god_map.world.state.to_position_dict()
+        current_joint_state = giskard.api.world.state.to_position_dict()
         percentage *= (
             0.9  # it will not reach the exact percentage, because the weight is so low
         )
@@ -2348,10 +2352,10 @@ class TestConstraints:
 
         kitchen_setup.check_cpi_leq(
             [
-                god_map.world.get_kinematic_structure_entity_by_name(
+                kitchen_setup.api.world.get_kinematic_structure_entity_by_name(
                     "pr2/r_gripper_tool_frame"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                kitchen_setup.api.world.get_kinematic_structure_entity_by_name(
                     "sink_area_dish_washer_door"
                 ),
             ],
@@ -2993,9 +2997,9 @@ class TestCartGoals:
         )
         giskard.execute()
         assert (
-            god_map.world.compute_forward_kinematics_np(
-                god_map.world.root,
-                god_map.world.get_kinematic_structure_entity_by_name(
+            giskard.api.world.compute_forward_kinematics_np(
+                giskard.api.world.root,
+                giskard.api.world.get_kinematic_structure_entity_by_name(
                     "r_gripper_tool_frame"
                 ),
             )[0, 3]
@@ -3183,22 +3187,24 @@ class TestCartGoals:
 class TestWorldManipulation:
 
     def test_save_graph_pdf(self, kitchen_setup):
-        god_map.world.save_graph_pdf(god_map.tmp_folder)
+        kitchen_setup.api.world.save_graph_pdf(god_map.tmp_folder)
 
     def test_dye_group(self, kitchen_setup: PR2Tester):
-        base_link = god_map.world.search_for_link_name("base_link")
-        sink_area_sink = god_map.world.search_for_link_name("sink_area_sink")
-        r_gripper_palm_link = god_map.world.search_for_link_name("r_gripper_palm_link")
+        base_link = kitchen_setup.api.world.search_for_link_name("base_link")
+        sink_area_sink = kitchen_setup.api.world.search_for_link_name("sink_area_sink")
+        r_gripper_palm_link = kitchen_setup.api.world.search_for_link_name(
+            "r_gripper_palm_link"
+        )
 
         old_color = (
-            god_map.world.groups[kitchen_setup.api.robot_name]
+            kitchen_setup.api.world.groups[kitchen_setup.api.robot_name]
             .links[base_link]
             .collisions[0]
             .color
         )
         kitchen_setup.dye_group(kitchen_setup.api.robot_name, (1.0, 0.0, 0.0, 1.0))
         color_robot = (
-            god_map.world.groups[kitchen_setup.api.robot_name]
+            kitchen_setup.api.world.groups[kitchen_setup.api.robot_name]
             .links[base_link]
             .collisions[0]
             .color
@@ -3209,7 +3215,7 @@ class TestWorldManipulation:
         assert color_robot.a == 1.0
         kitchen_setup.dye_group("iai_kitchen", (0.0, 1.0, 0.0, 1.0))
         color_kitchen = (
-            god_map.world.groups["iai_kitchen"]
+            kitchen_setup.api.world.groups["iai_kitchen"]
             .links[sink_area_sink]
             .collisions[0]
             .color
@@ -3224,7 +3230,7 @@ class TestWorldManipulation:
         assert color_kitchen.a == 1.0
         kitchen_setup.dye_group(kitchen_setup.r_gripper_group, (0.0, 0.0, 1.0, 1.0))
         color_hand = (
-            god_map.world.groups[kitchen_setup.api.robot_name]
+            kitchen_setup.api.world.groups[kitchen_setup.api.robot_name]
             .links[r_gripper_palm_link]
             .collisions[0]
             .color
@@ -3257,7 +3263,7 @@ class TestWorldManipulation:
         assert color_hand.a == 1.0
         kitchen_setup.clear_world()
         color_robot = (
-            god_map.world.groups[kitchen_setup.api.robot_name]
+            kitchen_setup.api.world.groups[kitchen_setup.api.robot_name]
             .links[base_link]
             .collisions[0]
             .color
@@ -3698,7 +3704,11 @@ class TestSelfCollisionAvoidance:
 
         giskard.check_cpi_geq(giskard.get_l_gripper_links(), 0.048)
         giskard.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                giskard.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
         giskard.detach_group(attached_link_name)
@@ -3751,7 +3761,11 @@ class TestSelfCollisionAvoidance:
         giskard.execute()
         giskard.check_cpi_leq(giskard.get_l_gripper_links(), 0.01)
         giskard.check_cpi_leq(
-            [god_map.world.get_kinematic_structure_entity_by_name("r_forearm_link")],
+            [
+                giskard.api.world.get_kinematic_structure_entity_by_name(
+                    "r_forearm_link"
+                )
+            ],
             0.01,
         )
         giskard.check_cpi_geq(giskard.get_r_gripper_links(), 0.05)
@@ -4095,10 +4109,12 @@ class TestCollisionAvoidanceGoals:
         box_setup.api.motion_goals.allow_self_collision()
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name("base_link")], 0.048
+            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
+            0.048,
         )
         box_setup.check_cpi_leq(
-            [god_map.world.get_kinematic_structure_entity_by_name("base_link")], 0.07
+            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
+            0.07,
         )
 
     @pytest.mark.skip(reason="Needs View PR")
@@ -4118,7 +4134,7 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name("base_link")],
+            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
             distance_threshold=0.25,
             check_self=False,
         )
@@ -4135,28 +4151,28 @@ class TestCollisionAvoidanceGoals:
         box_setup.teleport_base(p)
         box_setup.check_cpi_geq(
             [
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "bl_caster_l_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "bl_caster_r_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "fl_caster_l_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "fl_caster_r_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "br_caster_l_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "br_caster_r_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "fr_caster_l_wheel_link"
                 ),
-                god_map.world.get_kinematic_structure_entity_by_name(
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
                     "fr_caster_r_wheel_link"
                 ),
             ],
@@ -4198,7 +4214,7 @@ class TestCollisionAvoidanceGoals:
         fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.05)
         fake_table_setup.check_cpi_leq(
             [
-                god_map.world.get_kinematic_structure_entity_by_name(
+                GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
                     "r_gripper_l_finger_tip_link"
                 )
             ],
@@ -4206,7 +4222,7 @@ class TestCollisionAvoidanceGoals:
         )
         fake_table_setup.check_cpi_leq(
             [
-                god_map.world.get_kinematic_structure_entity_by_name(
+                GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
                     "r_gripper_r_finger_tip_link"
                 )
             ],
@@ -4269,7 +4285,8 @@ class TestCollisionAvoidanceGoals:
 
         pocky_pose_setup.execute()
         pocky_pose_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name("box")], 0.048
+            [pocky_pose_setup.world.get_kinematic_structure_entity_by_name("box")],
+            0.048,
         )
 
     def test_avoid_collision_box_between_3_boxes(self, pocky_pose_setup: PR2Tester):
@@ -4472,7 +4489,11 @@ class TestCollisionAvoidanceGoals:
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
 
@@ -4486,11 +4507,19 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             -0.008,
         )
         box_setup.check_cpi_leq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.01,
         )
         box_setup.detach_group(attached_link_name)
@@ -4518,7 +4547,11 @@ class TestCollisionAvoidanceGoals:
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
 
@@ -4536,7 +4569,11 @@ class TestCollisionAvoidanceGoals:
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
         box_setup.detach_group(attached_link_name)
@@ -4571,7 +4608,11 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             -0.003,
         )
 
@@ -4588,11 +4629,19 @@ class TestCollisionAvoidanceGoals:
             local_min_end=False, expected_error_type=MaxTrajectoryLengthException
         )
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             -0.005,
         )
         box_setup.check_cpi_leq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.01,
         )
         box_setup.detach_group(attached_link_name)
@@ -4619,7 +4668,11 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             -0.082,
         )
         box_setup.detach_group(attached_link_name)
@@ -4638,7 +4691,11 @@ class TestCollisionAvoidanceGoals:
         )
         box_setup.execute()
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
         box_setup.detach_group(attached_link_name)
@@ -4659,7 +4716,11 @@ class TestCollisionAvoidanceGoals:
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
         box_setup.check_cpi_geq(
-            [god_map.world.get_kinematic_structure_entity_by_name(attached_link_name)],
+            [
+                box_setup.api.world.get_kinematic_structure_entity_by_name(
+                    attached_link_name
+                )
+            ],
             0.048,
         )
         box_setup.detach_group(attached_link_name)
@@ -4688,7 +4749,7 @@ class TestCollisionAvoidanceGoals:
         box_setup.execute()
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
         box_setup.check_cpi_leq(
-            [god_map.world.get_kinematic_structure_entity_by_name(pocky)], 0.0
+            [box_setup.api.world.get_kinematic_structure_entity_by_name(pocky)], 0.0
         )
 
     def test_attached_two_items(self, giskard: PR2Tester):
@@ -4741,8 +4802,8 @@ class TestCollisionAvoidanceGoals:
 
         giskard.check_cpi_geq(
             [
-                god_map.world.get_kinematic_structure_entity_by_name(box1_name),
-                god_map.world.get_kinematic_structure_entity_by_name(box2_name),
+                giskard.api.world.get_kinematic_structure_entity_by_name(box1_name),
+                giskard.api.world.get_kinematic_structure_entity_by_name(box2_name),
             ],
             0.049,
         )

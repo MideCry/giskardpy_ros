@@ -45,14 +45,14 @@ class RealTimePointing(Pointing):
     def __post_init__(self):
         self.goal_point = cas.Point3(
             (1, 0, 1),
-            reference_frame=god_map.world.search_for_link_name("base_footprint"),
+            reference_frame=context.world.search_for_link_name("base_footprint"),
         )
         super().__post_init__()
         self.sub = rospy.node.create_subscription(PointStamped, "muh", self.cb, 10)
 
     def cb(self, data: PointStamped):
-        data = msg_converter.ros_msg_to_giskard_obj(data, god_map.world)
-        data = god_map.world.transform(
+        data = msg_converter.ros_msg_to_giskard_obj(data, context.world)
+        data = context.world.transform(
             target_frame=self.root_link, spatial_object=data
         ).to_np()
         self.root_P_goal_point = data
@@ -132,15 +132,15 @@ class CarryMyBullshit(Goal):
         self.laser_avoidance_angle_cutout = laser_avoidance_angle_cutout
         self.laser_avoidance_sideways_buffer = laser_avoidance_sideways_buffer
         self.base_orientation_threshold = base_orientation_threshold
-        self.odom_joint_name = god_map.world.search_for_joint_name(odom_joint_name)
-        self.odom_joint: OmniDrive = god_map.world.get_joint(self.odom_joint_name)
+        self.odom_joint_name = context.world.search_for_joint_name(odom_joint_name)
+        self.odom_joint: OmniDrive = context.world.get_joint(self.odom_joint_name)
         self.target_age_threshold = target_age_threshold
         self.target_age_exception_threshold = target_age_exception_threshold
         if root_link is None:
-            self.root = god_map.world.root.name
+            self.root = context.world.root.name
         else:
-            self.root = god_map.world.search_for_link_name(root_link)
-        self.camera_link = god_map.world.search_for_link_name(camera_link)
+            self.root = context.world.search_for_link_name(root_link)
+        self.camera_link = context.world.search_for_link_name(camera_link)
         self.tip_V_camera_axis = cas.Vector3()
         self.tip_V_camera_axis.z = 1
         self.tip = self.odom_joint.child_link_name
@@ -215,9 +215,9 @@ class CarryMyBullshit(Goal):
             self.publish_trajectory()
 
         # %% real shit
-        root_T_bf = god_map.world.compose_fk_expression(self.root, self.tip)
-        root_T_odom = god_map.world.compose_fk_expression(self.root, self.odom)
-        root_T_camera = god_map.world.compose_fk_expression(self.root, self.camera_link)
+        root_T_bf = context.world.compose_fk_expression(self.root, self.tip)
+        root_T_odom = context.world.compose_fk_expression(self.root, self.odom)
+        root_T_camera = context.world.compose_fk_expression(self.root, self.camera_link)
         root_P_bf = root_T_bf.to_position()
 
         min_left_violation1 = symbol_manager.get_symbol(
@@ -420,7 +420,7 @@ class CarryMyBullshit(Goal):
                 bf_V_laser_avoidance_direction
             )
             map_V_laser_avoidance_direction.vis_frame = (
-                god_map.world.search_for_link_name(self.laser_frame)
+                context.world.search_for_link_name(self.laser_frame)
             )
             god_map.debug_expression_manager.add_debug_expression(
                 "base_V_laser_avoidance_direction", map_V_laser_avoidance_direction
@@ -575,7 +575,7 @@ class CarryMyBullshit(Goal):
         ) = self.muddle_laser_scan(scan, self.thresholds_pc)
 
     def get_current_point(self) -> np.ndarray:
-        root_T_tip = god_map.world.compute_fk_np(self.root, self.tip)
+        root_T_tip = context.world.compute_fk_np(self.root, self.tip)
         x = root_T_tip[0, 3]
         y = root_T_tip[1, 3]
         return np.array([x, y])
@@ -652,7 +652,7 @@ class CarryMyBullshit(Goal):
         m_line.ns = "traj"
         m_line.id = 1
         m_line.type = m_line.LINE_STRIP
-        m_line.header.frame_id = str(god_map.world.root.name)
+        m_line.header.frame_id = str(context.world.root.name)
         m_line.scale.x = 0.05
         m_line.color.a = 1
         m_line.color.r = 1
@@ -838,16 +838,16 @@ class FollowNavPath(Goal):
     #         self.laser_avoidance_sideways_buffer = laser_avoidance_sideways_buffer
     #         self.base_orientation_threshold = base_orientation_threshold
     #         if odom_joint_name is None:
-    #             self.odom_joint = god_map.world.search_for_joint_of_type(OmniDrive)[0]
+    #             self.odom_joint = context.world.search_for_joint_of_type(OmniDrive)[0]
     #             self.odom_joint_name = self.odom_joint.name
     #         else:
-    #             self.odom_joint_name = god_map.world.search_for_joint_name(odom_joint_name)
-    #             self.odom_joint = god_map.world.get_joint(self.odom_joint_name)
+    #             self.odom_joint_name = context.world.search_for_joint_name(odom_joint_name)
+    #             self.odom_joint = context.world.get_joint(self.odom_joint_name)
     #         if root_link is None:
-    #             self.root = god_map.world.root.name
+    #             self.root = context.world.root.name
     #         else:
-    #             self.root = god_map.world.search_for_link_name(root_link)
-    #         self.camera_link = god_map.world.search_for_link_name(camera_link)
+    #             self.root = context.world.search_for_link_name(root_link)
+    #         self.camera_link = context.world.search_for_link_name(camera_link)
     #         self.tip_V_camera_axis = cas.Vector3()
     #         self.tip_V_camera_axis.z = 1
     #         self.tip = self.odom_joint.child_link_name
@@ -872,9 +872,9 @@ class FollowNavPath(Goal):
     #         self.path_to_trajectory(path=path)
     #
     #         # %% real shit
-    #         root_T_bf = god_map.world.compose_fk_expression(self.root, self.tip)
-    #         root_T_odom = god_map.world.compose_fk_expression(self.root, self.odom)
-    #         root_T_camera = god_map.world.compose_fk_expression(self.root, self.camera_link)
+    #         root_T_bf = context.world.compose_fk_expression(self.root, self.tip)
+    #         root_T_odom = context.world.compose_fk_expression(self.root, self.odom)
+    #         root_T_camera = context.world.compose_fk_expression(self.root, self.camera_link)
     #         root_P_bf = root_T_bf.to_position()
     #
     #         if self.enable_laser_avoidance:
@@ -982,7 +982,7 @@ class FollowNavPath(Goal):
     #             sideways_vel = (closest_laser_left + closest_laser_right)
     #             bf_V_laser_avoidance_direction = cas.Vector3([0, sideways_vel, 0])
     #             map_V_laser_avoidance_direction = root_T_bf.dot(bf_V_laser_avoidance_direction)
-    #             map_V_laser_avoidance_direction.vis_frame = god_map.world.search_for_link_name(self.laser_frame)
+    #             map_V_laser_avoidance_direction.vis_frame = context.world.search_for_link_name(self.laser_frame)
     #             god_map.debug_expression_manager.add_debug_expression('base_V_laser_avoidance_direction',
     #                                                                   map_V_laser_avoidance_direction)
     #             odom_y_vel = self.odom_joint.y_vel.get_symbol(Derivatives.position)
@@ -1009,7 +1009,7 @@ class FollowNavPath(Goal):
     #
     #         final_orientation = self.create_and_add_task('final orientation')
     #         frame_R_current = root_T_bf.to_rotation()
-    #         current_R_frame_eval = god_map.world.compose_fk_evaluated_expression(self.tip, self.root).to_rotation()
+    #         current_R_frame_eval = context.world.compose_fk_evaluated_expression(self.tip, self.root).to_rotation()
     #         frame_R_goal = cas.TransformationMatrix(path.poses[-1]).to_rotation()
     #         final_orientation.add_rotation_goal_constraints(frame_R_current=frame_R_current,
     #                                                         frame_R_goal=frame_R_goal,
@@ -1134,7 +1134,7 @@ class FollowNavPath(Goal):
     #         self.closest_laser_right[id_] = right
     #
     #     def get_current_point(self) -> np.ndarray:
-    #         root_T_tip = god_map.world.compute_fk_np(self.root, self.tip)
+    #         root_T_tip = context.world.compute_fk_np(self.root, self.tip)
     #         x = root_T_tip[0, 3]
     #         y = root_T_tip[1, 3]
     #         return np.array([x, y])
@@ -1184,7 +1184,7 @@ class FollowNavPath(Goal):
     #         m_line.ns = 'traj'
     #         m_line.id = 1
     #         m_line.type = m_line.LINE_STRIP
-    #         m_line.header.frame_id = str(god_map.world.root.name)
+    #         m_line.header.frame_id = str(context.world.root.name)
     #         m_line.scale.x = 0.05
     #         m_line.color.a = 1
     #         m_line.color.r = 1

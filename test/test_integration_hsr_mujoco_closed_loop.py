@@ -49,7 +49,6 @@ class HSRTester(GiskardTester):
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
         # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
         self.odom_root = "odom"
-        self.robot = god_map.world.groups[self.robot_name]
 
     def open_gripper(self):
         self.command_gripper(1.24)

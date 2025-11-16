@@ -85,7 +85,6 @@ class Giskard:
         """
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
-            god_map.world = self.world_config.world
 
             GiskardBlackboard().executor = Executor(
                 world=self.world_config.world,
@@ -126,7 +125,7 @@ class Giskard:
         return self.world_config.world.get_semantic_annotations_by_type(AbstractRobot)
 
     def _controlled_joints_sanity_check(self):
-        world = god_map.world
+        world = self.world_config.world
         movable_joints = world.get_connections_by_type(ActiveConnection)
         controlled_joints = self.robot.controlled_connections
         non_controlled_joints = set(movable_joints).difference(set(controlled_joints))

@@ -31,7 +31,7 @@ class SetMoveResult(GiskardBehavior):
             GiskardBlackboard().move_action_server.set_aborted()
 
         # trajectory = god_map.trajectory
-        # joints = god_map.world.get_connections_by_type(ActiveConnection)
+        # joints = GiskardBlackboard().executor.world.get_connections_by_type(ActiveConnection)
         # move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
         #     trajectory,
         #     sample_period=GiskardBlackboard().giskard.qp_controller_config.mpc_dt,

@@ -133,10 +133,10 @@ def dlr_kitchen_setup(better_pose: GiskardTester) -> GiskardTester:
             set_js_topic="/kitchen/cram_joint_states",
         )
     js = {}
-    for joint_name in god_map.world.groups[
+    for joint_name in better_pose.api.world.groups[
         better_pose.default_env_name
     ].movable_joint_names:
-        joint = god_map.world.joints[joint_name]
+        joint = better_pose.api.world.joints[joint_name]
         if isinstance(joint, ActiveConnection1DOF):
             if GiskardBlackboard().tree_config.is_standalone():
                 js[str(joint.dof.name)] = 0.0
@@ -170,6 +170,6 @@ def apartment_setup(better_pose: GiskardTester) -> GiskardTester:
     base_pose.pose.position.x = 1.5
     base_pose.pose.position.y = 2.4
     base_pose.pose.orientation.w = 1.0
-    base_pose = better_pose.transform_msg(god_map.world.root.name, base_pose)
+    base_pose = better_pose.transform_msg(better_pose.api.world.root.name, base_pose)
     better_pose.teleport_base(base_pose)
     return better_pose

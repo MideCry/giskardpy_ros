@@ -544,7 +544,7 @@ class TestCollisionAvoidance:
         )
         left_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         apartment_setup.api.motion_goals.add_cartesian_pose(
-            left_pose, tip_link=tcp, root_link=god_map.world.root_link_name
+            left_pose, tip_link=tcp, root_link=apartment_setup.world.root_link_name
         )
         goal_point = PointStamped()
         goal_point.header.frame_id = "cabinet1_door_top_left"
@@ -731,7 +731,7 @@ class TestJointGoals:
         default_pose_giskard.api.monitors.add_set_seed_configuration(
             seed_configuration=js
         )
-        god_map.world.state[
+        default_pose_giskard.world.state[
             PrefixedName("arm_right_5_joint", "tiago_dual")
         ].velocity = 1
         # zero_pose.world.state[PrefixedName('arm_left_5_joint', 'tiago_dual')].velocity = -1
@@ -747,7 +747,7 @@ class TestJointGoals:
             seed_configuration=js
         )
         default_pose_giskard.api.motion_goals.add_joint_position(js)
-        god_map.world.state[
+        default_pose_giskard.world.state[
             PrefixedName("arm_right_5_joint", "tiago_dual")
         ].velocity = 1
         default_pose_giskard.api.motion_goals.allow_all_collisions()

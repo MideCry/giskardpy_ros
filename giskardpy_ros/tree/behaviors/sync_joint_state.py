@@ -1,5 +1,6 @@
 from typing import Optional
 
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 
@@ -42,7 +43,7 @@ class SyncJointState(GiskardBehavior):
             mjs = msg_converter.ros_joint_state_to_giskard_joint_state(
                 self.data, self.group_name
             )
-            god_map.world.state.update(mjs)
+            GiskardBlackboard().executor.world.state.update(mjs)
             self.data = None
             return Status.SUCCESS
         return Status.RUNNING
@@ -89,6 +90,8 @@ class SyncJointStatePosition(GiskardBehavior):
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
             joint_name = PrefixedName(joint_name, self.group_name)
-            god_map.world.state[joint_name][Derivativesw.position] = position
+            GiskardBlackboard().executor.world.state[joint_name][
+                Derivativesw.position
+            ] = position
 
         return Status.SUCCESS

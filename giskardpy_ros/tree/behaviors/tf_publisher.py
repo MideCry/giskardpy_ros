@@ -36,7 +36,9 @@ class TFPublisher(GiskardBehavior):
         include_prefix: bool = True,
     ):
         super().__init__(name)
-        self.original_links = set(body.name for body in god_map.world.bodies)
+        self.original_links = set(
+            body.name for body in GiskardBlackboard().executor.world.bodies
+        )
         self.tf_pub = rospy.node.create_publisher(TFMessage, tf_topic, 10)
         self.mode = mode
         self.robots = GiskardBlackboard().giskard.robots
@@ -59,7 +61,7 @@ class TFPublisher(GiskardBehavior):
             if self.mode == TfPublishingModes.all:
                 self.tf_pub.publish(
                     msg_converter.world_to_tf_message(
-                        god_map.world, self.include_prefix
+                        GiskardBlackboard().executor.world, self.include_prefix
                     )
                 )
             else:
@@ -72,7 +74,7 @@ class TFPublisher(GiskardBehavior):
                         robot_links = set(robot.bodies)
                     attached_links = robot_links - self.original_links
                     if attached_links:
-                        get_fk = god_map.world.compute_fk
+                        get_fk = GiskardBlackboard().executor.world.compute_fk
                         for body in attached_links:
                             link_name = body.name
                             parent_link_name = body.parent_body
@@ -90,14 +92,20 @@ class TFPublisher(GiskardBehavior):
                 TfPublishingModes.world_objects,
                 TfPublishingModes.attached_and_world_objects,
             ]:
-                for group_name, group in god_map.world.groups.items():
+                for (
+                    group_name,
+                    group,
+                ) in GiskardBlackboard().executor.world.groups.items():
                     if group_name in self.robots:
                         # robot frames will exist for sure
                         continue
                     if len(group.joints) > 0:
                         continue
-                    get_fk = god_map.world.compute_fk
-                    fk = get_fk(god_map.world.root.name, group.root_link_name)
+                    get_fk = GiskardBlackboard().executor.world.compute_fk
+                    fk = get_fk(
+                        GiskardBlackboard().executor.world.root.name,
+                        group.root_link_name,
+                    )
                     tf = self.make_transform(
                         fk.header.frame_id, str(group.root_link_name), fk.pose
                     )

@@ -235,7 +235,7 @@ class ROSMsgVisualization:
         )
         self.marker_ids = {}
         if tf_frame is None:
-            self.tf_root = str(god_map.world.root.name.name)
+            self.tf_root = str(GiskardBlackboard().executor.world.root.name.name)
         else:
             self.tf_root = tf_frame
         GiskardBlackboard().ros_visualizer = self
@@ -256,8 +256,13 @@ class ROSMsgVisualization:
         clear_memo(self.link_to_marker)
 
     def has_world_changed(self) -> bool:
-        if self.world_version != god_map.world.get_world_model_manager().version:
-            self.world_version = god_map.world.get_world_model_manager().version
+        if (
+            self.world_version
+            != GiskardBlackboard().executor.world.get_world_model_manager().version
+        ):
+            self.world_version = (
+                GiskardBlackboard().executor.world.get_world_model_manager().version
+            )
             return True
         return False
 
@@ -270,9 +275,9 @@ class ROSMsgVisualization:
             VisualizationMode.Visuals,
             VisualizationMode.VisualsFrameLocked,
         ]:
-            bodies = god_map.world.bodies
+            bodies = GiskardBlackboard().executor.world.bodies
         else:
-            bodies = god_map.world.link_names_with_collisions
+            bodies = GiskardBlackboard().executor.world.link_names_with_collisions
         for i, body in enumerate(bodies):
             collision_markers = self.link_to_marker(body)
             for j, marker in enumerate(collision_markers):
@@ -326,9 +331,9 @@ class ROSMsgVisualization:
                 )
                 contact_distance = collision.contact_distance
                 if collision.map_P_pa is None:
-                    map_T_a = god_map.world.compute_forward_kinematics_np(
-                        god_map.world.root,
-                        god_map.world.get_kinematic_structure_entity_by_name(
+                    map_T_a = GiskardBlackboard().executor.world.compute_forward_kinematics_np(
+                        GiskardBlackboard().executor.world.root,
+                        GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
                             collision.original_body_a
                         ),
                     )
@@ -337,9 +342,9 @@ class ROSMsgVisualization:
                     map_P_pa = collision.map_P_pa
 
                 if collision.map_P_pb is None:
-                    map_T_b = god_map.world.compute_forward_kinematics_np(
-                        god_map.world.root,
-                        god_map.world.get_kinematic_structure_entity_by_name(
+                    map_T_b = GiskardBlackboard().executor.world.compute_forward_kinematics_np(
+                        GiskardBlackboard().executor.world.root,
+                        GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
                             collision.original_body_b
                         ),
                     )
@@ -397,11 +402,11 @@ class ROSMsgVisualization:
                 raise ValueError(f"Index {i} is out of range {len(trajectory)}")
             return start_alpha + i * (stop_alpha - start_alpha) / (len(trajectory) - 1)
 
-        with god_map.world.reset_joint_state_context():
+        with GiskardBlackboard().executor.world.reset_joint_state_context():
             for point_id, joint_state in trajectory.items():
                 if point_id % every_x == 0 or point_id == len(trajectory) - 1:
-                    god_map.world.state = joint_state
-                    god_map.world.notify_state_change()
+                    GiskardBlackboard().executor.world.state = joint_state
+                    GiskardBlackboard().executor.world.notify_state_change()
                     if self.mode not in [
                         VisualizationMode.Visuals,
                         VisualizationMode.VisualsFrameLocked,

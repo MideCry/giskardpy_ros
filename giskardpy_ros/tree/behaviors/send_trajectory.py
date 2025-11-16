@@ -83,7 +83,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         if len(controlled_joint_names) == 0:
             raise ValueError(f"'{self.action_namespace}' has no joints")
 
-        for joint in god_map.world.joints.values():
+        for joint in GiskardBlackboard().executor.world.joints.values():
             if isinstance(joint, OneDofJoint):
                 if joint.free_variable.name in controlled_joint_names:
                     self.controlled_joints.append(joint)
@@ -99,7 +99,9 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
                 f"{self.action_namespace} provides the following joints "
                 f"that are not known to giskard: {controlled_joint_names}"
             )
-        god_map.world.register_controlled_joints(controlled_joint_names)
+        GiskardBlackboard().executor.world.register_controlled_joints(
+            controlled_joint_names
+        )
         controlled_joint_names = [j.name for j in self.controlled_joints]
         get_middleware().loginfo(
             f"Successfully connected to '{self.action_namespace}'."
@@ -107,7 +109,9 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         get_middleware().loginfo(
             f"Flagging the following joints as controlled: {controlled_joint_names}."
         )
-        god_map.world.register_controlled_joints(controlled_joint_names)
+        GiskardBlackboard().executor.world.register_controlled_joints(
+            controlled_joint_names
+        )
 
     @record_time
     def initialise(self):

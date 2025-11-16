@@ -182,11 +182,13 @@ class GiskardTester(ABC):
             )
         self.robot_names = [
             v.name
-            for v in god_map.world.get_semantic_annotations_by_type(AbstractRobot)
+            for v in GiskardBlackboard().executor.world.get_semantic_annotations_by_type(
+                AbstractRobot
+            )
         ]
-        self.default_root = god_map.world.root
+        self.default_root = GiskardBlackboard().executor.world.root
 
-        self.original_number_of_links = len(god_map.world.bodies)
+        self.original_number_of_links = len(GiskardBlackboard().executor.world.bodies)
         self.heart = Thread(target=GiskardBlackboard().tree.live, name="bt ticker")
         self.heart.start()
         self.wait_heartbeats(1)
@@ -196,20 +198,36 @@ class GiskardTester(ABC):
     def setup_giskard(self) -> Giskard: ...
 
     def get_odometry_joint(self) -> OmniDrive:
-        return god_map.world.get_semantic_annotations_by_type(AbstractRobot)[0].drive
+        return (
+            GiskardBlackboard()
+            .executor.world.get_semantic_annotations_by_type(AbstractRobot)[0]
+            .drive
+        )
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
-        root_T_tip = god_map.world.compute_forward_kinematics(
-            root=god_map.world.get_kinematic_structure_entity_by_name(root_link),
-            tip=god_map.world.get_kinematic_structure_entity_by_name(tip_link),
+        root_T_tip = GiskardBlackboard().executor.world.compute_forward_kinematics(
+            root=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                root_link
+            ),
+            tip=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                tip_link
+            ),
         )
         return msg_converter.to_ros_message(root_T_tip)
 
     def compute_fk_point(self, root_link: str, tip_link: str) -> PointStamped:
-        root_T_tip = god_map.world.compute_forward_kinematics(
-            root=god_map.world.get_kinematic_structure_entity_by_name(root_link),
-            tip=god_map.world.get_kinematic_structure_entity_by_name(tip_link),
-        ).to_position()
+        root_T_tip = (
+            GiskardBlackboard()
+            .executor.world.compute_forward_kinematics(
+                root=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                    root_link
+                ),
+                tip=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                    tip_link
+                ),
+            )
+            .to_position()
+        )
         return msg_converter.to_ros_message(root_T_tip)
 
     def has_odometry_joint(self) -> bool:
@@ -234,24 +252,28 @@ class GiskardTester(ABC):
             else:
                 raise LookupException("just to trigger except block")
         except (LookupException, ExtrapolationException) as e:
-            target_frame = god_map.world.get_kinematic_structure_entity_by_name(
-                target_frame
-            ).name
+            target_frame = (
+                GiskardBlackboard()
+                .executor.world.get_kinematic_structure_entity_by_name(target_frame)
+                .name
+            )
             try:
                 result_msg.header.frame_id = str(
-                    god_map.world.get_kinematic_structure_entity_by_name(
+                    GiskardBlackboard()
+                    .executor.world.get_kinematic_structure_entity_by_name(
                         result_msg.header.frame_id
-                    ).name.name
+                    )
+                    .name.name
                 )
             except UnknownGroupException:
                 pass
             giskard_obj = msg_converter.ros_msg_to_giskard_obj(
-                result_msg, god_map.world
+                result_msg, self.api.world
             )
-            target_body = god_map.world.get_kinematic_structure_entity_by_name(
+            target_body = GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
                 target_frame
             )
-            transformed_giskard_obj = god_map.world.transform(
+            transformed_giskard_obj = GiskardBlackboard().executor.world.transform(
                 target_frame=target_body, spatial_object=giskard_obj
             )
             return msg_converter.to_ros_message(transformed_giskard_obj)
@@ -334,8 +356,8 @@ class GiskardTester(ABC):
         for joint_name in goal_js:
             goal = goal_js[joint_name]
             current = current_js[joint_name]
-            connection: ActiveConnection1DOF = god_map.world.get_connection_by_name(
-                joint_name
+            connection: ActiveConnection1DOF = (
+                GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
             )
             if not connection.dof.has_position_limits():
                 np.testing.assert_almost_equal(
@@ -426,9 +448,9 @@ class GiskardTester(ABC):
         """
         if add_local_minimum_reached:
             self.api.add_default_end_motion_conditions()
-        last_js = god_map.world.state.to_position_dict()
+        last_js = GiskardBlackboard().executor.world.state.to_position_dict()
         for key, value in list(last_js.items()):
-            if key not in god_map.world.controlled_connections:
+            if key not in GiskardBlackboard().executor.world.controlled_connections:
                 del last_js[key]
         result = self.async_loop.run_until_complete(
             self.send_goal(
@@ -437,9 +459,9 @@ class GiskardTester(ABC):
                 wait=wait,
             )
         )
-        new_js = god_map.world.state.to_position_dict()
+        new_js = GiskardBlackboard().executor.world.state.to_position_dict()
         for key, value in list(new_js.items()):
-            if key not in god_map.world.controlled_connections:
+            if key not in GiskardBlackboard().executor.world.controlled_connections:
                 del new_js[key]
         self.compare_joint_state(new_js, last_js)
         return result
@@ -543,7 +565,11 @@ class GiskardTester(ABC):
                     lower_limit = lower_limit.to_np()
                 if not isinstance(upper_limit, float):
                     upper_limit = upper_limit.to_np()
-                current_position = god_map.world.state[free_variable.name].position
+                current_position = (
+                    GiskardBlackboard()
+                    .executor.world.state[free_variable.name]
+                    .position
+                )
                 assert (
                     lower_limit - eps <= current_position <= upper_limit + eps
                 ), f"joint limit of {free_variable.name} is violated {lower_limit} <= {current_position} <= {upper_limit}"
@@ -551,14 +577,20 @@ class GiskardTester(ABC):
     def are_joint_limits_in_traj_violated(self):
         trajectory_vel = self.get_result_trajectory_velocity()
         trajectory_pos = self.get_result_trajectory_position()
-        controlled_joints = god_map.world.controlled_connections
+        controlled_joints = GiskardBlackboard().executor.world.controlled_connections
         for joint_name in controlled_joints:
             if isinstance(
-                god_map.world.joints[joint_name],
+                GiskardBlackboard().executor.world.joints[joint_name],
                 (PrismaticConnection, RevoluteConnection),
             ):
-                if not god_map.world.is_joint_continuous(joint_name):
-                    joint_limits = god_map.world.get_joint_position_limits(joint_name)
+                if not GiskardBlackboard().executor.world.is_joint_continuous(
+                    joint_name
+                ):
+                    joint_limits = (
+                        GiskardBlackboard().executor.world.get_joint_position_limits(
+                            joint_name
+                        )
+                    )
                     error_msg = f"{joint_name} has violated joint position limit"
                     eps = 0.0001
                     np.testing.assert_array_less(
@@ -568,7 +600,10 @@ class GiskardTester(ABC):
                         -trajectory_pos[joint_name], -joint_limits[0] + eps, error_msg
                     )
                 vel_limit = (
-                    god_map.world.get_joint_velocity_limits(joint_name)[1] * 1.001
+                    GiskardBlackboard().executor.world.get_joint_velocity_limits(
+                        joint_name
+                    )[1]
+                    * 1.001
                 )
                 vel = trajectory_vel[joint_name]
                 error_msg = f"{joint_name} has violated joint velocity limit {vel} > {vel_limit}"
@@ -594,18 +629,27 @@ class GiskardTester(ABC):
         old_link_names = []
         old_joint_names = []
         if expected_error_type is None:
-            old_link_names = god_map.world.groups[name].link_names_as_set
-            old_joint_names = god_map.world.groups[name].joint_names
+            old_link_names = (
+                GiskardBlackboard().executor.world.groups[name].link_names_as_set
+            )
+            old_joint_names = (
+                GiskardBlackboard().executor.world.groups[name].joint_names
+            )
         try:
             r = self.api.world.remove_group(name)
             self.wait_heartbeats()
             assert r.error.type == GiskardError.SUCCESS
             # links removed from world
             for old_link_name in old_link_names:
-                assert old_link_name not in god_map.world.link_names_as_set
+                assert (
+                    old_link_name
+                    not in GiskardBlackboard().executor.world.link_names_as_set
+                )
             # joints removed from world
             for old_joint_name in old_joint_names:
-                assert old_joint_name not in god_map.world.joint_names
+                assert (
+                    old_joint_name not in GiskardBlackboard().executor.world.joint_names
+                )
             # links removed from collision scene
             for (
                 link_a,
@@ -619,7 +663,7 @@ class GiskardTester(ABC):
             return r
         except Exception as e:
             assert type(e) == expected_error_type
-        assert name not in god_map.world.groups
+        assert name not in GiskardBlackboard().executor.world.groups
         assert name not in self.api.world.get_group_names()
         # if name in self.env_joint_state_pubs: todo
         #     self.env_joint_state_pubs[name].unregister()
@@ -705,7 +749,9 @@ class GiskardTester(ABC):
             self.wait_heartbeats()
             assert response.error.type == GiskardError.SUCCESS
             info = self.api.world.get_group_info(group_name)
-            map_T_group = tf.transform_pose(god_map.world.root.name, new_pose)
+            map_T_group = tf.transform_pose(
+                GiskardBlackboard().executor.world.root.name, new_pose
+            )
             compare_poses(info.root_link_pose.pose, map_T_group.pose)
         except Exception as e:
             assert type(e) == expected_error_type
@@ -964,14 +1010,15 @@ class GiskardTester(ABC):
             if not check_self and not collision.is_external:
                 continue
             if (
-                collision.original_body_a in bodies
-                or collision.original_body_b in bodies
+                collision.original_body_a not in bodies
+                and collision.original_body_b not in bodies
             ):
-                if (
-                    min_contact is None
-                    or collision.contact_distance <= min_contact.contact_distance
-                ):
-                    min_contact = collision
+                continue
+            if (
+                min_contact is None
+                or collision.contact_distance <= min_contact.contact_distance
+            ):
+                min_contact = collision
         assert min_contact.contact_distance <= distance_threshold, (
             f"{min_contact.contact_distance} > {distance_threshold} "
             f"({min_contact.original_body_a} with {min_contact.original_body_b})"
@@ -989,6 +1036,6 @@ class GiskardTester(ABC):
 
     def reset_base(self):
         p = PoseStamped()
-        p.header.frame_id = god_map.world.root.name
+        p.header.frame_id = GiskardBlackboard().executor.world.root.name
         p.pose.orientation.w = 1.0
         self.teleport_base(p)
