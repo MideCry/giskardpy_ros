@@ -177,7 +177,7 @@ class GiskardTester(ABC):
             )
             GiskardBlackboard().tree.turn_off_visualization()
         if "QP_SOLVER" in os.environ:
-            god_map.qp_controller.set_qp_solver(
+            GiskardBlackboard().executor.qp_controller.set_qp_solver(
                 SupportedQPSolver[os.environ["QP_SOLVER"]]
             )
         self.robot_names = [
@@ -483,7 +483,8 @@ class GiskardTester(ABC):
             diff = time() - time_spend_giskarding
             self.total_time_spend_giskarding += diff
             self.total_time_spend_moving += (
-                len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt
+                len(god_map.trajectory)
+                * GiskardBlackboard().executor.qp_controller.config.mpc_dt
             )
             get_middleware().logwarn(f"Goal processing took {diff}")
             result_exception = msg_converter.error_msg_to_exception(r.error)
@@ -532,7 +533,7 @@ class GiskardTester(ABC):
 
     def are_joint_limits_violated(self, eps=1e-2):
         active_free_variables: List[DegreeOfFreedom] = (
-            god_map.qp_controller.degrees_of_freedoms
+            GiskardBlackboard().executor.qp_controller.degrees_of_freedoms
         )
         for free_variable in active_free_variables:
             if free_variable.has_position_limits():

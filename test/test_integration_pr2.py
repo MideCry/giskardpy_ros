@@ -55,7 +55,6 @@ from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
-from giskardpy.motion_statechart.goals.set_prediction_horizon import SetQPSolver
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached
@@ -603,7 +602,11 @@ class TestMonitors:
         giskard.api.motion_goals.add_joint_position(goal_state=default_joint_state)
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(local_min_end=False)
-        assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 4
+        assert (
+            len(god_map.trajectory)
+            * GiskardBlackboard().executor.qp_controller.config.mpc_dt
+            > 4
+        )
 
     def test_joint_sequence(self, giskard: PR2Tester, pocky_pose_state, better_pose):
         g1 = "g1"
@@ -1219,7 +1222,11 @@ class TestMonitors:
         )
         giskard.api.monitors.add_check_trajectory_length(120)
         giskard.execute(local_min_end=False)
-        assert len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt > 6
+        assert (
+            len(god_map.trajectory)
+            * GiskardBlackboard().executor.qp_controller.config.mpc_dt
+            > 6
+        )
         current_pose = giskard.compute_fk_pose(
             root_link="map", tip_link="base_footprint"
         )
@@ -1661,7 +1668,7 @@ class TestConstraints:
             base_goal, tip_link="base_footprint", root_link="map"
         )
         result = giskard.execute(expected_error_type=MaxTrajectoryLengthException)
-        dt = god_map.qp_controller.config.mpc_dt
+        dt = GiskardBlackboard().executor.qp_controller.config.mpc_dt
         # due to rounding, its sometimes two or three steps longer, depending on dt
         assert (
             new_length + dt * 2
@@ -1673,7 +1680,7 @@ class TestConstraints:
             base_goal, tip_link="base_footprint", root_link="map"
         )
         result = giskard.execute(expected_error_type=MaxTrajectoryLengthException)
-        dt = god_map.qp_controller.config.mpc_dt
+        dt = GiskardBlackboard().executor.qp_controller.config.mpc_dt
         assert len(result.trajectory._points) * dt > new_length + 1.0
 
     def test_CartesianPosition(self, giskard: PR2Tester):
@@ -1976,8 +1983,8 @@ class TestConstraints:
         giskard.execute()
 
         for state in god_map.debug_expression_manager.raw_traj_to_traj(
-            god_map.qp_controller.config.control_dt
-            or god_map.qp_controller.config.mpc_dt
+            GiskardBlackboard().executor.qp_controller.config.control_dt
+            or GiskardBlackboard().executor.qp_controller.config.mpc_dt
         ):
             key = PrefixedName("trans_error", "")
             assert key in state

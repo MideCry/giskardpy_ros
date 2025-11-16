@@ -2,6 +2,7 @@ import traceback
 from threading import Lock
 
 import numpy as np
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
@@ -50,11 +51,11 @@ class PlotDebugExpressions(PlotTrajectory):
 
     def plot(self):
         trajectory = god_map.debug_expression_manager.raw_traj_to_traj(
-            god_map.qp_controller.config.control_dt
-            or god_map.qp_controller.config.mpc_dt
+            GiskardBlackboard().executor.qp_controller.config.control_dt
+            or GiskardBlackboard().executor.qp_controller.config.mpc_dt
         )
         if trajectory and len(trajectory) > 0:
-            sample_period = god_map.qp_controller.config.mpc_dt
+            sample_period = GiskardBlackboard().executor.qp_controller.config.mpc_dt
             traj = self.split_traj(trajectory)
             try:
                 traj.plot_trajectory(
