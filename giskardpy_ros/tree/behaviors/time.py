@@ -16,7 +16,7 @@ class RosTime(GiskardBehavior):
 
     @property
     def start_time(self) -> float:
-        return god_map.motion_start_time
+        return GiskardBlackboard().motion_start_time
 
     def update(self):
         god_map.time = rospy.node.get_clock().now().nanoseconds / 1e9 - self.start_time

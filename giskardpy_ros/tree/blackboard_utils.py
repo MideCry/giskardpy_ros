@@ -38,6 +38,7 @@ class GiskardBlackboard:
     executor: Executor
     model_synchronizer: ModelSynchronizer
     state_synchronizer: StateSynchronizer
+    motion_start_time: float
     __shared_state = {}
 
     @property

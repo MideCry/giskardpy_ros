@@ -1,3 +1,4 @@
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from line_profiler import profile
 from py_trees.common import Status
 from rclpy.duration import Duration
@@ -15,7 +16,9 @@ class SetTrackingStartTime(GiskardBehavior):
 
     def initialise(self):
         super().initialise()
-        god_map.motion_start_time = (rospy.node.get_clock().now() + self.offset).nanoseconds / 1e9
+        GiskardBlackboard().motion_start_time = (
+            rospy.node.get_clock().now() + self.offset
+        ).nanoseconds / 1e9
 
     def update(self):
         return Status.SUCCESS
