@@ -43,5 +43,4 @@ class CollisionChecker(GiskardBehavior):
         """
         collisions = GiskardBlackboard().executor.collision_scene.check_collisions()
         self.are_self_collisions_violated(collisions)
-        god_map.closest_point = collisions
         return Status.RUNNING
