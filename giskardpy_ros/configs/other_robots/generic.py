@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from giskardpy.model.world_config import WorldWithFixedRobot
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from semantic_digital_twin.robots.minimal_robot import MinimalRobot
 from semantic_digital_twin.world_description.connections import (
     ActiveConnection1DOF,
 )
@@ -16,12 +15,6 @@ class GenericWorldConfig(WorldWithFixedRobot):
 
     def setup_collision_config(self):
         pass
-
-    def setup_world(self):
-        super().setup_world()
-        self.robot = MinimalRobot.from_world(
-            world=self.world, root_body=self.robot_root
-        )
 
 
 class GenericRobotInterface(RobotInterfaceConfig):
