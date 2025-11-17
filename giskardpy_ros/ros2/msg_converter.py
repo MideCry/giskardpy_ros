@@ -480,8 +480,9 @@ def convert_ros_message_to_dictionary(message) -> dict:
 def msg_type_as_str(msg_type) -> str:
     type_str_parts = str(type(msg_type())).split(".")
     part1 = type_str_parts[0].split("'")[1]
-    part2 = type_str_parts[-1].split("'")[0]
-    return f"{part1}/{part2}"
+    part2 = type_str_parts[1]
+    part3 = type_str_parts[-1].split("'")[0]
+    return f"{part1}/{part2}/{part3}"
 
 
 def ros_msg_to_giskard_obj(msg, world: World):

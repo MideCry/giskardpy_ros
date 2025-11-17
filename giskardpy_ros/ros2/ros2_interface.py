@@ -27,13 +27,17 @@ def wait_for_message(
     node: "Node",
     topic: str,
     *,
-    qos_profile: Union[QoSProfile, int] = 10,
+    qos_profile: Union[QoSProfile, int] = QoSProfile,
     time_to_wait=-1,
 ) -> Tuple[bool, Any]:
     while True:
         try:
             result = rclpy_wait_for_message(
-                msg_type=msg_type, node=node, topic=topic, qos_profile=qos_profile
+                msg_type=msg_type,
+                node=node,
+                topic=topic,
+                qos_profile=qos_profile,
+                time_to_wait=time_to_wait,
             )
             if result[1] is not None:
                 return result

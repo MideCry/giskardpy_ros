@@ -23,7 +23,7 @@ class BehaviorTreeConfig:
     tree: GiskardBT = field(init=False)
     tree_tick_rate: float = 0.05
     debug_mode: bool = False
-    visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed
+    visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
 
     add_gantt_chart_plotter: bool = False
     add_goal_graph_plotter: bool = False

@@ -596,7 +596,7 @@ class GiskardTester(ABC):
                 .link_names_as_set
             )
             old_joint_names = (
-                GiskardBlackboard().executor.world.groups[name].joint_names
+                GiskardBlackboard().executor.world.groups[name].connections
             )
         try:
             r = self.api.world.remove_group(name)
@@ -944,6 +944,7 @@ class GiskardTester(ABC):
         check_self: bool = True,
     ):
         collisions = self.compute_all_collisions()
+        assert len(collisions.all_collisions) > 0
         for collision in collisions.all_collisions:
             if not check_external and collision.is_external:
                 continue
