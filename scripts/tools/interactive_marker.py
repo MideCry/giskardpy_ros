@@ -174,15 +174,14 @@ class InteractiveMarkerNode:
                 ),
             )
 
-            msc = MotionStatechart(self.giskard.world)
+            msc = MotionStatechart()
             cart_goal = CartesianPose(
-                name=PrefixedName("cart_goal"),
                 root_link=self.root_body,
                 tip_link=self.tip_body,
                 goal_pose=goal,
             )
             msc.add_node(cart_goal)
-            end = EndMotion(name=PrefixedName("end"))
+            end = EndMotion()
             msc.add_node(end)
             end.start_condition = cart_goal.observation_variable
             self.giskard.execute_async(msc)
