@@ -1,22 +1,20 @@
 from __future__ import annotations
+
 import traceback
-import typing
-from dataclasses import dataclass
 from functools import wraps
 from typing import TypeVar, Callable, TYPE_CHECKING, Optional
 
-from py_trees.common import Status, Access
+from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
 from giskardpy.executor import Executor
-from giskardpy.model.trajectory import Trajectory
-from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
     StateSynchronizer,
     ModelSynchronizer,
 )
 
 if TYPE_CHECKING:
+    from giskardpy.model.trajectory import Trajectory
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
     from giskardpy_ros.configs.giskard import Giskard
     from giskardpy_ros.ros2.ros_msg_visualization import (
@@ -24,7 +22,6 @@ if TYPE_CHECKING:
         DebugMarkerVisualizer,
     )
     from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
-    from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 
 
 class GiskardBlackboard:

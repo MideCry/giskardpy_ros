@@ -72,7 +72,7 @@ from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointPositionList,
     JointState,
 )
-from giskardpy.motion_statechart.test_nodes.test_nodes import TrueMonitor
+from giskardpy.motion_statechart.test_nodes.test_nodes import ConstTrueNode
 from giskardpy.qp.qp_controller_config import SupportedQPSolver, QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import (
@@ -771,10 +771,10 @@ class TestMonitors:
 
     def test_true_monitor(self, giskard: PR2Tester):
         done = giskard.api.monitors.add_monitor(
-            class_name=TrueMonitor.__name__, name="Node1"
+            class_name=ConstTrueNode.__name__, name="Node1"
         )
         giskard.api.monitors.add_monitor(
-            class_name=TrueMonitor.__name__, name="Node Name"
+            class_name=ConstTrueNode.__name__, name="Node Name"
         )
         giskard.api.motion_goals.allow_all_collisions()
         giskard.api.monitors.add_end_motion(start_condition=done)
@@ -3788,7 +3788,6 @@ class TestSelfCollisionAvoidance:
     def test_avoid_self_collision_with_l_arm(self, giskard: PR2Tester):
         msc = MotionStatechart()
         joint_goal = JointPositionList(
-            name=PrefixedName("joint_goal"),
             goal_state=JointState.from_str_dict(
                 {
                     "r_elbow_flex_joint": -1.43286344265,
@@ -3806,7 +3805,6 @@ class TestSelfCollisionAvoidance:
         joint_goal.end_condition = joint_goal.observation_variable
 
         cart_goal = CartesianPose(
-            name=PrefixedName("cart_goal"),
             root_link=giskard.base_footprint,
             tip_link=giskard.r_tip,
             goal_pose=TransformationMatrix.from_xyz_rpy(
@@ -3817,12 +3815,11 @@ class TestSelfCollisionAvoidance:
         cart_goal.start_condition = joint_goal.observation_variable
 
         collision_avoidance = CollisionAvoidance(
-            name=PrefixedName("collision_avoidance"),
             collision_entries=[CollisionRequest.avoid_all_collision()],
         )
         msc.add_node(collision_avoidance)
 
-        end = EndMotion(name=PrefixedName("end"))
+        end = EndMotion()
         msc.add_node(end)
         end.start_condition = cart_goal.observation_variable
 
@@ -4176,7 +4173,6 @@ class TestCollisionAvoidanceGoals:
         msc = MotionStatechart()
 
         cart_goal = CartesianPose(
-            name=PrefixedName("cart goal"),
             root_link=fake_table_setup.default_root,
             tip_link=fake_table_setup.r_tip,
             goal_pose=cas.TransformationMatrix.from_xyz_axis_angle(
@@ -4192,13 +4188,12 @@ class TestCollisionAvoidanceGoals:
         msc.add_node(cart_goal)
 
         collision_avoidance = CollisionAvoidance(
-            name=PrefixedName("collision avoidance"),
             collision_entries=[CollisionRequest.avoid_all_collision(0.1)],
         )
         msc.add_node(collision_avoidance)
-        local_min = LocalMinimumReached(name=PrefixedName("local min"))
+        local_min = LocalMinimumReached()
         msc.add_node(local_min)
-        end = EndMotion(name=PrefixedName("end"))
+        end = EndMotion()
         msc.add_node(end)
         end.start_condition = local_min.observation_variable
 
