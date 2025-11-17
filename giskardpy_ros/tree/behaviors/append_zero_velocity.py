@@ -16,7 +16,10 @@ class SetZeroVelocity(GiskardBehavior):
 
     @record_time
     def update(self):
-        for free_variable, state in GiskardBlackboard().executor.world.state.items():
+        for (
+            free_variable,
+            state,
+        ) in GiskardBlackboard().executor.world.state.items():
             for derivative in Derivatives.range(Derivatives.velocity, Derivatives.jerk):
                 if derivative == Derivatives.position:
                     continue

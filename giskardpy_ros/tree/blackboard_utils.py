@@ -33,7 +33,6 @@ class GiskardBlackboard:
     debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
-    executor: Executor
     model_synchronizer: ModelSynchronizer
     state_synchronizer: StateSynchronizer
     motion_start_time: float
@@ -41,8 +40,12 @@ class GiskardBlackboard:
     __shared_state = {}
 
     @property
+    def executor(self) -> Executor:
+        return self.giskard.executor
+
+    @property
     def motion_statechart(self):
-        return self.executor.motion_statechart
+        return self.giskard.executor.motion_statechart
 
     def __init__(self):
         self.__dict__ = self.__shared_state

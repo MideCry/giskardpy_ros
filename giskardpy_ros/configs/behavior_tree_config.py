@@ -186,12 +186,6 @@ class BehaviorTreeConfig:
                 include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
             )
 
-    def add_robot_description_publisher(self, topic: str = "robot_description"):
-        if GiskardBlackboard().tree_config.is_standalone():
-            self.tree.wait_for_goal.publish_state.add_robot_description_publisher(
-                topic=topic
-            )
-
     def add_evaluate_debug_expressions(self):
         self.tree.prepare_control_loop.add_compile_debug_expressions()
         if GiskardBlackboard().tree_config.is_closed_loop():
@@ -254,7 +248,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     publish_free_variables: bool = False
     publish_tf: bool = True
     include_prefix: bool = False
-    publish_robot_description: bool = True
     visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
 
     def __post_init__(self):
@@ -277,8 +270,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             self.add_tf_publisher(
                 include_prefix=self.include_prefix, mode=TfPublishingModes.all
             )
-        if self.publish_robot_description:
-            self.add_robot_description_publisher()
         self.add_evaluate_debug_expressions()
         if self.publish_js:
             self.add_js_publisher(include_prefix=self.include_prefix)

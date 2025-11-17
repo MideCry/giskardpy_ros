@@ -200,7 +200,7 @@ class GiskardTester(ABC):
     def get_odometry_joint(self) -> OmniDrive:
         return (
             GiskardBlackboard()
-            .executor.world.get_semantic_annotations_by_type(AbstractRobot)[0]
+            .giskard.executor.world.get_semantic_annotations_by_type(AbstractRobot)[0]
             .drive
         )
 
@@ -630,7 +630,9 @@ class GiskardTester(ABC):
         old_joint_names = []
         if expected_error_type is None:
             old_link_names = (
-                GiskardBlackboard().executor.world.groups[name].link_names_as_set
+                GiskardBlackboard()
+                .giskard.executor.world.groups[name]
+                .link_names_as_set
             )
             old_joint_names = (
                 GiskardBlackboard().executor.world.groups[name].joint_names

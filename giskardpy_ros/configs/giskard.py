@@ -52,32 +52,13 @@ class Giskard:
     robot_interface_config: RobotInterfaceConfig
     collision_checker_id: CollisionCheckerLib = CollisionCheckerLib.bpb
     qp_controller_config: QPControllerConfig = field(default_factory=QPControllerConfig)
+    executor: Executor = field(init=False)
 
     def __post_init__(self):
         god_map.tmp_folder = get_middleware().resolve_iri(
             "package://giskardpy_ros/tmp/"
         )
         GiskardBlackboard().giskard = self
-
-    def create_collision_detector(self, collision_checker: CollisionCheckerLib):
-        if collision_checker not in CollisionCheckerLib:
-            raise KeyError(
-                f"Unknown collision checker {collision_checker}. "
-                f"Collision avoidance is disabled"
-            )
-        if collision_checker == CollisionCheckerLib.bpb:
-            get_middleware().loginfo("Using betterpybullet for collision checking.")
-            try:
-                from giskardpy.model.better_pybullet_syncer import (
-                    BulletCollisionDetector,
-                )
-
-                return BulletCollisionDetector(_world=self.world_config.world)
-            except ImportError as e:
-                get_middleware().logerr(f"{e}; turning off collision avoidance.")
-                self._collision_checker = CollisionCheckerLib.none
-        get_middleware().logwarn("Using no collision checking.")
-        return NullCollisionDetector(_world=self.world_config.world)
 
     def setup(self):
         """
@@ -86,7 +67,7 @@ class Giskard:
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
 
-            GiskardBlackboard().executor = Executor(
+            self.executor = Executor(
                 world=self.world_config.world,
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
@@ -136,33 +117,6 @@ class Giskard:
                 f"The following joints are non-fixed according to the urdf, "
                 f"but not flagged as controlled: {[c.name for c in non_controlled_joints]}."
             )
-
-    # def add_goal_package_name(self, package_name: str):
-    #     new_goals = get_all_classes_in_package(package_name, Goal)
-    #     if len(new_goals) == 0:
-    #         raise SetupException(
-    #             f"No classes of type '{Goal.__name__}' found in {package_name}."
-    #         )
-    #     get_middleware().loginfo(f"Made goal classes {new_goals} available.")
-    #     god_map.motion_statechart_manager.add_goal_package_path(package_name)
-
-    # def add_task_package_name(self, package_name: str):
-    #     new_goals = get_all_classes_in_package(package_name, Task)
-    #     if len(new_goals) == 0:
-    #         raise SetupException(
-    #             f"No classes of type '{Goal.__name__}' found in {package_name}."
-    #         )
-    #     get_middleware().loginfo(f"Made task classes {new_goals} available.")
-    #     god_map.motion_statechart_manager.add_task_package_path(package_name)
-
-    # def add_monitor_package_name(self, package_name: str) -> None:
-    #     new_monitors = get_all_classes_in_package(package_name, Monitor)
-    #     if len(new_monitors) == 0:
-    #         raise SetupException(
-    #             f"No classes of type '{Monitor.__name__}' found in '{package_name}'."
-    #         )
-    #     get_middleware().loginfo(f"Made Monitor classes '{new_monitors}' available.")
-    #     god_map.motion_statechart_manager.add_monitor_package_path(package_name)
 
     def live(self):
         """

@@ -4,8 +4,6 @@ from typing import Union
 from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
-from giskardpy.data_types.exceptions import InvalidGoalException
-from giskardpy.executor import Executor
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
@@ -23,7 +21,6 @@ from giskardpy_ros.tree.blackboard_utils import (
 from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
     KinematicStructureEntityKwargsTracker,
 )
-from semantic_digital_twin.exceptions import KinematicStructureEntityNotInKwargs
 from semantic_digital_twin.world_description.connections import OmniDrive
 
 

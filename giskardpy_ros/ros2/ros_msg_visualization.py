@@ -258,10 +258,14 @@ class ROSMsgVisualization:
     def has_world_changed(self) -> bool:
         if (
             self.world_version
-            != GiskardBlackboard().executor.world.get_world_model_manager().version
+            != GiskardBlackboard()
+            .giskard.executor.world.get_world_model_manager()
+            .version
         ):
             self.world_version = (
-                GiskardBlackboard().executor.world.get_world_model_manager().version
+                GiskardBlackboard()
+                .giskard.executor.world.get_world_model_manager()
+                .version
             )
             return True
         return False
