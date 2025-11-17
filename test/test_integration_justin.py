@@ -11,7 +11,6 @@ from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.god_map import god_map
 from giskardpy_ros.configs.other_robots.justin import (
     WorldWithJustinConfig,
     JustinStandaloneInterface,

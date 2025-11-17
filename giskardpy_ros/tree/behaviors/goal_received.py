@@ -1,11 +1,7 @@
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.middleware import get_middleware
-from line_profiler import profile
 
 
 class GoalReceived(GiskardBehavior):

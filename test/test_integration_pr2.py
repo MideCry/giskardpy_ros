@@ -45,7 +45,6 @@ from giskardpy.data_types.exceptions import (
     SetupException,
     ExecutionException,
 )
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.collision_world_syncer import (

@@ -4,8 +4,6 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
@@ -13,6 +11,7 @@ from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
 # can be used during closed-loop control, instead of for tracking a trajectory

@@ -1,12 +1,9 @@
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from line_profiler import profile
 from py_trees.common import Status
 from rclpy.duration import Duration
 
-from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from line_profiler import profile
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class SetTrackingStartTime(GiskardBehavior):

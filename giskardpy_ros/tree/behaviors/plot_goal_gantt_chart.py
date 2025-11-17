@@ -5,11 +5,9 @@ from typing import List, Dict, Tuple
 import numpy as np
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
-from giskardpy.motion_statechart.tasks.task import LifeCycleValues
 from giskardpy.utils.decorators import record_time
 from giskardpy.utils.utils import create_path, cm_to_inch
 from giskardpy_ros.tree.behaviors import plot_motion_graph
@@ -34,11 +32,14 @@ class PlotGanttChart(GiskardBehavior):
         monitor_plot_filter = np.array(
             [
                 monitor.plot
-                for monitor in god_map.motion_statechart_manager.monitor_state.nodes
+                for monitor in GiskardBlackboard().motion_statechart.monitor_state.nodes
             ]
         )
         goal_plot_filter = np.array(
-            [goal.plot for goal in god_map.motion_statechart_manager.goal_state.nodes]
+            [
+                goal.plot
+                for goal in GiskardBlackboard().motion_statechart.goal_state.nodes
+            ]
         )
         task_plot_filter = np.array(
             [not isinstance(g, CollisionAvoidance) for g in tasks]
@@ -160,7 +161,7 @@ class PlotGanttChart(GiskardBehavior):
     ]:
         # because the monitor state doesn't get updated after the final end motion becomes true
         try:
-            god_map.motion_statechart_manager.evaluate_node_states()
+            GiskardBlackboard().motion_statechart.evaluate_node_states()
         except Exception as e:
             # if the motion was cancelled, this call will cause an exception
             pass
@@ -171,7 +172,7 @@ class PlotGanttChart(GiskardBehavior):
             + GiskardBlackboard().executor.qp_controller.config.mpc_dt
         )
 
-        task_history = copy(god_map.motion_statechart_manager.task_state_history)
+        task_history = copy(GiskardBlackboard().motion_statechart.task_state_history)
         task_history.append(
             (
                 new_end_time,
@@ -181,7 +182,9 @@ class PlotGanttChart(GiskardBehavior):
                 ),
             )
         )
-        monitor_history = copy(god_map.motion_statechart_manager.monitor_state_history)
+        monitor_history = copy(
+            GiskardBlackboard().motion_statechart.monitor_state_history
+        )
         monitor_history.append(
             (
                 new_end_time,
@@ -191,7 +194,7 @@ class PlotGanttChart(GiskardBehavior):
                 ),
             )
         )
-        goal_history = copy(god_map.motion_statechart_manager.goal_state_history)
+        goal_history = copy(GiskardBlackboard().motion_statechart.goal_state_history)
         goal_history.append(
             (
                 new_end_time,
@@ -206,12 +209,12 @@ class PlotGanttChart(GiskardBehavior):
 
     @record_time
     def update(self):
-        if not god_map.motion_statechart_manager.monitor_state_history:
+        if not GiskardBlackboard().motion_statechart.monitor_state_history:
             return Status.SUCCESS
         try:
-            tasks = god_map.motion_statechart_manager.task_state.nodes
-            monitors = god_map.motion_statechart_manager.monitor_state.nodes
-            goals = god_map.motion_statechart_manager.goal_state.nodes
+            tasks = GiskardBlackboard().motion_statechart.task_state.nodes
+            monitors = GiskardBlackboard().motion_statechart.monitor_state.nodes
+            goals = GiskardBlackboard().motion_statechart.goal_state.nodes
             file_name = (
                 god_map.tmp_folder
                 + f"gantt_charts/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf"

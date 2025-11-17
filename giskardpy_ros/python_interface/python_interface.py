@@ -17,7 +17,6 @@ from rclpy.node import Node
 from giskardpy.data_types.exceptions import (
     ExecutionException,
 )
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.motion_statechart import (
     MotionStatechart,

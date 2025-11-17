@@ -2,7 +2,6 @@ from typing import Tuple, Dict, Optional
 
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import msg_converter
 from giskardpy_ros.ros2.tfwrapper import lookup_pose
@@ -11,8 +10,8 @@ from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
-from semantic_digital_twin.world_description.connections import Connection6DoF
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.world_description.connections import Connection6DoF
 
 
 class SyncTfFrames(GiskardBehavior):

@@ -8,12 +8,10 @@ import rclpy
 
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.executor import Executor
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import (
     CollisionCheckerLib,
 )
-from giskardpy.model.collisions import NullCollisionDetector
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
@@ -53,11 +51,16 @@ class Giskard:
     collision_checker_id: CollisionCheckerLib = CollisionCheckerLib.bpb
     qp_controller_config: QPControllerConfig = field(default_factory=QPControllerConfig)
     executor: Executor = field(init=False)
-
-    def __post_init__(self):
-        god_map.tmp_folder = get_middleware().resolve_iri(
+    model_synchronizer: ModelSynchronizer = field(init=False)
+    state_synchronizer: StateSynchronizer = field(init=False)
+    world_fetcher: FetchWorldServer = field(init=False)
+    tmp_folder: str = field(
+        default_factory=lambda: get_middleware().resolve_iri(
             "package://giskardpy_ros/tmp/"
         )
+    )
+
+    def __post_init__(self):
         GiskardBlackboard().giskard = self
 
     def setup(self):
@@ -71,6 +74,7 @@ class Giskard:
                 world=self.world_config.world,
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
+                tmp_folder=self.tmp_folder,
             )
 
             self.behavior_tree_config.setup()
@@ -78,21 +82,24 @@ class Giskard:
             self.robot_interface_config.setup()
             self.world_config.setup_collision_config()
 
-        if GiskardBlackboard().executor.collision_scene.is_collision_checking_enabled():
-            GiskardBlackboard().executor.collision_scene.sync()
+        if self.executor.collision_scene.is_collision_checking_enabled():
+            self.executor.collision_scene.sync()
 
         self.sanity_check()
-        GiskardBlackboard().model_synchronizer = ModelSynchronizer(
+        self.setup_world_model_ros_interface()
+        GiskardBlackboard().tree.setup(rospy.node)
+
+    def setup_world_model_ros_interface(self):
+        self.model_synchronizer = ModelSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
-        GiskardBlackboard().model_synchronizer.pause()
-        god_map.state_synchronizer = StateSynchronizer(
+        self.model_synchronizer.pause()
+        self.state_synchronizer = StateSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
-        god_map.world_fetcher = FetchWorldServer(
+        self.world_fetcher = FetchWorldServer(
             node=rospy.node, world=self.world_config.world
         )
-        GiskardBlackboard().tree.setup(rospy.node)
 
     def sanity_check(self):
         self._controlled_joints_sanity_check()

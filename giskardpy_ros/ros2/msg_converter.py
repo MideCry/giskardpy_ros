@@ -30,7 +30,6 @@ from giskardpy.data_types.exceptions import (
     CorruptShapeException,
     UnknownGoalException,
 )
-from giskardpy.god_map import god_map
 from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
@@ -502,18 +501,7 @@ def ros_msg_to_giskard_obj(msg, world: World):
         return collision_entry_msg_to_giskard(msg, world=world)
     elif isinstance(msg, giskard_msgs.GiskardError):
         return error_msg_to_exception(msg)
-    elif isinstance(msg, giskard_msgs.MotionStatechartNode):
-        return create_node(msg, world)
     return msg
-
-
-def create_node(
-    msg_node: giskard_msgs.MotionStatechartNode, world: World
-) -> MotionStatechartNode:
-    node_class = parse_node_class(msg_node)
-    parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, world)
-    parsed_kwargs_and_replaced = convert_prefixed_name(node_class, parsed_kwargs, world)
-    return node_class(name=msg_node.name, **parsed_kwargs_and_replaced)
 
 
 def convert_prefixed_name(
@@ -568,21 +556,6 @@ def replace_str_prefixed_name(
             return world.get_kinematic_structure_entity_by_name(kwargs_value)
         elif issubclass(kwargs_type, Connection):
             return world.get_connection_by_name(kwargs_value)
-
-
-def parse_node_class(
-    msg_node: giskard_msgs.MotionStatechartNode,
-) -> Type[MotionStatechartNode]:
-    if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-        return god_map.motion_statechart_manager.allowed_monitor_types[
-            msg_node.class_name
-        ]
-    elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-        return god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-    elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-        return god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-    else:
-        raise UnknownGoalException(f"unknown task type: '{msg_node.class_name}'.")
 
 
 def ros_joint_state_to_giskard_joint_state(

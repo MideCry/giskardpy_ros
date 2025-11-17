@@ -1,17 +1,15 @@
 from enum import Enum
 
 from geometry_msgs.msg import TransformStamped
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from py_trees.common import Status
 from tf2_msgs.msg import TFMessage
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from giskardpy.god_map import god_map
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.tfwrapper import normalize_quaternion_msg
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class TfPublishingModes(Enum):

@@ -33,8 +33,6 @@ class GiskardBlackboard:
     debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
-    model_synchronizer: ModelSynchronizer
-    state_synchronizer: StateSynchronizer
     motion_start_time: float
     trajectory: Trajectory
     __shared_state = {}

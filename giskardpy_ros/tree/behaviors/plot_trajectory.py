@@ -5,7 +5,6 @@ from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
@@ -27,7 +26,7 @@ class PlotTrajectory(GiskardBehavior):
         self.wait = wait
         self.normalize_position = normalize_position
         self.kwargs = kwargs
-        self.path_to_data_folder = god_map.tmp_folder
+        self.path_to_data_folder = GiskardBlackboard().giskard.tmp_folder
 
     def initialise(self):
         self.plot_thread = Thread(target=self.plot, name=self.name)

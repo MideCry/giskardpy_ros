@@ -4,7 +4,6 @@ from typing import Optional
 from py_trees.behaviour import Behaviour
 
 import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy.god_map import god_map
 from giskardpy_ros.tree.blackboard_utils import (
     has_blackboard_exception,
     get_blackboard_exception,

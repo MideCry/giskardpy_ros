@@ -1,14 +1,11 @@
 from copy import deepcopy
 
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.model.trajectory import Trajectory
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
-from line_profiler import profile
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class NewTrajectory(GiskardBehavior):

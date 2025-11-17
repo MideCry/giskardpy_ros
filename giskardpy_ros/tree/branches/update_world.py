@@ -1,19 +1,8 @@
 from py_trees.common import Status
-
-from giskardpy.god_map import god_map
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from py_trees.composites import Sequence
 
-from giskard_msgs.action import World
-from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.collision_scene_updater import CollisionSceneUpdater
-from giskardpy_ros.tree.behaviors.goal_received import GoalReceived
-from giskardpy_ros.tree.behaviors.notify_state_change import (
-    NotifyStateChange,
-    NotifyModelChange,
-)
-from giskardpy_ros.tree.behaviors.send_result import SendResult
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.behaviors.world_updater import ProcessWorldUpdate
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.publish_state import PublishState
@@ -25,7 +14,7 @@ class HasWorldUpdate(GiskardBehavior):
         super().__init__("has world update?")
 
     def update(self) -> Status:
-        if len(GiskardBlackboard().model_synchronizer.missed_messages) > 0:
+        if len(GiskardBlackboard().giskard.model_synchronizer.missed_messages) > 0:
             return Status.SUCCESS
         return Status.FAILURE
 

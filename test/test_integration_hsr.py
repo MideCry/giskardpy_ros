@@ -12,7 +12,6 @@ from geometry_msgs.msg import (
 from numpy import pi
 
 from giskardpy.data_types.exceptions import EmptyProblemException
-from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.tasks.pointing import PointingCone

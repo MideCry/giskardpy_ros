@@ -1,11 +1,7 @@
-import traceback
 from threading import Lock
 
 import numpy as np
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
-from giskardpy.god_map import god_map
-from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName

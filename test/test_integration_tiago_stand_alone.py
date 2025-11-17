@@ -1,4 +1,3 @@
-import threading
 from copy import deepcopy
 
 import numpy as np
@@ -11,10 +10,8 @@ from geometry_msgs.msg import (
     Vector3Stamped,
 )
 
-from giskardpy.motion_statechart.data_types import DefaultWeights
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
+from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -23,8 +20,9 @@ from giskardpy.utils.math import (
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface
-from giskardpy_ros.ros2.ros2_interface import get_robot_description, load_urdf
+from giskardpy_ros.ros2.ros2_interface import load_urdf
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
 @pytest.fixture(scope="module")

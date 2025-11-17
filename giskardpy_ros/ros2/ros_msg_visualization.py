@@ -10,7 +10,6 @@ from visualization_msgs.msg import MarkerArray, Marker
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import semantic_digital_twin.spatial_types.spatial_types as cas
-from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import DebugExpression

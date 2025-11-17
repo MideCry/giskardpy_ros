@@ -5,7 +5,6 @@ import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion
 
 import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (

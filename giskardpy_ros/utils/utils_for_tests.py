@@ -26,7 +26,6 @@ from giskardpy.data_types.exceptions import (
     UnknownGroupException,
     WorldException,
 )
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import (
     CollisionRequest,
@@ -291,44 +290,6 @@ class GiskardTester(ABC):
         expected_error_codes=(DyeGroup_Response.SUCCESS,),
     ):
         pass
-
-    def print_qp_solver_times(self):
-        file_name = f"{god_map.tmp_folder}/benchmark.csv"
-        with open(file_name, mode="w", newline="") as csvfile:
-            csvwriter = csv.writer(
-                csvfile, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL
-            )
-            csvwriter.writerow(
-                [
-                    "solver",
-                    "filtered_variables",
-                    "variables",
-                    "eq_constraints",
-                    "neq_constraints",
-                    "num_eq_slack_variables",
-                    "num_neq_slack_variables",
-                    "num_slack_variables",
-                    "max_derivative",
-                    "data",
-                ]
-            )
-
-            # for solver_id, solver_class in available_solvers.items():
-            #     times = solver_class.get_solver_times()
-            #     for (filtered_variables, variables, eq_constraints, neq_constraints, num_eq_slack_variables,
-            #          num_neq_slack_variables, num_slack_variables), times in sorted(times.items()):
-            #         csvwriter.writerow([solver_id.name,
-            #                             str(filtered_variables),
-            #                             str(variables),
-            #                             str(eq_constraints),
-            #                             str(neq_constraints),
-            #                             str(num_eq_slack_variables),
-            #                             str(num_neq_slack_variables),
-            #                             str(num_slack_variables),
-            #                             str(int(god_map.qp_controller.max_derivative)),
-            #                             str(times)])
-
-        get_middleware().loginfo(f"saved benchmark file in {file_name}")
 
     def print_stats(self):
         giskarding_time = self.total_time_spend_giskarding

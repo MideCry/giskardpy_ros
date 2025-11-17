@@ -2,13 +2,11 @@ from typing import Dict
 
 from py_trees.composites import Sequence
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy_ros.tree.behaviors.send_trajectory import SendFollowJointTrajectory
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.control_loop import ControlLoop
 from giskardpy_ros.tree.branches.prepare_control_loop import PrepareBaseTrajControlLoop
 from giskardpy_ros.tree.composites.better_parallel import Parallel, ParallelPolicy
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 
 

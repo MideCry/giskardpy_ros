@@ -1,8 +1,6 @@
 from py_trees.common import Status
 from visualization_msgs.msg import MarkerArray, Marker
 
-from giskardpy.god_map import god_map
-from giskardpy.model.collision_world_syncer import Collisions
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
@@ -51,7 +49,6 @@ class CleanUpPlanning(CleanUp):
     def initialise(self):
         super().initialise()
         GiskardBlackboard().fill_trajectory_velocity_values = None
-        god_map.degrees_of_freedoms = []
 
     @catch_and_raise_to_blackboard
     def update(self):

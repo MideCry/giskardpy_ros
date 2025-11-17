@@ -11,7 +11,6 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.ros2_interface import (
     search_for_subscriber_of_node_with_type,
@@ -22,14 +21,14 @@ from giskardpy_ros.ros2.ros2_interface import (
 )
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from semantic_digital_twin.world_description.connections import (
-    OmniDrive,
-    ActiveConnection,
-)
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.connections import (
+    OmniDrive,
+    ActiveConnection,
+)
 
 
 class RobotInterfaceConfig(ABC):

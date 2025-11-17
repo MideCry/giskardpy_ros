@@ -1,11 +1,10 @@
 from threading import Thread
 
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class ProcessWorldUpdate(GiskardBehavior):
@@ -29,4 +28,4 @@ class ProcessWorldUpdate(GiskardBehavior):
         return Status.RUNNING
 
     def process_goal(self):
-        GiskardBlackboard().model_synchronizer.apply_missed_messages()
+        GiskardBlackboard().giskard.model_synchronizer.apply_missed_messages()

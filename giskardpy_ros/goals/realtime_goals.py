@@ -1,42 +1,30 @@
 from __future__ import division
 
 from dataclasses import dataclass
-
 from time import sleep
+from typing import Optional, List, Dict
 
 import numpy as np
-from typing import Optional, List, Dict, Tuple
-
-import rclpy
-from geometry_msgs.msg import PointStamped, Point, Vector3
-from nav_msgs.msg import Path
+from geometry_msgs.msg import PointStamped, Point
 from rclpy.publisher import Publisher
 from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import MarkerArray, Marker
 
-from semantic_digital_twin.world_description.connections import OmniDrive
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+import giskardpy_ros.ros2.msg_converter as msg_converter
+import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GoalInitalizationException,
     ExecutionException,
 )
-from giskardpy.motion_statechart.graph_node import Goal
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
-from giskardpy.motion_statechart.monitors.monitors import Monitor
-from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from giskardpy.motion_statechart.tasks.task import (
-    WEIGHT_BELOW_CA,
-    WEIGHT_COLLISION_AVOIDANCE,
-    Task,
-)
+from giskardpy.motion_statechart.graph_node import Goal
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-import semantic_digital_twin.spatial_types.spatial_types as cas
-import giskardpy_ros.ros2.msg_converter as msg_converter
-from giskardpy.utils.decorators import clear_memo, memoize_with_counter
+from giskardpy.utils.decorators import clear_memo
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world_description.connections import OmniDrive
 
 
 @dataclass

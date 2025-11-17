@@ -51,7 +51,6 @@ from giskardpy_ros.configs.robot_interface_config import (
     RobotInterfaceConfig,
     StandAloneRobotInterfaceConfig,
 )
-from giskardpy.god_map import god_map
 from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
 from giskardpy.model.collision_world_syncer import DisableCollisionReason
 from giskardpy.model.utils import robot_name_from_urdf_string
