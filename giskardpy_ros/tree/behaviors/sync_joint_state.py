@@ -8,6 +8,7 @@ from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 from semantic_digital_twin.world_description.world_state import WorldState
 
 
@@ -36,10 +37,14 @@ class SyncJointState(GiskardBehavior):
     def update(self):
         if self.data:
             for i, joint_name in enumerate(self.data.name):
-                connection = GiskardBlackboard().executor.world.get_connection_by_name(
-                    joint_name
+                connection: ActiveConnection1DOF = (
+                    GiskardBlackboard().executor.world.get_connection_by_name(
+                        joint_name
+                    )
                 )
-                connection.position = self.data.position[i]
+                connection._world.state[connection.raw_dof.name].position = (
+                    self.data.position[i]
+                )
             self.data = None
             return Status.SUCCESS
         return Status.RUNNING
@@ -81,9 +86,8 @@ class SyncJointStatePosition(GiskardBehavior):
     @record_time
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
-            connection = GiskardBlackboard().executor.world.get_connection_by_name(
-                joint_name
+            connection: ActiveConnection1DOF = (
+                GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
             )
-            connection.position = position
-
+            connection._world.state[connection.raw_dof.name].position = position
         return Status.SUCCESS
