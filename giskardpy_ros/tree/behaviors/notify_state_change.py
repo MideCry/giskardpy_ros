@@ -12,6 +12,8 @@ class NotifyStateChange(GiskardBehavior):
 
     @record_time
     def update(self):
+        if god_map.world.world_is_being_modified:
+            return Status.RUNNING
         god_map.world.notify_state_change()
         return Status.SUCCESS
 

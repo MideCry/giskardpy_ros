@@ -4,7 +4,7 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
@@ -16,7 +16,7 @@ from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
 class SendCmdVelTwist(GiskardBehavior):
     supported_state_types = [Twist]
 
-    def __init__(self, topic_name: str, joint_name: Optional[PrefixName] = None):
+    def __init__(self, topic_name: str, joint_name: Optional[PrefixedName] = None):
         super().__init__()
         self.threshold = np.array([0.0, 0.0, 0.0])
         self.cmd_topic = topic_name
@@ -24,18 +24,18 @@ class SendCmdVelTwist(GiskardBehavior):
 
         self.joint = god_map.world.get_drive_joint(joint_name=joint_name)
         god_map.world.register_controlled_joints([self.joint.name])
-        get_middleware().loginfo(f'Created publisher for {self.cmd_topic}.')
+        get_middleware().loginfo(f"Created publisher for {self.cmd_topic}.")
 
     def solver_cmd_to_twist(self, cmd) -> Twist:
         twist = Twist()
         try:
-            twist.linear.x = cmd.free_variable_data[self.joint.x_vel.name][0]
+            twist.linear.x = cmd.free_variable_data[self.joint.x_velocity.name][0]
             if abs(twist.linear.x) < self.threshold[0]:
                 twist.linear.x = 0.0
         except:
             twist.linear.x = 0.0
         try:
-            twist.linear.y = cmd.free_variable_data[self.joint.y_vel.name][0]
+            twist.linear.y = cmd.free_variable_data[self.joint.y_velocity.name][0]
             if abs(twist.linear.y) < self.threshold[1]:
                 twist.linear.y = 0.0
         except:

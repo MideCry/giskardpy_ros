@@ -36,11 +36,9 @@ class CleanUp(GiskardBehavior):
         if GiskardBlackboard().tree.control_loop_branch.publish_state.debug_marker_publisher is not None:
             self.clear_markers()
             GiskardBlackboard().ros_visualizer.publish_markers(force=True)
-        GiskardBlackboard().giskard.set_defaults()
         god_map.world.compiled_all_fks = None
         god_map.collision_scene.reset_cache()
-        god_map.collision_scene.clear_collision_matrix()
-        god_map.closest_point = Collisions(1)
+        god_map.closest_point = Collisions(collision_list_size=1)
         god_map.time = 0
         god_map.control_cycle_counter = 1
         god_map.motion_statechart_manager.reset()
@@ -56,7 +54,7 @@ class CleanUpPlanning(CleanUp):
     def initialise(self):
         super().initialise()
         GiskardBlackboard().fill_trajectory_velocity_values = None
-        god_map.free_variables = []
+        god_map.degrees_of_freedoms = []
 
     @catch_and_raise_to_blackboard
     def update(self):

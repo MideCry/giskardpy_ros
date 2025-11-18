@@ -4,59 +4,63 @@ from geometry_msgs.msg import PoseStamped, PointStamped
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.iai_robots.tracy import TracyStandAloneRobotInterfaceConfig, TracyWorldConfig, \
-    TracyCollisionAvoidanceConfig
+from giskardpy_ros.configs.iai_robots.tracy import (
+    TracyStandAloneRobotInterfaceConfig,
+    TracyWorldConfig,
+)
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def giskard(request, ros):
-    launch_launchfile('package://iai_tracy_description/launch/upload.launch')
+    launch_launchfile("package://iai_tracy_description/launch/upload.launch")
     c = TracebotTester()
     # c = TracebotTestWrapperMujoco()
-    request.addfinalizer(c.tear_down)
+    request.addfinalizer(c.print_stats)
     return c
 
 
 class TracebotTester(GiskardTester):
     default_pose = {
-        'left_shoulder_pan_joint': 0,
-        'left_shoulder_lift_joint': -1.57,
-        'left_elbow_joint': -1,
-        'left_wrist_1_joint': 0,
-        'left_wrist_2_joint': 0,
-        'left_wrist_3_joint': 0,
-        'right_shoulder_pan_joint': 0,
-        'right_shoulder_lift_joint': -1.57,
-        'right_elbow_joint': 1,
-        'right_wrist_1_joint': 0,
-        'right_wrist_2_joint': 0,
-        'right_wrist_3_joint': 0,
+        "left_shoulder_pan_joint": 0,
+        "left_shoulder_lift_joint": -1.57,
+        "left_elbow_joint": -1,
+        "left_wrist_1_joint": 0,
+        "left_wrist_2_joint": 0,
+        "left_wrist_3_joint": 0,
+        "right_shoulder_pan_joint": 0,
+        "right_shoulder_lift_joint": -1.57,
+        "right_elbow_joint": 1,
+        "right_wrist_1_joint": 0,
+        "right_wrist_2_joint": 0,
+        "right_wrist_3_joint": 0,
     }
 
     better_pose = {
-        'left_shoulder_pan_joint': 2.539670467376709,
-        'left_shoulder_lift_joint': -1.46823854119096,
-        'left_elbow_joint': 2.1197431723224085,
-        'left_wrist_1_joint': -1.4825000625899811,
-        'left_wrist_2_joint': 5.467689037322998,
-        'left_wrist_3_joint': -0.9808381239520472,
-        'right_shoulder_pan_joint': 3.7588136196136475,
-        'right_shoulder_lift_joint': -1.7489210567870082,
-        'right_elbow_joint': -2.054229259490967,
-        'right_wrist_1_joint': -1.6140786610045375,
-        'right_wrist_2_joint': 0.7295855283737183,
-        'right_wrist_3_joint': 3.944669485092163,
+        "left_shoulder_pan_joint": 2.539670467376709,
+        "left_shoulder_lift_joint": -1.46823854119096,
+        "left_elbow_joint": 2.1197431723224085,
+        "left_wrist_1_joint": -1.4825000625899811,
+        "left_wrist_2_joint": 5.467689037322998,
+        "left_wrist_3_joint": -0.9808381239520472,
+        "right_shoulder_pan_joint": 3.7588136196136475,
+        "right_shoulder_lift_joint": -1.7489210567870082,
+        "right_elbow_joint": -2.054229259490967,
+        "right_wrist_1_joint": -1.6140786610045375,
+        "right_wrist_2_joint": 0.7295855283737183,
+        "right_wrist_3_joint": 3.944669485092163,
     }
 
     def __init__(self):
         tf.init()
-        giskard = Giskard(world_config=TracyWorldConfig(),
-                          collision_avoidance_config=TracyCollisionAvoidanceConfig(),
-                          robot_interface_config=TracyStandAloneRobotInterfaceConfig(),
-                          behavior_tree_config=StandAloneBTConfig(debug_mode=True),
-                          qp_controller_config=QPControllerConfig())
+        giskard = Giskard(
+            world_config=TracyWorldConfig(),
+            collision_avoidance_config=TracyCollisionAvoidanceConfig(),
+            robot_interface_config=TracyStandAloneRobotInterfaceConfig(),
+            behavior_tree_config=StandAloneBTConfig(debug_mode=True),
+            qp_controller_config=QPControllerConfig(),
+        )
         super().__init__(giskard)
 
     def reset(self):
@@ -65,45 +69,53 @@ class TracebotTester(GiskardTester):
 
 
 class TestTracebot:
-    def test_joint_goal(self, zero_pose: TracebotTester):
-        zero_pose.set_joint_goal(zero_pose.better_pose)
-        zero_pose.allow_all_collisions()
-        zero_pose.execute()
+    def test_joint_goal(self, default_pose_giskard: TracebotTester):
+        default_pose_giskard.set_joint_goal(default_pose_giskard.better_pose)
+        default_pose_giskard.allow_all_collisions()
+        default_pose_giskard.execute()
 
     def test_place_cylinder(self, better_pose: TracebotTester):
-        cylinder_name = 'C'
+        cylinder_name = "C"
         cylinder_height = 0.121
         hole_point = PointStamped()
-        hole_point.header.frame_id = 'table'
+        hole_point.header.frame_id = "table"
         hole_point.point.x = 0.7
         hole_point.point.y = -0.25
         pose = PoseStamped()
-        pose.header.frame_id = 'r_gripper_tool_frame'
+        pose.header.frame_id = "r_gripper_tool_frame"
         pose.pose.position.z = cylinder_height / 5
         pose.pose.orientation.w = 1
-        better_pose.add_cylinder_to_world(name=cylinder_name,
-                                          height=cylinder_height,
-                                          radius=0.0225,
-                                          pose=pose,
-                                          parent_link='r_gripper_tool_frame')
+        better_pose.add_cylinder_to_world(
+            name=cylinder_name,
+            height=cylinder_height,
+            radius=0.0225,
+            pose=pose,
+            parent_link="r_gripper_tool_frame",
+        )
         better_pose.dye_group(cylinder_name, (0, 0, 1, 1))
 
-        better_pose.motion_goals.add_motion_goal(class_name=InsertCylinder.__name__,
-                                                 cylinder_name=cylinder_name,
-                                                 cylinder_height=0.121,
-                                                 hole_point=hole_point)
+        better_pose.motion_goals.add_motion_goal(
+            class_name=InsertCylinder.__name__,
+            cylinder_name=cylinder_name,
+            cylinder_height=0.121,
+            hole_point=hole_point,
+        )
         better_pose.allow_all_collisions()
         better_pose.execute()
 
 
 class TestCartGoals:
-    def test_move_left_hand(self, zero_pose: TracebotTester):
+    def test_move_left_hand(self, default_pose_giskard: TracebotTester):
         box_pose = PoseStamped()
-        box_pose.header.frame_id = zero_pose.default_root
+        box_pose.header.frame_id = default_pose_giskard.default_root
         box_pose.pose.orientation.w = 1
-        zero_pose.add_box('box', size=(0.1, 0.1, 0.1), pose=box_pose,
-                          parent_link=zero_pose.default_root)
-        tip = 'left_tool0'
+        default_pose_giskard.add_box(
+            "box",
+            size=(0.1, 0.1, 0.1),
+            pose=box_pose,
+            parent_link=default_pose_giskard.default_root,
+        )
+        tip = "left_tool0"
         goal = PoseStamped()
         goal.header.frame_id = tip
         goal.pose.position.x = 0.1
@@ -111,8 +123,8 @@ class TestCartGoals:
         goal.pose.orientation.w = 1
         # goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 4, [0, 0, 1]))
 
-        zero_pose.set_cart_goal(goal, tip_link=tip, root_link='world')
+        default_pose_giskard.set_cart_goal(goal, tip_link=tip, root_link="world")
         # zero_pose.allow_all_collisions()
-        zero_pose.execute()
+        default_pose_giskard.execute()
         # zero_pose.set_translation_goal(goal, 'base_footprint', 'odom')
         # zero_pose.plan_and_execute()

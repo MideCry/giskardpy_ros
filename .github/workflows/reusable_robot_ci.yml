@@ -70,7 +70,6 @@ jobs:
         qp_solver: [qpSWIFT]
         container:
           - jazzy
-          - humble
     container: # Login and start specified container image. Ubuntu20.04 isn't supported on GitHub-Workflow as of 04.2025
       image: ghcr.io/${{ needs.to-lowercase.outputs.repo_lowercase }}:${{ matrix.container }}
       credentials:
@@ -138,12 +137,18 @@ jobs:
         with:
           path: 'giskardpy'
           repository: ${{ github.repository_owner }}/giskardpy
-          ref: giskard_library
+          ref: semantic_world_integration
       - name: install pip dependencies giskardpy
         run: |
           python3 -m pip install --upgrade pip
           pip3 install -r giskardpy/requirements.txt
           cd giskardpy
+          pip3 install -e .
+      - name: install pip dependencies semantic-digital-twin
+        run: |
+          git clone https://github.com/cram2/semantic_digital_twin.git
+          cd semantic_digital_twin
+          pip3 install -r requirements.txt
           pip3 install -e .
       #pull github deps ================================================================================================
       - name: Create workspace I

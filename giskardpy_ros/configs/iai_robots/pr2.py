@@ -1,78 +1,113 @@
-from typing import Optional
+from dataclasses import dataclass
 
-import numpy as np
-
-from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
-from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy_ros.configs.giskard import RobotInterfaceConfig
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-from giskardpy_ros.configs.other_robots.generic import GenericWorldConfig
-from giskardpy_ros.ros2 import ros2_interface
+from giskardpy.model.world_config import WorldWithOmniDriveRobot
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy_ros.configs.giskard import RobotInterfaceConfig
+from semantic_digital_twin.robots.pr2 import PR2
+from semantic_digital_twin.world_description.connections import (
+    OmniDrive,
+    RevoluteConnection,
+    ActiveConnection,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+
+from pkg_resources import resource_filename
+
+from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
 
 
+@dataclass
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
-    def __init__(self, localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum',
-                 urdf: Optional[str] = None):
-        super().__init__(urdf=urdf, localization_joint_name=localization_joint_name, odom_link_name=odom_link_name,
-                         drive_joint_name=drive_joint_name)
-        self.localization_joint_name = localization_joint_name
-        self.odom_link_name = odom_link_name
-        self.drive_joint_name = drive_joint_name
-        self.robot_description = urdf
+    odom_body_name: PrefixedName = PrefixedName("odom_combined")
 
-    def setup(self, robot_name: Optional[str] = None):
-        super().setup(robot_name)
-        self.set_joint_limits(limit_map={Derivatives.velocity: 1,
-                                         Derivatives.jerk: None},
-                              joint_name='head_pan_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 3.5,
-                                         Derivatives.jerk: None},
-                              joint_name='head_tilt_joint')
+    def setup_world(self):
+        super().setup_world()
+        self.pr2 = PR2.from_world(world=self.world)
 
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
-                                         Derivatives.jerk: None},
-                              joint_name='r_shoulder_pan_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.15,
-                                         Derivatives.jerk: None},
-                              joint_name='l_shoulder_pan_joint')
+    def setup_collision_config(self):
+        path_to_srdf = resource_filename(
+            "giskardpy", "../self_collision_matrices/iai/pr2.srdf"
+        )
+        self.world.load_collision_srdf(path_to_srdf)
+        frozen_joints = ["r_gripper_l_finger_joint", "l_gripper_l_finger_joint"]
+        for joint_name in frozen_joints:
+            c: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            c.frozen_for_collision_avoidance = True
 
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
-                                         Derivatives.jerk: None},
-                              joint_name='r_shoulder_lift_joint')
-        self.set_joint_limits(limit_map={Derivatives.velocity: 0.2,
-                                         Derivatives.jerk: None},
-                              joint_name='l_shoulder_lift_joint')
+        for body in self.pr2.bodies_with_collisions:
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.1, violated_distance=0.0
+            )
+            body.set_static_collision_config(collision_config)
+
+        for joint_name in ["r_wrist_roll_joint", "l_wrist_roll_joint"]:
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.05, violated_distance=0.0, max_avoided_bodies=4
+            )
+            connection.set_static_collision_config_for_direct_child_bodies(
+                collision_config
+            )
+
+        for joint_name in ["r_wrist_flex_joint", "l_wrist_flex_joint"]:
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.05, violated_distance=0.0, max_avoided_bodies=2
+            )
+            connection.set_static_collision_config_for_direct_child_bodies(
+                collision_config
+            )
+        for joint_name in ["r_elbow_flex_joint", "l_elbow_flex_joint"]:
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.05, violated_distance=0.0, max_avoided_bodies=1
+            )
+            connection.set_static_collision_config_for_direct_child_bodies(
+                collision_config
+            )
+        for joint_name in ["r_forearm_roll_joint", "l_forearm_roll_joint"]:
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.025, violated_distance=0.0, max_avoided_bodies=1
+            )
+            connection.set_static_collision_config_for_direct_child_bodies(
+                collision_config
+            )
+
+        collision_config = CollisionCheckingConfig(
+            buffer_zone_distance=0.2, violated_distance=0.1, max_avoided_bodies=2
+        )
+        self.pr2.drive.set_static_collision_config_for_direct_child_bodies(
+            collision_config
+        )
 
 
 class PR2StandaloneInterface(RobotInterfaceConfig):
-    drive_joint_name: str
-
-    def __init__(self, drive_joint_name: str):
-        self.drive_joint_name = drive_joint_name
-
     def setup(self):
-        self.register_controlled_joints([
-            'torso_lift_joint',
-            'head_pan_joint',
-            'head_tilt_joint',
-            'r_shoulder_pan_joint',
-            'r_shoulder_lift_joint',
-            'r_upper_arm_roll_joint',
-            'r_forearm_roll_joint',
-            'r_elbow_flex_joint',
-            'r_wrist_flex_joint',
-            'r_wrist_roll_joint',
-            'l_shoulder_pan_joint',
-            'l_shoulder_lift_joint',
-            'l_upper_arm_roll_joint',
-            'l_forearm_roll_joint',
-            'l_elbow_flex_joint',
-            'l_wrist_flex_joint',
-            'l_wrist_roll_joint',
-            self.drive_joint_name,
-        ])
+        self.register_controlled_joints(
+            [
+                "torso_lift_joint",
+                "head_pan_joint",
+                "head_tilt_joint",
+                "r_shoulder_pan_joint",
+                "r_shoulder_lift_joint",
+                "r_upper_arm_roll_joint",
+                "r_forearm_roll_joint",
+                "r_elbow_flex_joint",
+                "r_wrist_flex_joint",
+                "r_wrist_roll_joint",
+                "l_shoulder_pan_joint",
+                "l_shoulder_lift_joint",
+                "l_upper_arm_roll_joint",
+                "l_forearm_roll_joint",
+                "l_elbow_flex_joint",
+                "l_wrist_flex_joint",
+                "l_wrist_roll_joint",
+                self.world.get_connections_by_type(OmniDrive)[0].name,
+            ]
+        )
 
 
 class PR2JointTrajServerMujocoInterface(RobotInterfaceConfig):
@@ -81,31 +116,38 @@ class PR2JointTrajServerMujocoInterface(RobotInterfaceConfig):
     odom_link_name: str
     drive_joint_name: str
 
-    def __init__(self,
-                 map_name: str = 'map',
-                 localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined',
-                 drive_joint_name: str = 'brumbrum'):
+    def __init__(
+        self,
+        map_name: str = "map",
+        localization_joint_name: str = "localization",
+        odom_link_name: str = "odom_combined",
+        drive_joint_name: str = "brumbrum",
+    ):
         self.map_name = map_name
         self.localization_joint_name = localization_joint_name
         self.odom_link_name = odom_link_name
         self.drive_joint_name = drive_joint_name
 
     def setup(self):
-        self.sync_6dof_joint_with_tf_frame(joint_name=self.localization_joint_name,
-                                           tf_parent_frame=self.map_name,
-                                           tf_child_frame=self.odom_link_name)
-        self.sync_joint_state_topic('/joint_states')
-        self.sync_odometry_topic('/pr2/base_footprint', self.drive_joint_name)
+        self.sync_6dof_joint_with_tf_frame(
+            joint_name=self.localization_joint_name,
+            tf_parent_frame=self.map_name,
+            tf_child_frame=self.odom_link_name,
+        )
+        self.sync_joint_state_topic("/joint_states")
+        self.sync_odometry_topic("/pr2/base_footprint", self.drive_joint_name)
+        self.add_follow_joint_trajectory_server(namespace="/pr2/whole_body_controller")
         self.add_follow_joint_trajectory_server(
-            namespace='/pr2/whole_body_controller')
+            namespace="/pr2/l_gripper_l_finger_controller"
+        )
         self.add_follow_joint_trajectory_server(
-            namespace='/pr2/l_gripper_l_finger_controller')
-        self.add_follow_joint_trajectory_server(
-            namespace='/pr2/r_gripper_l_finger_controller')
-        self.add_base_cmd_velocity(cmd_vel_topic='/pr2/cmd_vel',
-                                   track_only_velocity=True,
-                                   joint_name=self.drive_joint_name)
+            namespace="/pr2/r_gripper_l_finger_controller"
+        )
+        self.add_base_cmd_velocity(
+            cmd_vel_topic="/pr2/cmd_vel",
+            track_only_velocity=True,
+            joint_name=self.drive_joint_name,
+        )
 
 
 class PR2VelocityMujocoInterface(RobotInterfaceConfig):
@@ -114,11 +156,13 @@ class PR2VelocityMujocoInterface(RobotInterfaceConfig):
     odom_link_name: str
     drive_joint_name: str
 
-    def __init__(self,
-                 map_name: str = 'map',
-                 localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined',
-                 drive_joint_name: str = 'brumbrum'):
+    def __init__(
+        self,
+        map_name: str = "map",
+        localization_joint_name: str = "localization",
+        odom_link_name: str = "odom_combined",
+        drive_joint_name: str = "brumbrum",
+    ):
         self.map_name = map_name
         self.localization_joint_name = localization_joint_name
         self.odom_link_name = odom_link_name
@@ -126,45 +170,5 @@ class PR2VelocityMujocoInterface(RobotInterfaceConfig):
 
     def setup(self):
         self.discover_interfaces_from_controller_manager()
-        self.sync_odometry_topic('/odom', self.drive_joint_name)
-        self.add_base_cmd_velocity(cmd_vel_topic='/cmd_vel')
-
-
-class PR2CollisionAvoidance(CollisionAvoidanceConfig):
-    def __init__(self, drive_joint_name: str = 'brumbrum',
-                 collision_checker: CollisionCheckerLib = CollisionCheckerLib.bpb):
-        super().__init__(collision_checker=collision_checker)
-        self.drive_joint_name = drive_joint_name
-
-    def setup(self):
-        self.load_self_collision_matrix('self_collision_matrices/iai/pr2.srdf')
-        self.set_default_external_collision_avoidance(soft_threshold=0.1,
-                                                      hard_threshold=0.0)
-        for joint_name in ['r_wrist_roll_joint', 'l_wrist_roll_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        number_of_repeller=4,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0,
-                                                        max_velocity=0.2)
-        for joint_name in ['r_wrist_flex_joint', 'l_wrist_flex_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        number_of_repeller=2,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0,
-                                                        max_velocity=0.2)
-        for joint_name in ['r_elbow_flex_joint', 'l_elbow_flex_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        soft_threshold=0.05,
-                                                        hard_threshold=0.0)
-        for joint_name in ['r_forearm_roll_joint', 'l_forearm_roll_joint']:
-            self.overwrite_external_collision_avoidance(joint_name,
-                                                        soft_threshold=0.025,
-                                                        hard_threshold=0.0)
-        self.fix_joints_for_collision_avoidance([
-            'r_gripper_l_finger_joint',
-            'l_gripper_l_finger_joint'
-        ])
-        self.overwrite_external_collision_avoidance(self.drive_joint_name,
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.2,
-                                                    hard_threshold=0.1)
+        self.sync_odometry_topic("/odom", self.drive_joint_name)
+        self.add_base_cmd_velocity(cmd_vel_topic="/cmd_vel")

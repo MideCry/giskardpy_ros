@@ -4,7 +4,7 @@ from py_trees.composites import Sequence
 
 from giskardpy_ros.ros2.ros_msg_visualization import VisualizationMode
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisher
-from giskardpy_ros.tree.behaviors.publish_debug_expressions import PublishDebugExpressions
+from giskardpy_ros.tree.behaviors.publish_debug_expressions import PublishDebugExpressions, QPDataPublisherConfig
 from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback
 from giskardpy_ros.tree.behaviors.publish_joint_states import PublishJointState
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes, TFPublisher
@@ -49,21 +49,8 @@ class PublishState(Sequence):
         node = RobotDescriptionPublisher('publish robot description', topic=topic)
         self.add_child(node)
 
-    def add_qp_data_publisher(self, publish_lb: bool = False, publish_ub: bool = False, publish_lbA: bool = False,
-                              publish_ubA: bool = False, publish_bE: bool = False, publish_Ax: bool = False,
-                              publish_Ex: bool = False, publish_xdot: bool = False, publish_weights: bool = False,
-                              publish_g: bool = False, publish_debug: bool = False):
-        node = PublishDebugExpressions(publish_lb=publish_lb,
-                                       publish_ub=publish_ub,
-                                       publish_xdot=publish_xdot,
-                                       publish_lbA=publish_lbA,
-                                       publish_ubA=publish_ubA,
-                                       publish_Ax=publish_Ax,
-                                       publish_Ex=publish_Ex,
-                                       publish_bE=publish_bE,
-                                       publish_weights=publish_weights,
-                                       publish_g=publish_g,
-                                       publish_debug=publish_debug)
+    def add_qp_data_publisher(self, publish_config: QPDataPublisherConfig):
+        node = PublishDebugExpressions(publish_config=publish_config)
         self.add_child(node)
 
     def add_joint_state_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False,

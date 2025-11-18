@@ -1,8 +1,10 @@
 import builtins
 import json
 import threading
+from dataclasses import fields
+from json import JSONDecodeError
 from time import sleep
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Union, List, Dict, Any, Type
 
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
@@ -34,70 +36,116 @@ from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionEntry
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.goals.goal import Goal
+from random_events.utils import SubclassJSONSerializer
+from rclpy.duration import Duration
+from rclpy.time import Time
+from rclpy_message_converter.message_converter import (
+    convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message,
+    convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary,
+)
+from typing_extensions import get_origin, get_args
+
+import semantic_digital_twin.spatial_types.spatial_types as cas
+from giskardpy.data_types.exceptions import (
+    GiskardException,
+    CorruptShapeException,
+    UnknownLinkException,
+    UnknownJointException,
+    UnknownGoalException,
+)
+from giskardpy.god_map import god_map
+from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.trajectory import Trajectory
+from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from giskardpy.motion_statechart.goals.goal import Goal
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
+from semantic_digital_twin.world_description.connections import ActiveConnection
+from semantic_digital_twin.world_description.geometry import (
+    Shape,
+    Box,
+    Cylinder,
+    Sphere,
+    Mesh,
+    Color,
+    Scale,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.world_entity import (
+    Body,
+    KinematicStructureEntity,
+    Connection,
+)
+from semantic_digital_twin.world_description.world_state import WorldState
 
 
 # TODO probably needs some consistency check
 # 1. weights are same as in message
 
+
 def is_ros_message(obj: Any) -> bool:
-    return (
-            hasattr(obj, '__slots__') and
-            hasattr(obj, 'get_fields_and_field_types')
-    )
+    return hasattr(obj, "__slots__") and hasattr(obj, "get_fields_and_field_types")
 
 
 # %% to ros
 def to_ros_message(data):
-    if isinstance(data, cas.TransMatrix):
+    if isinstance(data, cas.TransformationMatrix):
         return trans_matrix_to_pose_stamped(data)
     if isinstance(data, cas.Point3):
         return point3_to_point_stamped(data)
-    raise ValueError(f'{type(data)} is not a valid type')
+    raise ValueError(f"{type(data)} is not a valid type")
 
 
 def to_visualization_marker(data):
-    if isinstance(data, LinkGeometry):
+    if isinstance(data, Shape):
         return link_geometry_to_visualization_marker(data)
 
 
-def link_to_visualization_marker(data: Link, mode: VisualizationMode) -> visualization_msgs.MarkerArray:
+def link_to_visualization_marker(
+    data: Body, mode: VisualizationMode
+) -> visualization_msgs.MarkerArray:
     markers = visualization_msgs.MarkerArray()
     if mode.is_visual():
-        geometries = data.visuals
+        geometries = data.visual
     else:
-        geometries = data.collisions
+        geometries = data.collision
     for collision in geometries:
-        if isinstance(collision, BoxGeometry):
+        if isinstance(collision, Box):
             marker = link_geometry_box_to_visualization_marker(collision)
-        elif isinstance(collision, CylinderGeometry):
+        elif isinstance(collision, Cylinder):
             marker = link_geometry_cylinder_to_visualization_marker(collision)
-        elif isinstance(collision, SphereGeometry):
+        elif isinstance(collision, Sphere):
             marker = link_geometry_sphere_to_visualization_marker(collision)
-        elif isinstance(collision, MeshGeometry):
+        elif isinstance(collision, Mesh):
             marker = link_geometry_mesh_to_visualization_marker(collision, mode)
             if mode.is_visual():
                 marker.mesh_use_embedded_materials = True
                 marker.color = std_msgs.ColorRGBA()
         else:
-            raise GiskardException(f'Can\'t convert {type(collision)} to visualization marker.')
+            raise GiskardException(
+                f"Can't convert {type(collision)} to visualization marker."
+            )
         markers.markers.append(marker)
     return markers
 
 
-def link_geometry_to_visualization_marker(data: LinkGeometry) -> visualization_msgs.Marker:
+def link_geometry_to_visualization_marker(data: Shape) -> visualization_msgs.Marker:
     marker = visualization_msgs.Marker()
     marker.color = color_rgba_to_ros_msg(data.color)
-    marker.pose = to_ros_message(data.link_T_geometry).pose
+    marker.pose = to_ros_message(data.origin).pose
     return marker
 
 
-def link_geometry_sphere_to_visualization_marker(data: SphereGeometry) -> visualization_msgs.Marker:
+def link_geometry_sphere_to_visualization_marker(
+    data: Sphere,
+) -> visualization_msgs.Marker:
     marker = link_geometry_to_visualization_marker(data)
     marker.type = visualization_msgs.Marker.SPHERE
     marker.scale.x = data.radius * 2
@@ -106,26 +154,29 @@ def link_geometry_sphere_to_visualization_marker(data: SphereGeometry) -> visual
     return marker
 
 
-def link_geometry_cylinder_to_visualization_marker(data: CylinderGeometry) -> visualization_msgs.Marker:
+def link_geometry_cylinder_to_visualization_marker(
+    data: Cylinder,
+) -> visualization_msgs.Marker:
     marker = link_geometry_to_visualization_marker(data)
     marker.type = visualization_msgs.Marker.CYLINDER
-    marker.scale.x = data.radius * 2
-    marker.scale.y = data.radius * 2
-    marker.scale.z = data.height
-    return marker
-
-
-def link_geometry_box_to_visualization_marker(data: BoxGeometry) -> visualization_msgs.Marker:
-    marker = link_geometry_to_visualization_marker(data)
-    marker.type = visualization_msgs.Marker.CUBE
-    marker.scale.x = data.depth
+    marker.scale.x = data.width
     marker.scale.y = data.width
     marker.scale.z = data.height
     return marker
 
 
-def link_geometry_mesh_to_visualization_marker(data: MeshGeometry, mode: VisualizationMode) \
-        -> visualization_msgs.Marker:
+def link_geometry_box_to_visualization_marker(data: Box) -> visualization_msgs.Marker:
+    marker = link_geometry_to_visualization_marker(data)
+    marker.type = visualization_msgs.Marker.CUBE
+    marker.scale.x = data.scale.x
+    marker.scale.y = data.scale.y
+    marker.scale.z = data.scale.z
+    return marker
+
+
+def link_geometry_mesh_to_visualization_marker(
+    data: Mesh, mode: VisualizationMode
+) -> visualization_msgs.Marker:
     marker = link_geometry_to_visualization_marker(data)
     marker.type = visualization_msgs.Marker.MESH_RESOURCE
     if mode.is_collision_decomposed():
@@ -141,100 +192,116 @@ def link_geometry_mesh_to_visualization_marker(data: MeshGeometry, mode: Visuali
     return marker
 
 
-def color_rgba_to_ros_msg(data) -> std_msgs.ColorRGBA:
-    return std_msgs.ColorRGBA(r=data.r, g=data.g, b=data.b, a=data.a)
+def color_rgba_to_ros_msg(data: Color) -> std_msgs.ColorRGBA:
+    return std_msgs.ColorRGBA(r=data.R, g=data.G, b=data.B, a=data.A)
 
 
-def trans_matrix_to_pose_stamped(data: cas.TransMatrix) -> geometry_msgs.PoseStamped:
+def trans_matrix_to_pose_stamped(
+    data: cas.TransformationMatrix,
+) -> geometry_msgs.PoseStamped:
     pose_stamped = geometry_msgs.PoseStamped()
-    pose_stamped.header.frame_id = str(data.reference_frame)
+    pose_stamped.header.frame_id = str(data.reference_frame.name.name)
     position = data.to_position().to_np()
-    orientation = data.to_rotation().to_quaternion().to_np()
-    pose_stamped.pose.position = geometry_msgs.Point(x=position[0],
-                                                     y=position[1],
-                                                     z=position[2])
-    pose_stamped.pose.orientation = geometry_msgs.Quaternion(x=orientation[0],
-                                                             y=orientation[1],
-                                                             z=orientation[2],
-                                                             w=orientation[3])
+    orientation = data.to_rotation_matrix().to_quaternion().to_np()
+    pose_stamped.pose.position = geometry_msgs.Point(
+        x=position[0], y=position[1], z=position[2]
+    )
+    pose_stamped.pose.orientation = geometry_msgs.Quaternion(
+        x=orientation[0], y=orientation[1], z=orientation[2], w=orientation[3]
+    )
     return pose_stamped
 
 
-def numpy_to_pose_stamped(data: np.ndarray, reference_frame: str) -> geometry_msgs.PoseStamped:
+def numpy_to_pose_stamped(
+    data: np.ndarray, reference_frame: str
+) -> geometry_msgs.PoseStamped:
     pose_stamped = geometry_msgs.PoseStamped()
     pose_stamped.header.frame_id = str(reference_frame)
     pose_stamped.pose.position.x = data[0, 3]
     pose_stamped.pose.position.y = data[1, 3]
     pose_stamped.pose.position.z = data[2, 3]
     q = quaternion_from_rotation_matrix(data)
-    pose_stamped.pose.orientation = geometry_msgs.Quaternion(x=q[0],
-                                                             y=q[1],
-                                                             z=q[2],
-                                                             w=q[3])
+    pose_stamped.pose.orientation = geometry_msgs.Quaternion(
+        x=q[0], y=q[1], z=q[2], w=q[3]
+    )
     return pose_stamped
 
 
 def point3_to_point_stamped(data: cas.Point3) -> geometry_msgs.PointStamped:
     point_stamped = geometry_msgs.PointStamped()
-    point_stamped.header.frame_id = str(data.reference_frame)
+    point_stamped.header.frame_id = str(data.reference_frame.name.name)
     position = data.to_np()
-    point_stamped.point = geometry_msgs.Point(x=position[0], y=position[1], z=position[2])
+    point_stamped.point = geometry_msgs.Point(
+        x=position[0], y=position[1], z=position[2]
+    )
     return point_stamped
 
 
-def trans_matrix_to_transform_stamped(data: cas.TransMatrix) -> geometry_msgs.TransformStamped:
+def trans_matrix_to_transform_stamped(
+    data: cas.TransformationMatrix,
+) -> geometry_msgs.TransformStamped:
     transform_stamped = geometry_msgs.TransformStamped()
-    transform_stamped.header.frame_id = data.reference_frame
-    transform_stamped.child_frame_id = data.child_frame
+    transform_stamped.header.frame_id = data.reference_frame.name.name
+    transform_stamped.child_frame_id = data.child_frame.name.name
     position = data.to_position().to_np()
-    orientation = data.to_rotation().to_quaternion().to_np()
-    transform_stamped.transform.translation = geometry_msgs.Vector3(x=position[0], y=position[1], z=position[2])
-    transform_stamped.transform.rotation = geometry_msgs.Quaternion(x=orientation[0], y=orientation[1],
-                                                                    z=orientation[2], w=orientation[3])
+    orientation = data.to_rotation_matrix().to_quaternion().to_np()
+    transform_stamped.transform.translation = geometry_msgs.Vector3(
+        x=position[0], y=position[1], z=position[2]
+    )
+    transform_stamped.transform.rotation = geometry_msgs.Quaternion(
+        x=orientation[0], y=orientation[1], z=orientation[2], w=orientation[3]
+    )
     return transform_stamped
 
 
-def trajectory_to_ros_trajectory(data: Trajectory,
-                                 sample_period: float,
-                                 start_time: Union[Time, float],
-                                 joints: List[MovableJoint],
-                                 fill_velocity_values: bool = True) -> trajectory_msgs.JointTrajectory:
+def trajectory_to_ros_trajectory(
+    data: Trajectory,
+    sample_period: float,
+    start_time: Union[Time, float],
+    joints: List[ActiveConnection],
+    fill_velocity_values: bool = True,
+) -> trajectory_msgs.JointTrajectory:
     if isinstance(start_time, (int, float)):
         start_time = Time(seconds=start_time)
     trajectory_msg = trajectory_msgs.JointTrajectory()
     trajectory_msg.header.stamp = start_time.to_msg()
     trajectory_msg.joint_names = []
-    for i, (time, traj_point) in enumerate(data.items()):
+    for time, traj_point in enumerate(data):
         p = trajectory_msgs.JointTrajectoryPoint()
         p.time_from_start = Duration(seconds=time * sample_period).to_msg()
         for joint in joints:
-            free_variables = joint.get_free_variable_names()
-            for free_variable in free_variables:
-                if free_variable in traj_point:
-                    if i == 0:
-                        joint_name = free_variable
-                        if isinstance(joint_name, PrefixName):
-                            joint_name = joint_name.short_name
+            for free_variable in joint.active_dofs:
+                if free_variable.name in traj_point:
+                    if time == 0:
+                        joint_name = free_variable.name
+                        if isinstance(joint_name, PrefixedName):
+                            joint_name = joint_name.name
                         trajectory_msg.joint_names.append(joint_name)
-                    p.positions.append(traj_point[free_variable].position)
+                    p.positions.append(traj_point[free_variable.name].position)
                     if fill_velocity_values:
-                        p.velocities.append(traj_point[free_variable].velocity)
+                        p.velocities.append(traj_point[free_variable.name].velocity)
                 else:
-                    raise NotImplementedError('generated traj does not contain all joints')
+                    raise NotImplementedError(
+                        "generated traj does not contain all joints"
+                    )
         trajectory_msg.points.append(p)
     return trajectory_msg
 
 
-def world_to_tf_message(world: WorldTree, include_prefix: bool) -> tf2_msgs.TFMessage:
+def world_to_tf_message(world: World, include_prefix: bool) -> tf2_msgs.TFMessage:
     tf_msg = tf2_msgs.TFMessage()
-    tf = world._fk_computer.compute_tf()
+    tf = world._forward_kinematic_manager.compute_tf()
     current_time = rospy.node.get_clock().now().to_msg()
-    tf_msg.transforms = create_tf_message_batch(len(world._fk_computer.tf))
-    for i, (parent_link_name, child_link_name) in enumerate(world._fk_computer.tf):
+    tf_msg.transforms = create_tf_message_batch(
+        len(world._forward_kinematic_manager.tf)
+    )
+    for i, (parent_link_name, child_link_name) in enumerate(
+        world._forward_kinematic_manager.tf
+    ):
         pose = tf[i]
         if not include_prefix:
-            parent_link_name = parent_link_name.short_name
-            child_link_name = child_link_name.short_name
+            parent_link_name = parent_link_name.name
+            child_link_name = child_link_name.name
 
         p_T_c = tf_msg.transforms[i]
         p_T_c.header.frame_id = str(parent_link_name)
@@ -250,7 +317,7 @@ def world_to_tf_message(world: WorldTree, include_prefix: bool) -> tf2_msgs.TFMe
     return tf_msg
 
 
-def json_str_to_giskard_kwargs(json_str: str, world: WorldTree) -> Dict[str, Any]:
+def json_str_to_giskard_kwargs(json_str: str, world: World) -> Dict[str, Any]:
     ros_kwargs = json_str_to_ros_kwargs(json_str)
     return ros_kwargs_to_giskard_kwargs(ros_kwargs, world)
 
@@ -261,20 +328,31 @@ def json_str_to_ros_kwargs(json_str: str) -> Dict[str, Any]:
 
 
 def json_dict_to_ros_kwargs(d: Any) -> Dict[str, Any]:
+    if isinstance(d, str):
+        try:
+            d = json.loads(d)
+        except JSONDecodeError:
+            pass
     if isinstance(d, list):
         for i, element in enumerate(d):
             d[i] = json_dict_to_ros_kwargs(element)
 
     if isinstance(d, dict):
-        if 'message_type' in d:
+        if "type" in d:
+            try:
+                return SubclassJSONSerializer.from_json(d)
+            except ValueError:
+                pass  # it wasn't a SubclassJSONSerializer
+        if "message_type" in d:
             d = convert_dictionary_to_ros_message(d)
         else:
             for key, value in d.copy().items():
-                d[key] = json_dict_to_ros_kwargs(value)
+                del d[key]
+                d[json_dict_to_ros_kwargs(key)] = json_dict_to_ros_kwargs(value)
     return d
 
 
-def ros_kwargs_to_giskard_kwargs(d: Any, world: WorldTree) -> Dict[str, Any]:
+def ros_kwargs_to_giskard_kwargs(d: Any, world: World) -> Dict[str, Any]:
     if is_ros_message(d):
         return ros_msg_to_giskard_obj(d, world)
     elif isinstance(d, list):
@@ -290,12 +368,16 @@ def ros_kwargs_to_giskard_kwargs(d: Any, world: WorldTree) -> Dict[str, Any]:
 
 def convert_dictionary_to_ros_message(json_data):
     # maybe somehow search for message that fits to structure of json?
-    if json_data['message_type'] == msg_type_as_str(MotionStatechartNode):
-        json_data['message']['kwargs'] = json.dumps(json_data['message']['kwargs'])
-    return original_convert_dictionary_to_ros_message(json_data['message_type'], json_data['message'])
+    if json_data["message_type"] == msg_type_as_str(giskard_msgs.MotionStatechartNode):
+        json_data["message"]["kwargs"] = json.dumps(json_data["message"]["kwargs"])
+    return original_convert_dictionary_to_ros_message(
+        json_data["message_type"], json_data["message"]
+    )
 
 
-def motion_statechart_node_to_ros_msg(motion_graph_node: Union[Monitor, Task]) -> giskard_msgs.MotionStatechartNode:
+def motion_statechart_node_to_ros_msg(
+    motion_graph_node: Union[Monitor, Task],
+) -> giskard_msgs.MotionStatechartNode:
     msg = giskard_msgs.MotionStatechartNode()
     msg.name = str(motion_graph_node.name)
     msg.class_name = motion_graph_node.__class__.__name__
@@ -307,7 +389,7 @@ def motion_statechart_node_to_ros_msg(motion_graph_node: Union[Monitor, Task]) -
 
 
 def exception_to_error_msg(exception: Exception) -> giskard_msgs.GiskardError:
-    error = GiskardError()
+    error = giskard_msgs.GiskardError()
     error.type = exception.__class__.__name__
     error.msg = str(exception)
     return error
@@ -315,38 +397,54 @@ def exception_to_error_msg(exception: Exception) -> giskard_msgs.GiskardError:
 
 # %% from ros
 
-exception_classes = get_all_classes_in_module(module_name='giskardpy.data_types.exceptions',
-                                              parent_class=GiskardException)
+exception_classes = get_all_classes_in_module(
+    module_name="giskardpy.data_types.exceptions", parent_class=GiskardException
+)
 
 # add all base exceptions
-exception_classes.update({name: getattr(builtins, name) for name in dir(builtins) if
-                          isinstance(getattr(builtins, name), type) and
-                          issubclass(getattr(builtins, name), BaseException)})
+exception_classes.update(
+    {
+        name: getattr(builtins, name)
+        for name in dir(builtins)
+        if isinstance(getattr(builtins, name), type)
+        and issubclass(getattr(builtins, name), BaseException)
+    }
+)
 
 
 def error_msg_to_exception(msg: giskard_msgs.GiskardError) -> Optional[Exception]:
-    if msg.type == GiskardError.SUCCESS:
+    if msg.type == giskard_msgs.GiskardError.SUCCESS:
         return None
     if msg.type in exception_classes:
         return exception_classes[msg.type](msg.msg)
-    return Exception(f'{msg.type}: {msg.msg}')
+    return Exception(f"{msg.type}: {msg.msg}")
 
 
-def link_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: WorldTree) -> PrefixName:
-    return world.search_for_link_name(msg.name, msg.group_name)
+def link_name_msg_to_body(
+    msg: giskard_msgs.LinkName, world: World
+) -> KinematicStructureEntity:
+    if msg.group_name == "" and msg.name == "":
+        return world.root
+    if msg.group_name == "":
+        return world.get_kinematic_structure_entity_by_name(msg.name)
+    return world.get_kinematic_structure_entity_by_name(
+        PrefixedName(msg.name, msg.group_name)
+    )
 
 
-def joint_name_msg_to_prefix_name(msg: giskard_msgs.LinkName, world: WorldTree) -> PrefixName:
-    return world.search_for_joint_name(msg.name, msg.group_name)
+def joint_name_msg_to_prefix_name(
+    msg: giskard_msgs.LinkName, world: World
+) -> PrefixedName:
+    return world.get_connection_by_name(PrefixedName(msg.name, msg.group_name)).name
 
 
 def replace_prefix_name_with_str(d: dict) -> dict:
     new_d = d.copy()
     for k, v in d.items():
-        if isinstance(k, PrefixName):
+        if isinstance(k, PrefixedName):
             del new_d[k]
             new_d[str(k)] = v
-        if isinstance(v, PrefixName):
+        if isinstance(v, PrefixedName):
             new_d[k] = str(v)
         if isinstance(v, dict):
             new_d[k] = replace_prefix_name_with_str(v)
@@ -367,11 +465,13 @@ def thing_to_json(thing: Any) -> Any:
     if isinstance(thing, list):
         return [thing_to_json(x) for x in thing]
     if isinstance(thing, dict):
-        return {k: thing_to_json(v) for k, v in thing.items()}
-    if isinstance(thing, MotionStatechartNode):
+        return {thing_to_json(k): thing_to_json(v) for k, v in thing.items()}
+    if isinstance(thing, giskard_msgs.MotionStatechartNode):
         return thing_to_json(convert_ros_message_to_dictionary(thing))
     if is_ros_message(thing):
         return convert_ros_message_to_dictionary(thing)
+    if isinstance(thing, SubclassJSONSerializer):
+        return json.dumps(thing.to_json())
     return thing
 
 
@@ -391,25 +491,27 @@ def convert_ros_message_to_dictionary(message) -> dict:
 
     elif is_ros_message(message):
 
-        type_str_parts = str(type(message)).split('.')
-        part1 = type_str_parts[0].split('\'')[1]
-        part2 = type_str_parts[-1].split('\'')[0]
-        message_type = f'{part1}/{part2}'
-        d = {'message_type': message_type,
-             'message': original_convert_ros_message_to_dictionary(message)}
+        type_str_parts = str(type(message)).split(".")
+        part1 = type_str_parts[0].split("'")[1]
+        part2 = type_str_parts[-1].split("'")[0]
+        message_type = f"{part1}/{part2}"
+        d = {
+            "message_type": message_type,
+            "message": original_convert_ros_message_to_dictionary(message),
+        }
         return d
 
     return message
 
 
 def msg_type_as_str(msg_type) -> str:
-    type_str_parts = str(type(msg_type())).split('.')
-    part1 = type_str_parts[0].split('\'')[1]
-    part2 = type_str_parts[-1].split('\'')[0]
-    return f'{part1}/{part2}'
+    type_str_parts = str(type(msg_type())).split(".")
+    part1 = type_str_parts[0].split("'")[1]
+    part2 = type_str_parts[-1].split("'")[0]
+    return f"{part1}/{part2}"
 
 
-def ros_msg_to_giskard_obj(msg, world: WorldTree):
+def ros_msg_to_giskard_obj(msg, world: World):
     if isinstance(msg, sensor_msgs.JointState):
         return ros_joint_state_to_giskard_joint_state(msg)
     elif isinstance(msg, geometry_msgs.PoseStamped):
@@ -423,141 +525,240 @@ def ros_msg_to_giskard_obj(msg, world: WorldTree):
     elif isinstance(msg, geometry_msgs.QuaternionStamped):
         return quaternion_stamped_to_quaternion(msg, world)
     elif isinstance(msg, giskard_msgs.CollisionEntry):
-        return collision_entry_msg_to_giskard(msg)
-    elif isinstance(msg, giskard_msgs.LinkName):
-        try:
-            return link_name_msg_to_prefix_name(msg, world)
-        except UnknownLinkException as e:
-            try:
-                return joint_name_msg_to_prefix_name(msg, world)
-            except UnknownJointException:
-                raise e
-    elif isinstance(msg, GiskardError):
+        return collision_entry_msg_to_giskard(msg, world=world)
+    elif isinstance(msg, giskard_msgs.GiskardError):
         return error_msg_to_exception(msg)
-    elif isinstance(msg, MotionStatechartNode):
+    elif isinstance(msg, giskard_msgs.MotionStatechartNode):
         return create_node(msg, world)
     return msg
 
 
-def create_node(msg_node: MotionStatechartNode, world: WorldTree):
+def create_node(
+    msg_node: giskard_msgs.MotionStatechartNode, world: World
+) -> MotionStatechartNode:
+    node_class = parse_node_class(msg_node)
     parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, world)
+    parsed_kwargs_and_replaced = convert_prefixed_name(node_class, parsed_kwargs, world)
+    return node_class(name=msg_node.name, **parsed_kwargs_and_replaced)
+
+
+def convert_prefixed_name(
+    node_class: Type[MotionStatechartNode],
+    kwargs: Dict[str, Any],
+    world: World,
+) -> Dict[str, Any]:
+    for field in fields(node_class):
+        if field.name in kwargs:
+            value = kwargs[field.name]
+            new_value = replace_connection_and_kinematic_structure_entity_in_kwargs(
+                field.type, value, world
+            )
+            kwargs[field.name] = new_value
+    return kwargs
+
+
+def replace_connection_and_kinematic_structure_entity_in_kwargs(
+    type_hint: Any, kwargs_value: Any, world: World
+) -> Any:
+    if isinstance(kwargs_value, dict):
+        type_args = get_args(type_hint)
+        for key, value in kwargs_value.copy().items():
+            replaced_key = replace_str_prefixed_name(type_args[0], key, world)
+            if replaced_key is not None:
+                del kwargs_value[key]
+                kwargs_value[replaced_key] = value
+            replaced_value = replace_str_prefixed_name(type_args[1], value, world)
+            if replaced_value is not None:
+                kwargs_value[key] = replaced_value
+        return kwargs_value
+    if isinstance(kwargs_value, list):
+        type_args = get_args(type_hint)
+        for index, value in enumerate(kwargs_value):
+            replaced_value = replace_str_prefixed_name(type_args[0], value, world)
+            if replaced_value is not None:
+                kwargs_value[index] = replaced_value
+        return kwargs_value
+    replaced_value = replace_str_prefixed_name(
+        get_origin(type_hint) or type_hint, kwargs_value, world
+    )
+    if replaced_value is not None:
+        return replaced_value
+    return kwargs_value
+
+
+def replace_str_prefixed_name(
+    kwargs_type, kwargs_value, world: World
+) -> Optional[Union[KinematicStructureEntity, Connection]]:
+    if isinstance(kwargs_value, (str, PrefixedName)):
+        if issubclass(kwargs_type, KinematicStructureEntity):
+            return world.get_kinematic_structure_entity_by_name(kwargs_value)
+        elif issubclass(kwargs_type, Connection):
+            return world.get_connection_by_name(kwargs_value)
+
+
+def parse_node_class(
+    msg_node: giskard_msgs.MotionStatechartNode,
+) -> Type[MotionStatechartNode]:
     if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-        C = god_map.motion_statechart_manager.allowed_monitor_types[msg_node.class_name]
-        node: Monitor = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_monitor_types[
+            msg_node.class_name
+        ]
     elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-        C = god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-        node: Task = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
     elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-        C = god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-        node: Goal = C(name=msg_node.name, **parsed_kwargs)
+        return god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
     else:
-        raise UnknownGoalException(f'unknown task type: \'{msg_node.class_name}\'.')
-    return node
+        raise UnknownGoalException(f"unknown task type: '{msg_node.class_name}'.")
 
 
-def ros_joint_state_to_giskard_joint_state(msg: sensor_msgs.JointState, prefix: Optional[str] = None) -> JointStates:
-    js = JointStates()
+def ros_joint_state_to_giskard_joint_state(
+    msg: sensor_msgs.JointState, prefix: Optional[str] = None
+) -> WorldState:
+    js = WorldState()
     for i, joint_name in enumerate(msg.name):
-        joint_name = PrefixName(joint_name, prefix)
-        sjs = _JointState(position=msg.position[i],
-                          velocity=0,
-                          acceleration=0,
-                          jerk=0,
-                          snap=0,
-                          crackle=0,
-                          pop=0)
-        js[joint_name] = sjs
+        joint_name = PrefixedName(joint_name, prefix)
+        js[joint_name][Derivatives.position] = msg.position[i]
     return js
 
 
-def world_body_to_link(link_name: PrefixName, msg: giskard_msgs.WorldBody, color: ColorRGBA) -> Link:
-    link = Link(link_name)
-    geometry = world_body_to_geometry(msg=msg, color=color)
-    link.collisions.append(geometry)
-    link.visuals.append(geometry)
-    return link
-
-
-def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: ColorRGBA) -> LinkGeometry:
-    if msg.type == msg.URDF_BODY:
+def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: Color) -> Shape:
+    if msg.type == giskard_msgs.WorldBody.URDF_BODY:
         raise NotImplementedError()
-    elif msg.type == msg.PRIMITIVE_BODY:
+    elif msg.type == giskard_msgs.WorldBody.PRIMITIVE_BODY:
         if msg.shape.type == msg.shape.BOX:
-            geometry = BoxGeometry(link_T_geometry=cas.TransMatrix(),
-                                   depth=msg.shape.dimensions[msg.shape.BOX_X],
-                                   width=msg.shape.dimensions[msg.shape.BOX_Y],
-                                   height=msg.shape.dimensions[msg.shape.BOX_Z],
-                                   color=color)
+            scale = Scale(
+                msg.shape.dimensions[msg.shape.BOX_X],
+                msg.shape.dimensions[msg.shape.BOX_Y],
+                msg.shape.dimensions[msg.shape.BOX_Z],
+            )
+            geometry = Box(origin=cas.TransformationMatrix(), scale=scale, color=color)
         elif msg.shape.type == msg.shape.CYLINDER:
-            geometry = CylinderGeometry(link_T_geometry=cas.TransMatrix(),
-                                        height=msg.shape.dimensions[msg.shape.CYLINDER_HEIGHT],
-                                        radius=msg.shape.dimensions[msg.shape.CYLINDER_RADIUS],
-                                        color=color)
+            geometry = Cylinder(
+                origin=cas.TransformationMatrix(),
+                height=msg.shape.dimensions[msg.shape.CYLINDER_HEIGHT],
+                width=msg.shape.dimensions[msg.shape.CYLINDER_RADIUS] * 2,
+                color=color,
+            )
         elif msg.shape.type == msg.shape.SPHERE:
-            geometry = SphereGeometry(link_T_geometry=cas.TransMatrix(),
-                                      radius=msg.shape.dimensions[msg.shape.SPHERE_RADIUS],
-                                      color=color)
+            geometry = Sphere(
+                origin=cas.TransformationMatrix(),
+                radius=msg.shape.dimensions[msg.shape.SPHERE_RADIUS],
+                color=color,
+            )
         else:
-            raise CorruptShapeException(f'Primitive shape of type {msg.shape.type} not supported.')
-    elif msg.type == msg.MESH_BODY:
+            raise CorruptShapeException(
+                f"Primitive shape of type {msg.shape.type} not supported."
+            )
+    elif msg.type == giskard_msgs.WorldBody.MESH_BODY:
         if msg.scale.x == 0 or msg.scale.y == 0 or msg.scale.z == 0:
-            raise CorruptShapeException(f'Scale of mesh contains 0: {msg.scale}')
-        geometry = MeshGeometry(link_T_geometry=cas.TransMatrix(),
-                                file_name=msg.mesh,
-                                scale=[msg.scale.x, msg.scale.y, msg.scale.z],
-                                color=color)
+            raise CorruptShapeException(f"Scale of mesh contains 0: {msg.scale}")
+        geometry = Mesh(
+            origin=cas.TransformationMatrix(),
+            filename=msg.mesh,
+            scale=Scale(msg.scale.x, msg.scale.y, msg.scale.z),
+            color=color,
+        )
     else:
-        raise CorruptShapeException(f'World body type {msg.type} not supported')
+        raise CorruptShapeException(f"World body type {msg.type} not supported")
     return geometry
 
 
-def pose_stamped_to_trans_matrix(msg: geometry_msgs.PoseStamped, world: WorldTree) -> cas.TransMatrix:
-    p = cas.Point3.from_xyz(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
-    R = cas.Quaternion.from_xyzw(msg.pose.orientation.x, msg.pose.orientation.y,
-                                 msg.pose.orientation.z, msg.pose.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
-                                                        rotation_matrix=R,
-                                                        reference_frame=world.search_for_link_name(msg.header.frame_id))
+def pose_stamped_to_trans_matrix(
+    msg: geometry_msgs.PoseStamped, world: World
+) -> cas.TransformationMatrix:
+    p = cas.Point3(
+        x_init=msg.pose.position.x,
+        y_init=msg.pose.position.y,
+        z_init=msg.pose.position.z,
+    )
+    R = cas.Quaternion(
+        x_init=msg.pose.orientation.x,
+        y_init=msg.pose.orientation.y,
+        z_init=msg.pose.orientation.z,
+        w_init=msg.pose.orientation.w,
+    ).to_rotation_matrix()
+    result = cas.TransformationMatrix.from_point_rotation_matrix(
+        point=p,
+        rotation_matrix=R,
+        reference_frame=world.get_kinematic_structure_entity_by_name(
+            msg.header.frame_id
+        ),
+    )
     return result
 
 
-def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
-    p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
-    R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
-                                 msg.orientation.z, msg.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
-                                                        rotation_matrix=R,
-                                                        reference_frame=None)
+def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
+    p = cas.Point3(msg.position.x, msg.position.y, msg.position.z)
+    R = cas.Quaternion(
+        msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w
+    ).to_rotation_matrix()
+    result = cas.TransformationMatrix.from_point_rotation_matrix(
+        point=p, rotation_matrix=R, reference_frame=None
+    )
     return result
 
 
-def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransMatrix:
-    p = cas.Point3.from_xyz(msg.position.x, msg.position.y, msg.position.z)
-    R = cas.Quaternion.from_xyzw(msg.orientation.x, msg.orientation.y,
-                                 msg.orientation.z, msg.orientation.w).to_rotation_matrix()
-    result = cas.TransMatrix.from_point_rotation_matrix(point=p,
-                                                        rotation_matrix=R,
-                                                        reference_frame=None)
-    return result
+def point_stamped_to_point3(
+    msg: geometry_msgs.PointStamped, world: World
+) -> cas.Point3:
+    return cas.Point3(
+        msg.point.x,
+        msg.point.y,
+        msg.point.z,
+        reference_frame=world.get_kinematic_structure_entity_by_name(
+            msg.header.frame_id
+        ),
+    )
 
 
-def point_stamped_to_point3(msg: geometry_msgs.PointStamped, world: WorldTree) -> cas.Point3:
-    return cas.Point3.from_xyz(msg.point.x, msg.point.y, msg.point.z,
-                               reference_frame=world.search_for_link_name(msg.header.frame_id))
+def vector_stamped_to_vector3(
+    msg: geometry_msgs.Vector3Stamped, world: World
+) -> cas.Vector3:
+    return cas.Vector3(
+        msg.vector.x,
+        msg.vector.y,
+        msg.vector.z,
+        reference_frame=world.get_kinematic_structure_entity_by_name(
+            msg.header.frame_id
+        ),
+    )
 
 
-def vector_stamped_to_vector3(msg: geometry_msgs.Vector3Stamped, world: WorldTree) -> cas.Vector3:
-    return cas.Vector3.from_xyz(msg.vector.x, msg.vector.y, msg.vector.z,
-                                reference_frame=world.search_for_link_name(msg.header.frame_id))
+def quaternion_stamped_to_quaternion(
+    msg: geometry_msgs.QuaternionStamped, world: World
+) -> cas.RotationMatrix:
+    return cas.Quaternion(
+        msg.quaternion.x,
+        msg.quaternion.y,
+        msg.quaternion.z,
+        msg.quaternion.w,
+        reference_frame=world.get_kinematic_structure_entity_by_name(
+            msg.header.frame_id
+        ),
+    ).to_rotation_matrix()
 
 
-def quaternion_stamped_to_quaternion(msg: geometry_msgs.QuaternionStamped, world: WorldTree) -> cas.RotationMatrix:
-    return cas.Quaternion((msg.quaternion.x, msg.quaternion.y, msg.quaternion.z, msg.quaternion.w),
-                          reference_frame=world.search_for_link_name(msg.header.frame_id)).to_rotation_matrix()
+def collision_entry_msg_to_giskard(
+    msg: giskard_msgs.CollisionEntry, world: World
+) -> CollisionViewRequest:
+    if msg.distance == -1:
+        distance = None
+    else:
+        distance = msg.distance
 
+    try:
+        view1 = world.get_semantic_annotation_by_name(msg.group1)
+    except WorldEntityNotFoundError as e:
+        view1 = None
 
-def collision_entry_msg_to_giskard(msg: giskard_msgs.CollisionEntry) -> CollisionEntry:
-    return CollisionEntry(msg.type, msg.distance, msg.group1, msg.group2)
+    try:
+        view2 = world.get_semantic_annotation_by_name(msg.group2)
+    except WorldEntityNotFoundError as e:
+        view2 = None
+
+    return CollisionViewRequest(
+        type_=msg.type, distance=distance, view1=view1, view2=view2
+    )
 
 
 __tf_messages: List[TransformStamped] = None

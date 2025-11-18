@@ -2,7 +2,11 @@ import asyncio
 from typing import List, Optional, Tuple, Union, Any
 
 import xacro
-from rcl_interfaces.srv._get_parameters import GetParameters_Request, GetParameters_Response, GetParameters
+from rcl_interfaces.srv._get_parameters import (
+    GetParameters_Request,
+    GetParameters_Response,
+    GetParameters,
+)
 from rclpy import Future
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
@@ -18,39 +22,49 @@ from giskardpy_ros.ros2.msg_converter import msg_type_as_str
 from giskardpy_ros.utils.asynio_utils import wait_until_not_none, wait_until_none
 
 
-def wait_for_message(msg_type,
-                     node: 'Node',
-                     topic: str,
-                     *,
-                     qos_profile: Union[QoSProfile, int] = 10,
-                     time_to_wait=-1) -> Tuple[bool, Any]:
+def wait_for_message(
+    msg_type,
+    node: "Node",
+    topic: str,
+    *,
+    qos_profile: Union[QoSProfile, int] = 10,
+    time_to_wait=-1,
+) -> Tuple[bool, Any]:
     while True:
         try:
-            result = rclpy_wait_for_message(msg_type=msg_type, node=node, topic=topic, qos_profile=qos_profile)
+            result = rclpy_wait_for_message(
+                msg_type=msg_type, node=node, topic=topic, qos_profile=qos_profile
+            )
             if result[1] is not None:
                 return result
         except Exception as e:
-            node.get_logger().info(f'waiting for message from {topic}.')
+            node.get_logger().info(f"waiting for message from {topic}.")
 
 
-def get_robot_description(topic: str = '/robot_description') -> str:
+def get_robot_description(topic: str = "/robot_description") -> str:
     qos_profile = QoSProfile(depth=10)
     qos_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
     return wait_for_message(String, rospy.node, topic, qos_profile=qos_profile)[1].data
 
 
 def search_for_publisher_of_node_with_type(node_name: str, topic_type):
-    topics = rospy.node.get_publisher_names_and_types_by_node(node_name, '/')
-    return _search_in_topic_list(node_name=node_name, topic_list=topics, topic_type=topic_type)[0]
+    topics = rospy.node.get_publisher_names_and_types_by_node(node_name, "/")
+    return _search_in_topic_list(
+        node_name=node_name, topic_list=topics, topic_type=topic_type
+    )[0]
 
 
 def search_for_subscriber_of_node_with_type(node_name: str, topic_type):
-    topics = rospy.node.get_subscriber_names_and_types_by_node(node_name, '/')
-    return _search_in_topic_list(node_name=node_name, topic_list=topics, topic_type=topic_type)[0]
+    topics = rospy.node.get_subscriber_names_and_types_by_node(node_name, "/")
+    return _search_in_topic_list(
+        node_name=node_name, topic_list=topics, topic_type=topic_type
+    )[0]
 
 
 def search_for_publishers_of_type(topic_type) -> List[str]:
-    topics = _search_in_topic_list(topic_list=rospy.node.get_topic_names_and_types(), topic_type=topic_type)
+    topics = _search_in_topic_list(
+        topic_list=rospy.node.get_topic_names_and_types(), topic_type=topic_type
+    )
     matches = []
     for topic_name in topics:
         if len(rospy.node.get_publishers_info_by_topic(topic_name)) > 0:
@@ -60,18 +74,24 @@ def search_for_publishers_of_type(topic_type) -> List[str]:
 
 def search_for_unique_publisher_of_type(topic_type) -> str:
     topic_names = search_for_publishers_of_type(topic_type)
-    assert len(topic_names) == 1, f'Found too many {msg_type_as_str(topic_type)} topics: {topic_names}.'
+    assert (
+        len(topic_names) == 1
+    ), f"Found too many {msg_type_as_str(topic_type)} topics: {topic_names}."
     return topic_names[0]
 
 
 def search_for_unique_subscriber_of_type(topic_type) -> str:
     topic_names = search_for_subscribers_of_type(topic_type)
-    assert len(topic_names) == 1, f'Found too many {msg_type_as_str(topic_type)} topics: {topic_names}.'
+    assert (
+        len(topic_names) == 1
+    ), f"Found too many {msg_type_as_str(topic_type)} topics: {topic_names}."
     return topic_names[0]
 
 
 def search_for_subscribers_of_type(topic_type) -> List[str]:
-    topics = _search_in_topic_list(topic_list=rospy.node.get_topic_names_and_types(), topic_type=topic_type)
+    topics = _search_in_topic_list(
+        topic_list=rospy.node.get_topic_names_and_types(), topic_type=topic_type
+    )
     matches = []
     for topic_name in topics:
         if len(rospy.node.get_subscriptions_info_by_topic(topic_name)) > 0:
@@ -79,19 +99,25 @@ def search_for_subscribers_of_type(topic_type) -> List[str]:
     return matches
 
 
-def get_parameters(parameters: List[str], node_name: str = 'controller_manager') -> GetParameters_Response:
+def get_parameters(
+    parameters: List[str], node_name: str = "controller_manager"
+) -> GetParameters_Response:
     from controller_manager import controller_manager_services
+
     req = GetParameters_Request()
     req.names = parameters
-    return controller_manager_services.service_caller(node=rospy.node,
-                                                      service_name=f'{node_name}/get_parameters',
-                                                      service_type=GetParameters,
-                                                      request=req,
-                                                      service_timeout=10)
+    return controller_manager_services.service_caller(
+        node=rospy.node,
+        service_name=f"{node_name}/get_parameters",
+        service_type=GetParameters,
+        request=req,
+        service_timeout=10,
+    )
 
 
-def _search_in_topic_list(topic_list: List[Tuple[str, list]], topic_type: str, node_name: Optional[str] = None) \
-        -> List[str]:
+def _search_in_topic_list(
+    topic_list: List[Tuple[str, list]], topic_type: str, node_name: Optional[str] = None
+) -> List[str]:
     matches = []
     for topic_name, topic_types in topic_list:
         if topic_types[0] == msg_type_as_str(topic_type):
@@ -99,9 +125,9 @@ def _search_in_topic_list(topic_list: List[Tuple[str, list]], topic_type: str, n
     if matches:
         return matches
     if node_name is not None:
-        raise AttributeError(f'Node {node_name} has no topic of type {topic_type}.')
+        raise AttributeError(f"Node {node_name} has no topic of type {topic_type}.")
     else:
-        raise AttributeError(f'Didn\'t find topic of type {topic_type}.')
+        raise AttributeError(f"Didn't find topic of type {topic_type}.")
 
 
 def wait_for_publisher(publisher):
@@ -112,14 +138,14 @@ def wait_for_publisher(publisher):
 
 def load_urdf(file_path: str) -> str:
     file_path = get_middleware().resolve_iri(file_path)
-    doc = xacro.process_file(file_path, mappings={'radius': '0.9'})
-    return doc.toprettyxml(indent='  ')
+    doc = xacro.process_file(file_path, mappings={"radius": "0.9"})
+    return doc.toprettyxml(indent="  ")
 
 
 class ControllerManager:
     name: str
 
-    def __init__(self, name: str = 'controller_manager'):
+    def __init__(self, name: str = "controller_manager"):
         self.name = name
 
 
@@ -137,10 +163,11 @@ class MyActionClient:
         self.result = None
         self.node_handle = node_handle
         self.action_name = action_name
-        self._client = ActionClient(node=node_handle,
-                                    action_type=action_type,
-                                    action_name=action_name)
-        self._client.wait_for_server()
+        self._client = ActionClient(
+            node=node_handle, action_type=action_type, action_name=action_name
+        )
+        while not self._client.wait_for_server(timeout_sec=2):
+            rospy.get_middleware().loginfo(f"Waiting for {action_name} server...")
 
     def send_goal_async(self, goal) -> Future:
         self._goal_counter += 1
@@ -168,29 +195,38 @@ class MyActionClient:
         goal_id = self._goal_counter  # Capture the current goal ID
 
         if not goal_handle.accepted:
-            self.node_handle.get_logger().info(f'{self.action_name} Goal {goal_id} rejected')
+            self.node_handle.get_logger().info(
+                f"{self.action_name} Goal {goal_id} rejected"
+            )
             return
 
         # Only process if this is still the current goal
         if goal_id != self._current_goal_id:
-            self.node_handle.get_logger().debug(f'Ignoring accepted callback for old goal {goal_id}')
+            self.node_handle.get_logger().debug(
+                f"Ignoring accepted callback for old goal {goal_id}"
+            )
             return
 
         self._goal_handle = goal_handle
-        self.node_handle.get_logger().info(f'{self.action_name} Goal #{goal_id} accepted')
+        self.node_handle.get_logger().info(
+            f"{self.action_name} Goal #{goal_id} accepted"
+        )
 
         self._result_future = self._goal_handle.get_result_async()
-        self._result_future.add_done_callback(
-            lambda f: self.__goal_done_cb(f, goal_id))
+        self._result_future.add_done_callback(lambda f: self.__goal_done_cb(f, goal_id))
 
     def __goal_done_cb(self, future: Future, goal_id: int):
         # Only process if this is still the current goal
         if goal_id != self._current_goal_id:
-            self.node_handle.get_logger().debug(f'Ignoring done callback for old goal {goal_id}')
+            self.node_handle.get_logger().debug(
+                f"Ignoring done callback for old goal {goal_id}"
+            )
             self.result = None
             return
 
-        self.node_handle.get_logger().info(f'{self.action_name} Goal #{goal_id} result received')
+        self.node_handle.get_logger().info(
+            f"{self.action_name} Goal #{goal_id} result received"
+        )
         self.result = future.result().result
         self._goal_handle = None
         self._current_goal_id = None

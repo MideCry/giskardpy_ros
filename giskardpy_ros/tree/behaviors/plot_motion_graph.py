@@ -6,10 +6,9 @@ from typing import List, Dict, Optional, Union, Set
 import giskard_msgs.msg as giskard_msgs
 import pydot
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.data_types.data_types import LifeCycleState, ObservationState
+from giskardpy.motion_statechart.data_types import LifeCycleState, ObservationState
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.monitors.monitors import EndMotion, CancelMotion

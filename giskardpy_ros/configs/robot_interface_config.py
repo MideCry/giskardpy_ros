@@ -10,23 +10,26 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
-from giskardpy.data_types.data_types import PrefixName, Derivatives
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
-from giskardpy.model.world import WorldTree
 from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.ros2_interface import search_for_subscriber_of_node_with_type, get_parameters, \
-    search_for_publisher_of_node_with_type, search_for_unique_publisher_of_type, \
-    search_for_unique_subscriber_of_type
+from giskardpy_ros.ros2.ros2_interface import (
+    search_for_subscriber_of_node_with_type,
+    get_parameters,
+    search_for_publisher_of_node_with_type,
+    search_for_unique_publisher_of_type,
+    search_for_unique_subscriber_of_type,
+)
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from giskardpy_ros.tree.control_modes import ControlModes
+from semantic_digital_twin.world_description.connections import OmniDrive, ActiveConnection
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
 
 
 class RobotInterfaceConfig(ABC):
-    def set_defaults(self):
-        pass
-
     @abstractmethod
     def setup(self):
         """
@@ -34,51 +37,52 @@ class RobotInterfaceConfig(ABC):
         """
 
     @property
-    def world(self) -> WorldTree:
+    def world(self) -> World:
         return god_map.world
 
     @property
-    def robot_group_name(self) -> str:
-        return self.world.robot_name
-
-    def get_root_link_of_group(self, group_name: str) -> PrefixName:
-        return self.world.groups[group_name].root_link_name
+    def robot(self) -> AbstractRobot:
+        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0]
 
     @property
     def tree(self) -> GiskardBT:
         return GiskardBlackboard().tree
 
-    @property
-    def control_mode(self) -> ControlModes:
-        return GiskardBlackboard().tree.control_mode
-
-    def sync_odometry_topic(self, odometry_topic: Optional[str] = None, joint_name: Optional[str] = None,
-                            sync_in_control_loop: bool = True):
+    def sync_odometry_topic(
+        self,
+        odometry_topic: Optional[str] = None,
+        joint_name: Optional[str] = None,
+        sync_in_control_loop: bool = True,
+    ):
         """
         Tell Giskard to sync an odometry joint added during by the world config.
         """
         if odometry_topic is None:
             odometry_topic = search_for_unique_publisher_of_type(Odometry)
-        joint_name = self.world.get_drive_joint(joint_name=joint_name).name
-        self.tree.wait_for_goal.synchronization.sync_odometry_topic(odometry_topic, joint_name)
-        if sync_in_control_loop and GiskardBlackboard().tree.is_closed_loop():
+        odom_connection = self.world.get_connection_by_name(joint_name)
+        assert isinstance(odom_connection, OmniDrive)
+        self.tree.wait_for_goal.synchronization.sync_odometry_topic(
+            odometry_topic, joint_name
+        )
+        if sync_in_control_loop and GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_odometry_topic(
-                odometry_topic,
-                joint_name)
+                odometry_topic, joint_name
+            )
 
-    def sync_6dof_joint_with_tf_frame(self, joint_name: str, tf_parent_frame: str, tf_child_frame: str):
+    def sync_6dof_joint_with_tf_frame(
+        self, joint_name: str, tf_parent_frame: str, tf_child_frame: str
+    ):
         """
         Tell Giskard to sync a 6dof joint with a tf frame.
         """
-        joint_name = self.world.search_for_joint_name(joint_name)
-        self.tree.wait_for_goal.synchronization.sync_6dof_joint_with_tf_frame(joint_name,
-                                                                              tf_parent_frame,
-                                                                              tf_child_frame)
-        if GiskardBlackboard().tree.is_closed_loop():
+        joint_name = self.world.get_connection_by_name(joint_name).name
+        self.tree.wait_for_goal.synchronization.sync_6dof_joint_with_tf_frame(
+            joint_name, tf_parent_frame, tf_child_frame
+        )
+        if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_6dof_joint_with_tf_frame(
-                joint_name,
-                tf_parent_frame,
-                tf_child_frame)
+                joint_name, tf_parent_frame, tf_child_frame
+            )
 
     def sync_joint_state_topic(self, topic_name: str, group_name: Optional[str] = None):
         """
@@ -86,17 +90,23 @@ class RobotInterfaceConfig(ABC):
         """
         if group_name is None:
             group_name = self.world.robot_name
-        self.tree.wait_for_goal.synchronization.sync_joint_state_topic(group_name=group_name,
-                                                                       topic_name=topic_name)
-        if GiskardBlackboard().tree.is_closed_loop() and group_name == self.world.robot_name:
+        self.tree.wait_for_goal.synchronization.sync_joint_state_topic(
+            group_name=group_name, topic_name=topic_name
+        )
+        if (
+            GiskardBlackboard().tree_config.is_closed_loop()
+            and group_name == self.world.robot_name
+        ):
             self.tree.control_loop_branch.closed_loop_synchronization.sync_joint_state2_topic(
-                group_name=group_name,
-                topic_name=topic_name)
+                group_name=group_name, topic_name=topic_name
+            )
 
-    def add_base_cmd_velocity(self,
-                              cmd_vel_topic: Optional[str] = None,
-                              joint_name: Optional[PrefixName] = None,
-                              track_only_velocity: bool = False):
+    def add_base_cmd_velocity(
+        self,
+        cmd_vel_topic: Optional[str] = None,
+        joint_name: Optional[PrefixedName] = None,
+        track_only_velocity: bool = False,
+    ):
         """
         Tell Giskard how it can control an odom joint of the robot.
         :param cmd_vel_topic: a Twist topic
@@ -106,30 +116,37 @@ class RobotInterfaceConfig(ABC):
         """
         if cmd_vel_topic is None:
             cmd_vel_topic = search_for_unique_subscriber_of_type(Twist)
-        if GiskardBlackboard().tree.is_closed_loop():
-            self.tree.control_loop_branch.send_controls.add_send_cmd_velocity(topic_name=cmd_vel_topic,
-                                                                              joint_name=joint_name)
-        elif GiskardBlackboard().tree.is_open_loop():
-            self.tree.execute_traj.add_base_traj_action_server(cmd_vel_topic=cmd_vel_topic,
-                                                               track_only_velocity=track_only_velocity)
+        if GiskardBlackboard().tree_config.is_closed_loop():
+            self.tree.control_loop_branch.send_controls.add_send_cmd_velocity(
+                topic_name=cmd_vel_topic, joint_name=joint_name
+            )
+        elif GiskardBlackboard().tree_config.is_open_loop():
+            self.tree.execute_traj.add_base_traj_action_server(
+                cmd_vel_topic=cmd_vel_topic, track_only_velocity=track_only_velocity
+            )
 
-    def register_controlled_joints(self, joint_names: List[Union[str, PrefixName]], group_name: Optional[str] = None) \
-            -> None:
-        """
-        Tell Giskard which joints can be controlled. Giskard can usually figure this out on its own.
-        Only used in standalone mode.
-        :param group_name: Only needs to be specified, if there are more than two robots.
-        """
-        if self.control_mode != ControlModes.standalone:
-            raise SetupException(f'Joints only need to be registered in {ControlModes.standalone.name} mode.')
-        joint_names = [self.world.search_for_joint_name(j, group_name) for j in joint_names]
-        self.world.register_controlled_joints(joint_names)
+    def register_controlled_joints(
+        self, joint_names: List[Union[str, PrefixedName]]
+    ) -> None:
+        if not GiskardBlackboard().tree_config.is_standalone():
+            raise SetupException(
+                f"Joints only need to be registered in StandAlone mode."
+            )
+        for joint_name in joint_names:
+            connection: ActiveConnection = self.world.get_connection_by_name(joint_name)
+            if not isinstance(connection, ActiveConnection):
+                raise Exception(
+                    f"{joint_name} is not an active connection and cannot be controlled."
+                )
+            connection.has_hardware_interface = True
 
-    def add_follow_joint_trajectory_server(self,
-                                           namespace: str,
-                                           group_name: Optional[str] = None,
-                                           fill_velocity_values: bool = False,
-                                           path_tolerance: Dict[Derivatives, float] = None):
+    def add_follow_joint_trajectory_server(
+        self,
+        namespace: str,
+        group_name: Optional[str] = None,
+        fill_velocity_values: bool = False,
+        path_tolerance: Dict[Derivatives, float] = None,
+    ):
         """
         Connect Giskard to a follow joint trajectory server. It will automatically figure out which joints are offered
         and can be controlled.
@@ -139,69 +156,100 @@ class RobotInterfaceConfig(ABC):
         """
         if group_name is None:
             group_name = self.world.robot_name
-        if not GiskardBlackboard().tree.is_open_loop():
-            raise SetupException('add_follow_joint_trajectory_server only works in planning mode')
-        self.tree.execute_traj.add_follow_joint_traj_action_server(namespace=namespace,
-                                                                   group_name=group_name,
-                                                                   fill_velocity_values=fill_velocity_values,
-                                                                   path_tolerance=path_tolerance)
+        if not GiskardBlackboard().tree_config.is_open_loop():
+            raise SetupException(
+                "add_follow_joint_trajectory_server only works in planning mode"
+            )
+        self.tree.execute_traj.add_follow_joint_traj_action_server(
+            namespace=namespace,
+            group_name=group_name,
+            fill_velocity_values=fill_velocity_values,
+            path_tolerance=path_tolerance,
+        )
 
-    def discover_interfaces_from_controller_manager(self,
-                                                    controller_manager_name: str = 'controller_manager',
-                                                    whitelist: Optional[List[str]] = None) -> None:
+    def discover_interfaces_from_controller_manager(
+        self,
+        controller_manager_name: str = "controller_manager",
+        whitelist: Optional[List[str]] = None,
+    ) -> None:
         """
         :param whitelist: list all controllers that should get added, if None, giskard will search automatically
         """
         import controller_manager as cm
-        controllers: ListControllers_Response = cm.list_controllers(node=rospy.node,
-                                                                    controller_manager_name=controller_manager_name)
 
-        controllers_to_add = self.__filter_controllers_with_whitelist(controllers.controller, whitelist)
+        controllers: ListControllers_Response = cm.list_controllers(
+            node=rospy.node, controller_manager_name=controller_manager_name
+        )
+
+        controllers_to_add = self.__filter_controllers_with_whitelist(
+            controllers.controller, whitelist
+        )
 
         for controller in controllers_to_add:
-            if controller.state == 'active':
-                if controller.type == 'joint_state_broadcaster/JointStateBroadcaster':
-                    topic_name = search_for_publisher_of_node_with_type(topic_type=JointState,
-                                                                        node_name=controller.name)
+            if controller.state == "active":
+                if controller.type == "joint_state_broadcaster/JointStateBroadcaster":
+                    topic_name = search_for_publisher_of_node_with_type(
+                        topic_type=JointState, node_name=controller.name
+                    )
                     self.sync_joint_state_topic(topic_name)
-                elif controller.type == 'velocity_controllers/JointGroupVelocityController':
-                    cmt_topic = search_for_subscriber_of_node_with_type(topic_type=Float64MultiArray,
-                                                                        node_name=controller.name)
-                    joints = get_parameters(parameters=['joints'],
-                                            node_name=controller.name).values[0].string_array_value
-                    self.add_joint_velocity_group_controller(cmd_topic=cmt_topic, joints=joints)
-                elif controller.type == 'diff_drive_controller/DiffDriveController':
+                elif (
+                    controller.type
+                    == "velocity_controllers/JointGroupVelocityController"
+                ):
+                    cmt_topic = search_for_subscriber_of_node_with_type(
+                        topic_type=Float64MultiArray, node_name=controller.name
+                    )
+                    joints = (
+                        get_parameters(parameters=["joints"], node_name=controller.name)
+                        .values[0]
+                        .string_array_value
+                    )
+                    self.add_joint_velocity_group_controller(
+                        cmd_topic=cmt_topic, joints=joints
+                    )
+                elif controller.type == "diff_drive_controller/DiffDriveController":
                     self.add_base_cmd_velocity(controller.name)
 
-    def __filter_controllers_with_whitelist(self, controllers: List[ControllerState], whitelist: Optional[List[str]]) \
-            -> List[ControllerState]:
+    def __filter_controllers_with_whitelist(
+        self, controllers: List[ControllerState], whitelist: Optional[List[str]]
+    ) -> List[ControllerState]:
         controllers_to_add: List[ControllerState]
         if whitelist is None:
             return controllers
         else:
             available_controllers = {controller.name for controller in controllers}
-            missing_controllers = [controller for controller in whitelist if controller not in available_controllers]
+            missing_controllers = [
+                controller
+                for controller in whitelist
+                if controller not in available_controllers
+            ]
             if missing_controllers:
                 raise ValueError(
-                    f"The following controllers from the whitelist are not available: {missing_controllers}")
-            return [controller for controller in controllers if controller.name in whitelist]
+                    f"The following controllers from the whitelist are not available: {missing_controllers}"
+                )
+            return [
+                controller for controller in controllers if controller.name in whitelist
+            ]
 
     def add_joint_velocity_controller(self, namespaces: List[str]):
         """
         For closed loop mode. Tell Giskard how it can send velocities to joints.
         :param namespaces: A list of namespaces where Giskard can find the topics and rosparams.
         """
-        self.tree.control_loop_branch.send_controls.add_joint_velocity_controllers(namespaces)
+        self.tree.control_loop_branch.send_controls.add_joint_velocity_controllers(
+            namespaces
+        )
 
     def add_joint_velocity_group_controller(self, cmd_topic: str, joints: List[str]):
         """
         For closed loop mode. Tell Giskard how it can send velocities for a group of joints.
         """
-        internal_joint_names: List[PrefixName] = []
+        internal_joint_names: List[PrefixedName] = []
         for i in range(len(joints)):
             internal_joint_names.append(god_map.world.search_for_joint_name(joints[i]))
-        self.tree.control_loop_branch.send_controls.add_joint_velocity_group_controllers(cmd_topic=cmd_topic,
-                                                                                         joints=internal_joint_names)
+        self.tree.control_loop_branch.send_controls.add_joint_velocity_group_controllers(
+            cmd_topic=cmd_topic, joints=internal_joint_names
+        )
 
 
 class StandAloneRobotInterfaceConfig(RobotInterfaceConfig):

@@ -30,7 +30,7 @@ class PlotTrajectory(GiskardBehavior):
     def plot(self):
         trajectory = god_map.trajectory
         if trajectory:
-            sample_period = god_map.qp_controller.mpc_dt
+            sample_period = god_map.qp_controller.config.mpc_dt
             try:
                 trajectory.plot_trajectory(path_to_data_folder=self.path_to_data_folder,
                                            sample_period=sample_period,

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from giskardpy_ros.ros2 import rospy
-from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard

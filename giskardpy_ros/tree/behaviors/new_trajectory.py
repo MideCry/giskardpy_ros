@@ -16,7 +16,7 @@ class NewTrajectory(GiskardBehavior):
     def initialise(self):
         current_js = deepcopy(god_map.world.state)
         trajectory = Trajectory()
-        trajectory.set(0, current_js)
+        trajectory.append(current_js)
         god_map.trajectory = trajectory
 
     def update(self):

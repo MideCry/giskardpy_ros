@@ -5,44 +5,48 @@ from giskardpy.middleware import get_middleware
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.pr2 import PR2CollisionAvoidance, WorldWithPR2Config
+from giskardpy_ros.configs.iai_robots.pr2 import WorldWithPR2Config
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 
+
 def main():
-    rospy.init_node('giskard')
-    rospy.node.declare_parameters(namespace='',
-                                  parameters=[('robot_description', Parameter.Type.STRING)])
-    robot_description = rospy.node.get_parameter_or('robot_description').value
-    drive_joint_name = 'brumbrum'
-    giskard = Giskard(world_config=WorldWithPR2Config(drive_joint_name=drive_joint_name,
-                                                      urdf=robot_description),
-                      collision_avoidance_config=PR2CollisionAvoidance(drive_joint_name=drive_joint_name),
-                      robot_interface_config=StandAloneRobotInterfaceConfig(
-                          [
-                              'torso_lift_joint',
-                              'head_pan_joint',
-                              'head_tilt_joint',
-                              'r_shoulder_pan_joint',
-                              'r_shoulder_lift_joint',
-                              'r_upper_arm_roll_joint',
-                              'r_forearm_roll_joint',
-                              'r_elbow_flex_joint',
-                              'r_wrist_flex_joint',
-                              'r_wrist_roll_joint',
-                              'l_shoulder_pan_joint',
-                              'l_shoulder_lift_joint',
-                              'l_upper_arm_roll_joint',
-                              'l_forearm_roll_joint',
-                              'l_elbow_flex_joint',
-                              'l_wrist_flex_joint',
-                              'l_wrist_roll_joint',
-                              drive_joint_name,
-                          ]
-                      ),
-                      behavior_tree_config=StandAloneBTConfig(publish_tf=True, publish_js=False, debug_mode=True),
-                      qp_controller_config=QPControllerConfig())
+    rospy.init_node("giskard")
+    rospy.node.declare_parameters(
+        namespace="", parameters=[("robot_description", Parameter.Type.STRING)]
+    )
+    robot_description = rospy.node.get_parameter_or("robot_description").value
+    giskard = Giskard(
+        world_config=WorldWithPR2Config(urdf=robot_description),
+        robot_interface_config=StandAloneRobotInterfaceConfig(
+            [
+                "torso_lift_joint",
+                "head_pan_joint",
+                "head_tilt_joint",
+                "r_shoulder_pan_joint",
+                "r_shoulder_lift_joint",
+                "r_upper_arm_roll_joint",
+                "r_forearm_roll_joint",
+                "r_elbow_flex_joint",
+                "r_wrist_flex_joint",
+                "r_wrist_roll_joint",
+                "l_shoulder_pan_joint",
+                "l_shoulder_lift_joint",
+                "l_upper_arm_roll_joint",
+                "l_forearm_roll_joint",
+                "l_elbow_flex_joint",
+                "l_wrist_flex_joint",
+                "l_wrist_roll_joint",
+                "odom_combined_T_base_footprint",
+            ]
+        ),
+        behavior_tree_config=StandAloneBTConfig(
+            publish_tf=True, publish_js=False, debug_mode=True
+        ),
+        qp_controller_config=QPControllerConfig(control_dt=None, mpc_dt=0.05),
+    )
     giskard.live()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

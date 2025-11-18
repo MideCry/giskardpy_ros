@@ -2,342 +2,131 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from dataclasses import dataclass, field
 from threading import Thread
 from time import sleep
 from typing import Dict, Tuple, Optional, List, Union
 
-import giskard_msgs.msg as giskard_msgs
 import numpy as np
 import rclpy
-from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, QuaternionStamped
-from giskard_msgs.action import World, Move
+from geometry_msgs.msg import (
+    PoseStamped,
+    Vector3Stamped,
+    PointStamped,
+    QuaternionStamped,
+)
+from giskard_msgs.action import Move
 from giskard_msgs.action._move import Move_Result
-from giskard_msgs.action._world import World_Result, World_Goal
+from giskard_msgs.msg import CollisionEntry
 from giskard_msgs.msg import ExecutionState, MotionStatechartNode
-from giskard_msgs.msg import WorldBody, CollisionEntry, GiskardError, LinkName
-from giskard_msgs.srv._get_group_names import GetGroupNames, GetGroupNames_Response, GetGroupNames_Request
-from giskard_msgs.srv._get_group_info import GetGroupInfo, GetGroupInfo_Response, GetGroupInfo_Request
-from giskard_msgs.srv._dye_group import DyeGroup, DyeGroup_Response, DyeGroup_Request
 from nav_msgs.msg import Path
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
-from rclpy.client import Client
 from rclpy.node import Node
-from shape_msgs.msg import SolidPrimitive
 
-from giskardpy.data_types.data_types import goal_parameter
-from giskardpy.data_types.exceptions import MaxTrajectoryLengthException, ExecutionException
+from giskardpy.data_types.exceptions import (
+    MaxTrajectoryLengthException,
+    ExecutionException,
+)
+from giskardpy.god_map import god_map
+from giskardpy.middleware import get_middleware
+from giskardpy.motion_statechart.data_types import goal_parameter
 from giskardpy.motion_statechart.goals.align_to_push_door import AlignToPushDoor
-from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal, \
-    CartesianPoseStraight, CartesianPositionStraight
+from giskardpy.motion_statechart.goals.cartesian_goals import (
+    DiffDriveBaseGoal,
+    CartesianPoseStraight,
+    CartesianPositionStraight,
+)
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Close, Open
 from giskardpy.motion_statechart.goals.pre_push_door import PrePushDoor
-from giskardpy.motion_statechart.monitors.cartesian_monitors import PoseReached, PositionReached, OrientationReached, \
-    PointingAt, VectorsAligned, DistanceToLine
-from giskardpy.motion_statechart.monitors.feature_monitors import PerpendicularMonitor, AngleMonitor, HeightMonitor, \
-    DistanceMonitor
+from giskardpy.motion_statechart.monitors.cartesian_monitors import (
+    PoseReached,
+    PositionReached,
+    OrientationReached,
+    PointingAt,
+    VectorsAligned,
+    DistanceToLine,
+)
+from giskardpy.motion_statechart.monitors.feature_monitors import (
+    PerpendicularMonitor,
+    AngleMonitor,
+    HeightMonitor,
+    DistanceMonitor,
+)
 from giskardpy.motion_statechart.monitors.joint_monitors import JointGoalReached
-from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached, TimeAbove, Alternator, CancelMotion, \
-    EndMotion, TrueMonitor, FalseMonitor
-from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry, SetSeedConfiguration
-from giskardpy.motion_statechart.monitors.payload_monitors import Print, Sleep, \
-    Pulse, CheckMaxTrajectoryLength
+from giskardpy.motion_statechart.monitors.monitors import (
+    LocalMinimumReached,
+    TimeAbove,
+    Alternator,
+    CancelMotion,
+    EndMotion,
+    TrueMonitor,
+    FalseMonitor,
+)
+from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
+    SetOdometry,
+    SetSeedConfiguration,
+)
+from giskardpy.motion_statechart.monitors.payload_monitors import (
+    Print,
+    Sleep,
+    Pulse,
+    CheckMaxTrajectoryLength,
+)
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
-from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation, \
-    CartesianPose, \
-    JustinTorsoLimitCart, CartesianVelocityLimit
-from giskardpy.motion_statechart.tasks.feature_functions import AlignPerpendicular, HeightGoal, AngleGoal, DistanceGoal
+from giskardpy.motion_statechart.tasks.cartesian_tasks import (
+    CartesianPosition,
+    CartesianOrientation,
+    CartesianPose,
+    JustinTorsoLimitCart,
+    CartesianVelocityLimit,
+)
+from giskardpy.motion_statechart.tasks.feature_functions import (
+    AlignPerpendicular,
+    HeightGoal,
+    AngleGoal,
+    DistanceGoal,
+)
 from giskardpy.motion_statechart.tasks.grasp_bar import GraspBar
-from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionLimitList, JointPositionList, AvoidJointLimits, \
-    MirrorJointPosition
+from giskardpy.motion_statechart.tasks.joint_tasks import (
+    JointPositionLimitList,
+    JointPositionList,
+    AvoidJointLimits,
+    MirrorJointPosition,
+)
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
-from giskardpy.motion_statechart.tasks.weight_scaling_goals import MaxManipulability, BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import BaseArmWeightScaling
+from giskardpy.motion_statechart.tasks.weight_scaling_goals import (
+    MaxManipulability,
+)
 from giskardpy.motion_statechart.tasks.wiggle_insert import WiggleInsert
 from giskardpy.utils.utils import get_all_classes_in_package, ImmutableDict
-from giskardpy_ros.goals.realtime_goals import RealTimePointing, CarryMyBullshit, FollowNavPath
+from giskardpy_ros.goals.realtime_goals import (
+    RealTimePointing,
+    CarryMyBullshit,
+    FollowNavPath,
+)
 from giskardpy_ros.ros2 import msg_converter, rospy
 from giskardpy_ros.ros2.msg_converter import kwargs_to_json
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
-from giskardpy_ros.utils.utils import make_world_body_box
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.world import World
 
 
-class WorldWrapper:
-    _get_group_info_srv: Client
-    _get_group_names_srv: Client
-    _dye_group_srv: Client
-
-    def __init__(self, giskard_node_name: str, node_handle: Node):
-        self.node_handle = node_handle
-        self._get_group_info_srv = node_handle.create_client(GetGroupInfo, f'{giskard_node_name}/get_group_info')
-        self._get_group_names_srv = node_handle.create_client(GetGroupNames, f'{giskard_node_name}/get_group_names')
-        self._dye_group_srv = node_handle.create_client(DyeGroup, f'{giskard_node_name}/dye_group')
-        self._client = MyActionClient(node_handle, World, f'{giskard_node_name}/update_world')
-        self._get_group_names_srv.wait_for_service()
-        self.robot_name = self.get_group_names()[0]
-
-    def _send_goal(self, goal: World_Goal) -> World_Result:
-        result: World_Result = self._client.send_goal(goal)
-        if result.error.type != GiskardError.SUCCESS:
-            raise msg_converter.error_msg_to_exception(result.error)
-        return result
-
-    def clear(self) -> World_Result:
-        """
-        Resets the world to what it was when Giskard was launched.
-        """
-        req = World_Goal()
-        req.operation = World_Goal.REMOVE_ALL
-        return self._send_goal(req)
-
-    def remove_group(self, name: str) -> World_Result:
-        """
-        Removes a group and all links and joints it contains from the world.
-        Be careful, you can remove parts of the robot like that.
-        """
-        world_body = WorldBody()
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.REMOVE
-        req.body = world_body
-        return self._send_goal(req)
-
-    def add_box(self,
-                name: str,
-                size: Tuple[float, float, float],
-                pose: PoseStamped,
-                parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None) -> World_Result:
-        """
-        Adds a new box to the world tree and attaches it to parent_link.
-        If parent_link_group and parent_link are empty, the box will be attached to the world root link, e.g., map.
-        :param name: How the new group will be called
-        :param size: X, Y and Z dimensions of the box, respectively
-        :param pose: Where the root link of the new object will be positioned
-        :param parent_link: Name of the link, the object will get attached to. None = root link of world
-        :return: Response message of the service call
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = make_world_body_box(float(size[0]), float(size[1]), float(size[2]))
-        req.parent_link = parent_link or giskard_msgs.LinkName()
-        req.pose = pose
-        return self._send_goal(req)
-
-    def add_sphere(self,
-                   name: str,
-                   radius: float,
-                   pose: PoseStamped,
-                   parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None) -> World_Result:
-        """
-        See add_box.
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.PRIMITIVE_BODY
-        world_body.shape.type = SolidPrimitive.SPHERE
-        world_body.shape.dimensions.append(float(radius))
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def add_mesh(self,
-                 name: str,
-                 mesh: str,
-                 pose: PoseStamped,
-                 parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                 scale: Tuple[float, float, float] = (1., 1., 1.)) -> World_Result:
-        """
-        See add_box.
-        :param mesh: path to the mesh location, can be ros package path, e.g.,
-                        package://giskardpy/test/urdfs/meshes/bowl_21.obj
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.MESH_BODY
-        world_body.mesh = mesh
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.body.scale.x = float(scale[0])
-        req.body.scale.y = float(scale[1])
-        req.body.scale.z = float(scale[2])
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def add_cylinder(self,
-                     name: str,
-                     height: float,
-                     radius: float,
-                     pose: PoseStamped,
-                     parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None) -> World_Result:
-        """
-        See add_box.
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        world_body = WorldBody()
-        world_body.type = WorldBody.PRIMITIVE_BODY
-        world_body.shape.type = SolidPrimitive.CYLINDER
-        world_body.shape.dimensions = [0., 0.]
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = float(height)
-        world_body.shape.dimensions[SolidPrimitive.CYLINDER_RADIUS] = float(radius)
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = world_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def update_parent_link_of_group(self,
-                                    name: str,
-                                    parent_link: Union[str, giskard_msgs.LinkName]) -> World_Result:
-        """
-        Removes the joint connecting the root link of a group and attaches it to a parent_link.
-        The object will not move relative to the world's root link in this process.
-        :param name: name of the group
-        :param parent_link: name of the new parent link
-        :return: result message
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        req = World_Goal()
-        req.operation = World_Goal.UPDATE_PARENT_LINK
-        req.group_name = str(name)
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def detach_group(self, object_name: str) -> World_Result:
-        """
-        A wrapper for update_parent_link_of_group which set parent_link to the root link of the world.
-        """
-        req = World_Goal()
-        req.group_name = str(object_name)
-        req.operation = World_Goal.UPDATE_PARENT_LINK
-        return self._send_goal(req)
-
-    def add_urdf(self,
-                 name: str,
-                 urdf: str,
-                 pose: PoseStamped,
-                 parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-                 js_topic: Optional[str] = '') -> World_Result:
-        """
-        Adds a urdf to the world.
-        :param name: name the group containing the urdf will have.
-        :param urdf: urdf as string, no path!
-        :param pose: pose of the root link of the new object
-        :param parent_link: to which link the urdf will be attached
-        :param js_topic: Giskard will listen on that topic for joint states and update the urdf accordingly
-        :return: response message
-        """
-        if isinstance(parent_link, str):
-            parent_link = giskard_msgs.LinkName(name=parent_link)
-        parent_link = parent_link or giskard_msgs.LinkName()
-        js_topic = str(js_topic)
-        urdf_body = WorldBody()
-        urdf_body.type = WorldBody.URDF_BODY
-        urdf_body.urdf = str(urdf)
-        urdf_body.joint_state_topic = js_topic
-        req = World_Goal()
-        req.group_name = str(name)
-        req.operation = World_Goal.ADD
-        req.body = urdf_body
-        req.pose = pose
-        req.parent_link = parent_link
-        return self._send_goal(req)
-
-    def dye_group(self, group_name: str, rgba: Tuple[float, float, float, float]) -> DyeGroup_Response:
-        """
-        Change the color of the ghost for this particular group.
-        """
-        req = DyeGroup_Request()
-        req.group_name = group_name
-        req.color.r = rgba[0]
-        req.color.g = rgba[1]
-        req.color.b = rgba[2]
-        req.color.a = rgba[3]
-        return self._dye_group_srv.call(req)
-
-    def get_group_names(self) -> List[str]:
-        """
-        Returns the names of every group in the world.
-        """
-        req = GetGroupNames_Request()
-        resp: GetGroupNames_Response = self._get_group_names_srv.call(req)
-        return resp.group_names
-
-    def get_group_info(self, group_name: str) -> GetGroupInfo_Response:
-        """
-        Returns the joint state, joint state topic and pose of a group.
-        """
-        req = GetGroupInfo_Request()
-        req.group_name = group_name
-        return self._get_group_info_srv.call(req)
-
-    def get_controlled_joints(self, group_name: str) -> List[str]:
-        """
-        Returns all joints of a group that are flagged as controlled.
-        """
-        return self.get_group_info(group_name).controlled_joints
-
-    def update_group_pose(self, group_name: str, new_pose: PoseStamped) -> World_Result:
-        """
-        Overwrites the pose specified in the joint that connects the two groups.
-        :param group_name: Name of the group that will move
-        :param new_pose: New pose of the group
-        :return: Giskard's reply
-        """
-        req = World_Goal()
-        req.operation = World_Goal.UPDATE_POSE
-        req.group_name = group_name
-        req.pose = new_pose
-        return self._send_goal(req)
-
-    def register_group(self, new_group_name: str, root_link_name: Union[str, giskard_msgs.LinkName]) -> World_Result:
-        """
-        Register a new group for reference in collision checking. All child links of root_link_name will belong to it.
-        :param new_group_name: Name of the new group.
-        :param root_link_name: root link of the new group
-        :return: World_Result
-        """
-        if isinstance(root_link_name, str):
-            root_link_name = LinkName(name=root_link_name)
-        req = World_Goal()
-        req.operation = World_Goal.REGISTER_GROUP
-        req.group_name = new_group_name
-        req.parent_link = root_link_name
-        return self._send_goal(req)
-
-
+@dataclass
 class MotionStatechartNodeWrapper:
-    _motion_graph_nodes: Dict[str, MotionStatechartNode]
-    _name_prefix = ''
     giskard_wrapper: GiskardWrapper
-
-    def __init__(self, giskard_wrapper: GiskardWrapper):
-        self.giskard_wrapper = giskard_wrapper
-        self.reset()
+    _motion_graph_nodes: Dict[str, MotionStatechartNode] = field(
+        default_factory=ImmutableDict
+    )
+    _name_prefix: str = ""
 
     @property
-    def robot_name(self) -> str:
+    def robot_name(self) -> PrefixedName:
         return self.giskard_wrapper.robot_name
 
     @property
@@ -347,14 +136,17 @@ class MotionStatechartNodeWrapper:
     def reset(self):
         self._motion_graph_nodes = ImmutableDict()
 
-    def _add_motion_statechart_node(self, *,
-                                    class_name: str,
-                                    name: Optional[str] = None,
-                                    start_condition: str = '',
-                                    pause_condition: str = '',
-                                    end_condition: str = '',
-                                    reset_condition: str = '',
-                                    **kwargs) -> str:
+    def _add_motion_statechart_node(
+        self,
+        *,
+        class_name: str,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        **kwargs,
+    ) -> str:
         """
         Generic function to add a motion goal.
         :param motion_goal_class: Name of a class defined in src/giskardpy/goals
@@ -366,7 +158,7 @@ class MotionStatechartNodeWrapper:
         :param kwargs: kwargs for __init__ function of motion_goal_class
         """
         if name is None:
-            name = f'{self._name_prefix}{len(self._motion_graph_nodes)} [{class_name}]'
+            name = f"{self._name_prefix}{len(self._motion_graph_nodes)} [{class_name}]"
         motion_goal = MotionStatechartNode()
         motion_goal.name = name
         motion_goal.class_name = class_name
@@ -386,17 +178,20 @@ class MotionStatechartNodeWrapper:
     def get_anded_nodes(self, add_nodes_without_end_condition: bool = True) -> str:
         nodes = []
         for node in self.motion_graph_nodes.values():
-            if (node.class_name not in get_all_classes_in_package('giskardpy.motion_statechart.monitors',
-                                                                  CancelMotion)
-                    and (add_nodes_without_end_condition or node.end_condition != '')):
+            if node.class_name not in get_all_classes_in_package(
+                "giskardpy.motion_statechart.monitors", CancelMotion
+            ) and (add_nodes_without_end_condition or node.end_condition != ""):
                 nodes.append(node.name)
-        return ' and '.join(nodes)
+        return " and ".join(nodes)
 
-    def set_conditions(self, node_name: str,
-                       start_condition: str,
-                       pause_condition: str,
-                       end_condition: str,
-                       reset_condition: str):
+    def set_conditions(
+        self,
+        node_name: str,
+        start_condition: str,
+        pause_condition: str,
+        end_condition: str,
+        reset_condition: str,
+    ):
         self.update_start_condition(node_name, start_condition)
         self.update_pause_condition(node_name, pause_condition)
         self.update_end_condition(node_name, end_condition)
@@ -415,21 +210,27 @@ class MotionStatechartNodeWrapper:
         self._motion_graph_nodes[node_name].end_condition = condition
 
 
+@dataclass
 class MotionGoalWrapper(MotionStatechartNodeWrapper):
-    _name_prefix = 'G'
-    _collision_entries: Dict[Tuple[str, str, str], List[CollisionEntry]]
+    _name_prefix: str = "G"
+    _collision_entries: Dict[Tuple[str, str, str], List[CollisionEntry]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
     def reset(self):
         super().reset()
         self._collision_entries = defaultdict(list)
 
-    def add_motion_goal(self, *,
-                        class_name: str,
-                        start_condition: str = '',
-                        pause_condition: str = '',
-                        name: Optional[str] = None,
-                        end_condition: str = '',
-                        **kwargs) -> str:
+    def add_motion_goal(
+        self,
+        *,
+        class_name: str,
+        start_condition: str = "",
+        pause_condition: str = "",
+        name: Optional[str] = None,
+        end_condition: Optional[str] = "",
+        **kwargs,
+    ) -> str:
         """
         Generic function to add a motion goal.
         :param class_name: Name of a class defined in src/giskardpy/goals
@@ -440,28 +241,32 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param end_condition: a logical expression. Goal will become inactive when this becomes True.
         :param kwargs: kwargs for __init__ function of motion_goal_class
         """
-        return super()._add_motion_statechart_node(class_name=class_name,
-                                                   name=name,
-                                                   start_condition=start_condition,
-                                                   pause_condition=pause_condition,
-                                                   end_condition=end_condition,
-                                                   **kwargs)
+        return super()._add_motion_statechart_node(
+            class_name=class_name,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_grasp_bar(self,
-                      bar_center: PointStamped,
-                      bar_axis: Vector3Stamped,
-                      bar_length: float,
-                      tip_link: Union[str, giskard_msgs.LinkName],
-                      tip_grasp_axis: Vector3Stamped,
-                      root_link: Union[str, giskard_msgs.LinkName],
-                      name: Optional[str] = None,
-                      reference_linear_velocity: Optional[float] = None,
-                      reference_angular_velocity: Optional[float] = None,
-                      weight: Optional[float] = None,
-                      start_condition: str = '',
-                      pause_condition: str = '',
-                      end_condition: str = '',
-                      **kwargs: goal_parameter) -> str:
+    def add_grasp_bar(
+        self,
+        bar_center: PointStamped,
+        bar_axis: Vector3Stamped,
+        bar_length: float,
+        tip_link: Union[str, PrefixedName],
+        tip_grasp_axis: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_linear_velocity: Optional[float] = None,
+        reference_angular_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Like a CartesianPose but with more freedom.
         tip_link is allowed to be at any point along bar_axis, that is without bar_center +/- bar_length.
@@ -475,39 +280,39 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_linear_velocity: m/s
         :param reference_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=GraspBar.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    tip_grasp_axis=tip_grasp_axis,
-                                    bar_center=bar_center,
-                                    bar_axis=bar_axis,
-                                    bar_length=bar_length,
-                                    reference_linear_velocity=reference_linear_velocity,
-                                    reference_angular_velocity=reference_angular_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=GraspBar.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            tip_grasp_axis=tip_grasp_axis,
+            bar_center=bar_center,
+            bar_axis=bar_axis,
+            bar_length=bar_length,
+            reference_linear_velocity=reference_linear_velocity,
+            reference_angular_velocity=reference_angular_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_cartesian_pose(self,
-                           goal_pose: PoseStamped,
-                           tip_link: Union[str, giskard_msgs.LinkName],
-                           root_link: Union[str, giskard_msgs.LinkName],
-                           name: Optional[str] = None,
-                           reference_linear_velocity: Optional[float] = None,
-                           reference_angular_velocity: Optional[float] = None,
-                           absolute: bool = False,
-                           weight: Optional[float] = None,
-                           start_condition: str = '',
-                           pause_condition: str = '',
-                           end_condition: str = '',
-                           **kwargs: goal_parameter) -> str:
+    def add_cartesian_pose(
+        self,
+        goal_pose: PoseStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_linear_velocity: Optional[float] = None,
+        reference_angular_velocity: Optional[float] = None,
+        absolute: bool = False,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use the kinematic chain between root and tip link to move tip link to the goal pose.
         The max velocities enforce a strict limit, but require a lot of additional constraints, thus making the
@@ -521,36 +326,36 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight: None = use default weight
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianPose.__name__,
-                                    goal_pose=goal_pose,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    reference_linear_velocity=reference_linear_velocity,
-                                    reference_angular_velocity=reference_angular_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    absolute=absolute,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianPose.__name__,
+            goal_pose=goal_pose,
+            tip_link=tip_link,
+            root_link=root_link,
+            reference_linear_velocity=reference_linear_velocity,
+            reference_angular_velocity=reference_angular_velocity,
+            weight=weight,
+            name=name,
+            absolute=absolute,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_base_arm_weight_scaling(self,
-                                    tip_link: Union[str, giskard_msgs.LinkName],
-                                    root_link: Union[str, giskard_msgs.LinkName],
-                                    tip_goal: PointStamped,
-                                    arm_joints: List[str],
-                                    base_joints: List[str],
-                                    gain: int = 100000,
-                                    name: Optional[str] = None,
-                                    start_condition: str = '',
-                                    pause_condition: str = '',
-                                    end_condition: str = '',
-                                    **kwargs: goal_parameter) -> str:
+    def add_base_arm_weight_scaling(
+        self,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        tip_goal: PointStamped,
+        arm_joints: List[str],
+        base_joints: List[str],
+        gain: int = 100000,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goals adds weight scaling constraints with the distance between a tip_link and its goal Position as a
         scaling expression. The larger the scaling expression the more is the base movement used to achieve
@@ -562,31 +367,31 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param arm_joints: joints of the arm that should be scaled.
         :param base_joints: joints of the base that should be scaled.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=BaseArmWeightScaling.__name__,
-                                    name=name,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    tip_goal=tip_goal,
-                                    arm_joints=arm_joints,
-                                    base_joints=base_joints,
-                                    gain=gain,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=BaseArmWeightScaling.__name__,
+            name=name,
+            tip_link=tip_link,
+            root_link=root_link,
+            tip_goal=tip_goal,
+            arm_joints=arm_joints,
+            base_joints=base_joints,
+            gain=gain,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_maximize_manipulability(self,
-                                    tip_link: Union[str, giskard_msgs.LinkName],
-                                    root_link: Union[str, giskard_msgs.LinkName],
-                                    name: Optional[str] = None,
-                                    start_condition: str = '',
-                                    pause_condition: str = '',
-                                    end_condition: str = '',
-                                    **kwargs: goal_parameter) -> str:
+    def add_maximize_manipulability(
+        self,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use the kinematic chain between root and tip link to move tip link to the goal pose.
         The max velocities enforce a strict limit, but require a lot of additional constraints, thus making the
@@ -600,31 +405,31 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight: None = use default weight
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=MaxManipulability.__name__,
-                                    name=name,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=MaxManipulability.__name__,
+            name=name,
+            tip_link=tip_link,
+            root_link=root_link,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_align_planes(self,
-                         goal_normal: Vector3Stamped,
-                         tip_link: Union[str, giskard_msgs.LinkName],
-                         tip_normal: Vector3Stamped,
-                         root_link: Union[str, giskard_msgs.LinkName],
-                         name: Optional[str] = None,
-                         reference_angular_velocity: Optional[float] = None,
-                         weight: Optional[float] = None,
-                         start_condition: str = '',
-                         pause_condition: str = '',
-                         end_condition: str = '',
-                         **kwargs: goal_parameter) -> str:
+    def add_align_planes(
+        self,
+        goal_normal: Vector3Stamped,
+        tip_link: Union[str, PrefixedName],
+        tip_normal: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_angular_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use the kinematic chain between tip and root to align tip_normal with goal_normal.
         :param goal_normal:
@@ -634,137 +439,149 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param weight:
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=AlignPlanes.__name__,
-                                    tip_link=tip_link,
-                                    tip_normal=tip_normal,
-                                    root_link=root_link,
-                                    goal_normal=goal_normal,
-                                    max_angular_velocity=reference_angular_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=AlignPlanes.__name__,
+            tip_link=tip_link,
+            tip_normal=tip_normal,
+            root_link=root_link,
+            goal_normal=goal_normal,
+            max_angular_velocity=reference_angular_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_joint_position(self,
-                           goal_state: Dict[str, float],
-                           name: Optional[str] = None,
-                           weight: Optional[float] = None,
-                           max_velocity: Optional[float] = None,
-                           start_condition: str = '',
-                           pause_condition: str = '',
-                           end_condition: str = '',
-                           **kwargs: goal_parameter) -> str:
+    def add_joint_position(
+        self,
+        goal_state: Dict[str, float],
+        name: Optional[str] = None,
+        weight: Optional[float] = None,
+        max_velocity: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Sets joint position goals for all pairs in goal_state
         :param goal_state: maps joint_name to goal position
         :param weight: None = use default weight
         :param max_velocity: will be applied to all joints
         """
-        return self.add_motion_goal(class_name=JointPositionList.__name__,
-                                    goal_state=goal_state,
-                                    weight=weight,
-                                    max_velocity=max_velocity,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=JointPositionList.__name__,
+            goal_state=goal_state,
+            weight=weight,
+            max_velocity=max_velocity,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_mirror_joint_position(self,
-                                  mapping: Dict[str, str],
-                                  name: Optional[str] = None,
-                                  weight: Optional[float] = None,
-                                  max_velocity: Optional[float] = None,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  **kwargs: goal_parameter) -> str:
+    def add_mirror_joint_position(
+        self,
+        mapping: Dict[str, str],
+        name: Optional[str] = None,
+        weight: Optional[float] = None,
+        max_velocity: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Sets joint position goals for all pairs in goal_state
         :param goal_state: maps joint_name to goal position
         :param weight: None = use default weight
         :param max_velocity: will be applied to all joints
         """
-        return self.add_motion_goal(class_name=MirrorJointPosition.__name__,
-                                    mapping=mapping,
-                                    weight=weight,
-                                    max_velocity=max_velocity,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=MirrorJointPosition.__name__,
+            mapping=mapping,
+            weight=weight,
+            max_velocity=max_velocity,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_joint_position_limit(self,
-                                 lower_upper_limits: Dict[str, Tuple[float, float]],
-                                 name: Optional[str] = None,
-                                 weight: Optional[float] = None,
-                                 max_velocity: Optional[float] = None,
-                                 start_condition: str = '',
-                                 pause_condition: str = '',
-                                 end_condition: str = '',
-                                 **kwargs: goal_parameter) -> str:
+    def add_joint_position_limit(
+        self,
+        lower_upper_limits: Dict[str, Tuple[float, float]],
+        name: Optional[str] = None,
+        weight: Optional[float] = None,
+        max_velocity: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Sets joint position goals for all pairs in goal_state
         :param goal_state: maps joint_name to goal position
         :param weight: None = use default weight
         :param max_velocity: will be applied to all joints
         """
-        return self.add_motion_goal(class_name=JointPositionLimitList.__name__,
-                                    lower_upper_limits=lower_upper_limits,
-                                    weight=weight,
-                                    max_velocity=max_velocity,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=JointPositionLimitList.__name__,
+            lower_upper_limits=lower_upper_limits,
+            weight=weight,
+            max_velocity=max_velocity,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_justin_torso_limit(self,
-                               name: Optional[str] = None,
-                               root_link: Union[str, giskard_msgs.LinkName] = 'torso1',
-                               tip_link: Union[str, giskard_msgs.LinkName] = 'torso4',
-                               forward_distance: float = 0.05,
-                               backward_distance: float = 0.14,
-                               weight: float = WEIGHT_ABOVE_CA,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '',
-                               **kwargs: goal_parameter) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=JustinTorsoLimitCart.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    forward_distance=forward_distance,
-                                    backward_distance=backward_distance,
-                                    name=name,
-                                    weight=weight,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    def add_justin_torso_limit(
+        self,
+        name: Optional[str] = None,
+        root_link: Union[str, PrefixedName] = "torso1",
+        tip_link: Union[str, PrefixedName] = "torso4",
+        forward_distance: float = 0.05,
+        backward_distance: float = 0.14,
+        weight: float = WEIGHT_ABOVE_CA,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
+        return self.add_motion_goal(
+            class_name=JustinTorsoLimitCart.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            forward_distance=forward_distance,
+            backward_distance=backward_distance,
+            name=name,
+            weight=weight,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_cartesian_position(self,
-                               goal_point: PointStamped,
-                               tip_link: Union[str, giskard_msgs.LinkName],
-                               root_link: Union[str, giskard_msgs.LinkName],
-                               name: Optional[str] = None,
-                               reference_velocity: Optional[float] = 0.2,
-                               weight: Optional[float] = None,
-                               absolute: bool = False,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '',
-                               **kwargs: goal_parameter) -> str:
+    def add_cartesian_position(
+        self,
+        goal_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = 0.2,
+        weight: Optional[float] = None,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Will use kinematic chain between root_link and tip_link to move tip_link to goal_point.
         :param goal_point:
@@ -774,35 +591,35 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param weight:
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianPosition.__name__,
-                                    goal_point=goal_point,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    reference_velocity=reference_velocity,
-                                    weight=weight,
-                                    absolute=absolute,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianPosition.__name__,
+            goal_point=goal_point,
+            tip_link=tip_link,
+            root_link=root_link,
+            reference_velocity=reference_velocity,
+            weight=weight,
+            absolute=absolute,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_cartesian_orientation(self,
-                                  goal_orientation: QuaternionStamped,
-                                  tip_link: Union[str, giskard_msgs.LinkName],
-                                  root_link: Union[str, giskard_msgs.LinkName],
-                                  name: Optional[str] = None,
-                                  reference_velocity: Optional[float] = None,
-                                  weight: Optional[float] = None,
-                                  absolute: bool = False,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  **kwargs: goal_parameter) -> str:
+    def add_cartesian_orientation(
+        self,
+        goal_orientation: QuaternionStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Will use kinematic chain between root_link and tip_link to move tip_link to goal_orientation.
         :param goal_orientation:
@@ -813,36 +630,36 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_velocity: rad/s, approx limit
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianOrientation.__name__,
-                                    goal_orientation=goal_orientation,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    reference_velocity=reference_velocity,
-                                    weight=weight,
-                                    absolute=absolute,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianOrientation.__name__,
+            goal_orientation=goal_orientation,
+            tip_link=tip_link,
+            root_link=root_link,
+            reference_velocity=reference_velocity,
+            weight=weight,
+            absolute=absolute,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_pointing(self,
-                     goal_point: PointStamped,
-                     tip_link: Union[str, giskard_msgs.LinkName],
-                     pointing_axis: Vector3Stamped,
-                     root_link: Union[str, giskard_msgs.LinkName],
-                     name: Optional[str] = None,
-                     max_velocity: float = 0.3,
-                     threshold: float = 0.01,
-                     weight: Optional[float] = None,
-                     start_condition: str = '',
-                     pause_condition: str = '',
-                     end_condition: str = '',
-                     **kwargs: goal_parameter) -> str:
+    def add_pointing(
+        self,
+        goal_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        pointing_axis: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        max_velocity: float = 0.3,
+        threshold: float = 0.01,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Will orient pointing_axis at goal_point.
         :param tip_link: tip link of the kinematic chain.
@@ -851,41 +668,41 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pointing_axis: the axis of tip_link that will be used for pointing
         :param max_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=Pointing.__name__,
-                                    tip_link=tip_link,
-                                    goal_point=goal_point,
-                                    root_link=root_link,
-                                    pointing_axis=pointing_axis,
-                                    max_velocity=max_velocity,
-                                    threshold=threshold,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=Pointing.__name__,
+            tip_link=tip_link,
+            goal_point=goal_point,
+            root_link=root_link,
+            pointing_axis=pointing_axis,
+            max_velocity=max_velocity,
+            threshold=threshold,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_wiggle_insert(self,
-                          root_link: giskard_msgs.LinkName,
-                          tip_link: giskard_msgs.LinkName,
-                          hole_point: PointStamped,
-                          name: Optional[str] = None,
-                          down_velocity: float = 0.2,
-                          noise_translation: float = 0.5,
-                          noise_angle: float = 10,
-                          random_walk: bool = True,
-                          vector_momentum_factor: float = 0.9,
-                          angular_momentum_factor: float = 0.9,
-                          center_pull_strength_angle: float = 0.1,
-                          center_pull_strength_vector: float = 0.25,
-                          weight: Optional[float] = None,
-                          start_condition: str = '',
-                          pause_condition: str = '',
-                          end_condition: str = ''):
+    def add_wiggle_insert(
+        self,
+        root_link: PrefixedName,
+        tip_link: PrefixedName,
+        hole_point: PointStamped,
+        name: Optional[str] = None,
+        down_velocity: float = 0.2,
+        noise_translation: float = 0.5,
+        noise_angle: float = 10,
+        random_walk: bool = True,
+        vector_momentum_factor: float = 0.9,
+        angular_momentum_factor: float = 0.9,
+        center_pull_strength_angle: float = 0.1,
+        center_pull_strength_vector: float = 0.25,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         """
         Press down while wiggling the end effector.
         :param root_link:
@@ -905,58 +722,68 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param center_pull_strength_vector: (only when random_walk=True) Forces translation movement faster back towards
                                                                          hole_point
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=WiggleInsert.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    name=name,
-                                    down_velocity=down_velocity,
-                                    hole_point=hole_point,
-                                    noise_translation=noise_translation,
-                                    noise_angle=noise_angle,
-                                    random_walk=random_walk,
-                                    vector_momentum_factor=vector_momentum_factor,
-                                    angular_momentum_factor=angular_momentum_factor,
-                                    center_pull_strength_angle=center_pull_strength_angle,
-                                    center_pull_strength_vector=center_pull_strength_vector,
-                                    weight=weight,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=WiggleInsert.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            name=name,
+            down_velocity=down_velocity,
+            hole_point=hole_point,
+            noise_translation=noise_translation,
+            noise_angle=noise_angle,
+            random_walk=random_walk,
+            vector_momentum_factor=vector_momentum_factor,
+            angular_momentum_factor=angular_momentum_factor,
+            center_pull_strength_angle=center_pull_strength_angle,
+            center_pull_strength_vector=center_pull_strength_vector,
+            weight=weight,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def _add_collision_avoidance(self,
-                                 collisions: List[CollisionEntry],
-                                 start_condition: str = '',
-                                 pause_condition: str = '',
-                                 end_condition: str = ''):
+    def _add_collision_avoidance(
+        self,
+        collisions: List[CollisionEntry],
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         key = (start_condition, pause_condition, end_condition)
         self._collision_entries[key].extend(collisions)
 
     def _add_collision_entries_as_goals(self):
-        for (start_condition, pause_condition, end_condition), collision_entries in self._collision_entries.items():
-            if (collision_entries[-1].type == CollisionEntry.ALLOW_COLLISION
-                    and collision_entries[-1].group1 == CollisionEntry.ALL
-                    and collision_entries[-1].group2 == CollisionEntry.ALL):
+        for (
+            start_condition,
+            pause_condition,
+            end_condition,
+        ), collision_entries in self._collision_entries.items():
+            if (
+                collision_entries[-1].type == CollisionEntry.ALLOW_COLLISION
+                and collision_entries[-1].group1 == CollisionEntry.ALL
+                and collision_entries[-1].group2 == CollisionEntry.ALL
+            ):
                 continue
-            name = 'collision avoidance'
+            name = "collision avoidance"
             if start_condition or pause_condition or end_condition:
-                name += f'{start_condition}, {pause_condition}, {end_condition}'
-            self.add_motion_goal(class_name=CollisionAvoidance.__name__,
-                                 name=name,
-                                 collision_entries=collision_entries,
-                                 start_condition=start_condition,
-                                 pause_condition=pause_condition,
-                                 end_condition=end_condition)
+                name += f"{start_condition}, {pause_condition}, {end_condition}"
+            self.add_motion_goal(
+                class_name=CollisionAvoidance.__name__,
+                name=name,
+                collision_entries=collision_entries,
+                start_condition=start_condition,
+                pause_condition=pause_condition,
+                end_condition=end_condition,
+            )
 
-    def allow_collision(self,
-                        group1: str = CollisionEntry.ALL,
-                        group2: str = CollisionEntry.ALL,
-                        start_condition: str = '',
-                        pause_condition: str = '',
-                        end_condition: str = ''):
+    def allow_collision(
+        self,
+        group1: str = CollisionEntry.ALL,
+        group2: str = CollisionEntry.ALL,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         """
         Tell Giskard to allow collision between group1 and group2. Use CollisionEntry.ALL to allow collision with all
         groups.
@@ -967,18 +794,22 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
         collision_entry.group1 = str(group1)
         collision_entry.group2 = str(group2)
-        self._add_collision_avoidance(collisions=[collision_entry],
-                                      start_condition=start_condition,
-                                      pause_condition=pause_condition,
-                                      end_condition=end_condition)
+        self._add_collision_avoidance(
+            collisions=[collision_entry],
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def avoid_collision(self,
-                        min_distance: Optional[float] = None,
-                        group1: str = CollisionEntry.ALL,
-                        group2: str = CollisionEntry.ALL,
-                        start_condition: str = '',
-                        pause_condition: str = '',
-                        end_condition: str = ''):
+    def avoid_collision(
+        self,
+        min_distance: Optional[float] = None,
+        group1: str = CollisionEntry.ALL,
+        group2: str = CollisionEntry.ALL,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         """
         Tell Giskard to avoid collision between group1 and group2. Use CollisionEntry.ALL to allow collision with all
         groups.
@@ -987,53 +818,65 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param group2: name of the second group
         """
         if min_distance is None:
-            min_distance = - 1.
+            min_distance = -1.0
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.distance = min_distance
         collision_entry.group1 = group1
         collision_entry.group2 = group2
-        self._add_collision_avoidance(collisions=[collision_entry],
-                                      start_condition=start_condition,
-                                      pause_condition=pause_condition,
-                                      end_condition=end_condition)
+        self._add_collision_avoidance(
+            collisions=[collision_entry],
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def allow_all_collisions(self,
-                             start_condition: str = '',
-                             pause_condition: str = '',
-                             end_condition: str = ''):
+    def allow_all_collisions(
+        self,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
-        self._add_collision_avoidance(collisions=[collision_entry],
-                                      start_condition=start_condition,
-                                      pause_condition=pause_condition,
-                                      end_condition=end_condition)
+        self._add_collision_avoidance(
+            collisions=[collision_entry],
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def avoid_all_collisions(self,
-                             min_distance: Optional[float] = None,
-                             start_condition: str = '',
-                             pause_condition: str = '',
-                             end_condition: str = ''):
+    def avoid_all_collisions(
+        self,
+        min_distance: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         """
         If you don't want to override the distance, don't call this function. Avoid all is the default, if you don't
         add any collision entries.
         :param min_distance: set this to overwrite default distances
         """
         if min_distance is None:
-            min_distance = -1.
+            min_distance = -1.0
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.distance = min_distance
-        self._add_collision_avoidance(collisions=[collision_entry],
-                                      start_condition=start_condition,
-                                      pause_condition=pause_condition,
-                                      end_condition=end_condition)
+        self._add_collision_avoidance(
+            collisions=[collision_entry],
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def allow_self_collision(self,
-                             robot_name: Optional[str] = None,
-                             start_condition: str = '',
-                             pause_condition: str = '',
-                             end_condition: str = ''):
+    def allow_self_collision(
+        self,
+        robot_name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ):
         """
         Allows the collision of the robot with itself for the next goal.
         :param robot_name: if there are multiple robots, specify which one.
@@ -1042,69 +885,81 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
             robot_name = self.robot_name
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
-        collision_entry.group1 = robot_name
-        collision_entry.group2 = robot_name
-        self._add_collision_avoidance(collisions=[collision_entry],
-                                      start_condition=start_condition,
-                                      pause_condition=pause_condition,
-                                      end_condition=end_condition)
+        if isinstance(robot_name, PrefixedName):
+            collision_entry.group1 = robot_name.name
+            collision_entry.group2 = robot_name.name
+        else:
+            collision_entry.group1 = robot_name
+            collision_entry.group2 = robot_name
+        self._add_collision_avoidance(
+            collisions=[collision_entry],
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_avoid_joint_limits(self,
-                               name: Optional[str] = None,
-                               percentage: int = 15.,
-                               joint_list: Optional[List[str]] = None,
-                               weight: Optional[float] = None,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '') -> str:
+    def add_avoid_joint_limits(
+        self,
+        name: Optional[str] = None,
+        percentage: float = 15.0,
+        joint_list: Optional[List[str]] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         This goal will push joints away from their position limits. For example if percentage is 15 and the joint
         limits are 0-100, it will push it into the 15-85 range.
         """
-        return self.add_motion_goal(class_name=AvoidJointLimits.__name__,
-                                    percentage=percentage,
-                                    weight=weight,
-                                    joint_list=joint_list,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=AvoidJointLimits.__name__,
+            percentage=percentage,
+            weight=weight,
+            joint_list=joint_list,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_close_container(self,
-                            tip_link: Union[str, giskard_msgs.LinkName],
-                            environment_link: Union[str, giskard_msgs.LinkName],
-                            name: Optional[str] = None,
-                            goal_joint_state: Optional[float] = None,
-                            weight: Optional[float] = None,
-                            start_condition: str = '',
-                            pause_condition: str = '',
-                            end_condition: str = '') -> str:
+    def add_close_container(
+        self,
+        tip_link: Union[str, PrefixedName],
+        environment_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        goal_joint_state: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         Same as Open, but will use minimum value as default for goal_joint_state
         """
-        if isinstance(environment_link, str):
-            environment_link = giskard_msgs.LinkName(name=environment_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=Close.__name__,
-                                    tip_link=tip_link,
-                                    environment_link=environment_link,
-                                    goal_joint_state=goal_joint_state,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=Close.__name__,
+            tip_link=tip_link,
+            environment_link=environment_link,
+            goal_joint_state=goal_joint_state,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_open_container(self,
-                           tip_link: Union[str, LinkName],
-                           environment_link: Union[str, LinkName],
-                           name: Optional[str] = None,
-                           goal_joint_state: Optional[float] = None,
-                           weight: Optional[float] = None,
-                           start_condition: str = '',
-                           pause_condition: str = '',
-                           end_condition: str = '') -> str:
+    def add_open_container(
+        self,
+        tip_link: Union[str, PrefixedName],
+        environment_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        goal_joint_state: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         Open a container in an environment.
         Only works with the environment was added as urdf.
@@ -1115,33 +970,33 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param goal_joint_state: goal state for the container. default is maximum joint state.
         :param weight:
         """
-        if isinstance(environment_link, str):
-            environment_link = LinkName(name=environment_link)
-        if isinstance(tip_link, str):
-            tip_link = LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=Open.__name__,
-                                    tip_link=tip_link,
-                                    environment_link=environment_link,
-                                    goal_joint_state=goal_joint_state,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=Open.__name__,
+            tip_link=tip_link,
+            environment_link=environment_link,
+            goal_joint_state=goal_joint_state,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_align_to_push_door(self,
-                               root_link: str,
-                               tip_link: str,
-                               door_object: str,
-                               door_handle: str,
-                               tip_gripper_axis: Vector3Stamped,
-                               weight: Optional[float] = None,
-                               name: Optional[str] = None,
-                               tip_group: Optional[str] = None,
-                               root_group: Optional[str] = None,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '') -> str:
+    def add_align_to_push_door(
+        self,
+        root_link: str,
+        tip_link: str,
+        door_object: str,
+        door_handle: str,
+        tip_gripper_axis: Vector3Stamped,
+        weight: Optional[float] = None,
+        name: Optional[str] = None,
+        tip_group: Optional[str] = None,
+        root_group: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         Aligns the tip_link with the door_object to push it open. Only works if the door object is part of the urdf.
         The door has to be open a little before aligning.
@@ -1154,34 +1009,38 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         : param tip_gripper_axis: axis of the tip_link that will be aligned along the door rotation axis
         : param object_rotation_axis: door rotation axis w.r.t root
         """
-        return self.add_motion_goal(class_name=AlignToPushDoor.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    door_handle=door_handle,
-                                    door_object=door_object,
-                                    tip_gripper_axis=tip_gripper_axis,
-                                    tip_group=tip_group,
-                                    root_group=root_group,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=AlignToPushDoor.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            door_handle=door_handle,
+            door_object=door_object,
+            tip_gripper_axis=tip_gripper_axis,
+            tip_group=tip_group,
+            root_group=root_group,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_pre_push_door(self,
-                          root_link: str,
-                          tip_link: str,
-                          door_object: str,
-                          door_handle: str,
-                          weight: Optional[float] = None,
-                          name: Optional[str] = None,
-                          tip_group: Optional[str] = None,
-                          root_group: Optional[str] = None,
-                          reference_linear_velocity: Optional[float] = None,
-                          reference_angular_velocity: Optional[float] = None,
-                          start_condition: str = '',
-                          pause_condition: str = '',
-                          end_condition: str = '') -> str:
+    def add_pre_push_door(
+        self,
+        root_link: str,
+        tip_link: str,
+        door_object: str,
+        door_handle: str,
+        weight: Optional[float] = None,
+        name: Optional[str] = None,
+        tip_group: Optional[str] = None,
+        root_group: Optional[str] = None,
+        reference_linear_velocity: Optional[float] = None,
+        reference_angular_velocity: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         Positions the gripper in contact with the door before pushing to open.
         : param root_link: root link of the kinematic chain
@@ -1191,33 +1050,37 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         : param root_V_object_rotation_axis: door rotation axis w.r.t root
         : param root_V_object_normal: door normal w.r.t root
         """
-        return self.add_motion_goal(class_name=PrePushDoor.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    door_object=door_object,
-                                    door_handle=door_handle,
-                                    tip_group=tip_group,
-                                    root_group=root_group,
-                                    weight=weight,
-                                    name=name,
-                                    reference_linear_velocity=reference_linear_velocity,
-                                    reference_angular_velocity=reference_angular_velocity,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=PrePushDoor.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            door_object=door_object,
+            door_handle=door_handle,
+            tip_group=tip_group,
+            root_group=root_group,
+            weight=weight,
+            name=name,
+            reference_linear_velocity=reference_linear_velocity,
+            reference_angular_velocity=reference_angular_velocity,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_diff_drive_base(self,
-                            goal_pose: PoseStamped,
-                            tip_link: Union[str, giskard_msgs.LinkName],
-                            root_link: Union[str, giskard_msgs.LinkName],
-                            name: Optional[str] = None,
-                            reference_linear_velocity: Optional[float] = None,
-                            reference_angular_velocity: Optional[float] = None,
-                            weight: Optional[float] = None,
-                            start_condition: str = '',
-                            pause_condition: str = '',
-                            end_condition: str = '',
-                            **kwargs: goal_parameter) -> str:
+    def add_diff_drive_base(
+        self,
+        goal_pose: PoseStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_linear_velocity: Optional[float] = None,
+        reference_angular_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal pose.
         It is specifically for differential drives. Will drive towards the goal the following way:
@@ -1230,34 +1093,34 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_linear_velocity: m/s
         :param reference_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=DiffDriveBaseGoal.__name__,
-                                    goal_pose=goal_pose,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    reference_linear_velocity=reference_linear_velocity,
-                                    reference_angular_velocity=reference_angular_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=DiffDriveBaseGoal.__name__,
+            goal_pose=goal_pose,
+            tip_link=tip_link,
+            root_link=root_link,
+            reference_linear_velocity=reference_linear_velocity,
+            reference_angular_velocity=reference_angular_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_limit_cartesian_velocity(self,
-                                     tip_link: Union[str, giskard_msgs.LinkName],
-                                     root_link: Union[str, giskard_msgs.LinkName],
-                                     name: Optional[str] = None,
-                                     max_linear_velocity: float = 0.1,
-                                     max_angular_velocity: float = 0.5,
-                                     weight: Optional[float] = None,
-                                     start_condition: str = '',
-                                     pause_condition: str = '',
-                                     end_condition: str = '',
-                                     **kwargs: goal_parameter) -> str:
+    def add_limit_cartesian_velocity(
+        self,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        max_linear_velocity: float = 0.1,
+        max_angular_velocity: float = 0.5,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use put a strict limit on the Cartesian velocity. This will require a lot of constraints, thus
         slowing down the system noticeably.
@@ -1266,36 +1129,36 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param max_linear_velocity: m/s
         :param max_angular_velocity: rad/s
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianVelocityLimit.__name__,
-                                    root_link=root_link,
-                                    tip_link=tip_link,
-                                    weight=weight,
-                                    max_linear_velocity=max_linear_velocity,
-                                    max_angular_velocity=max_angular_velocity,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianVelocityLimit.__name__,
+            root_link=root_link,
+            tip_link=tip_link,
+            weight=weight,
+            max_linear_velocity=max_linear_velocity,
+            max_angular_velocity=max_angular_velocity,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_real_time_pointing(self,
-                               tip_link: str,
-                               pointing_axis: Vector3Stamped,
-                               root_link: str,
-                               topic_name: str,
-                               name: Optional[str] = None,
-                               tip_group: Optional[str] = None,
-                               root_group: Optional[str] = None,
-                               max_velocity: float = 0.3,
-                               weight: Optional[float] = None,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '',
-                               **kwargs: goal_parameter) -> str:
+    def add_real_time_pointing(
+        self,
+        tip_link: str,
+        pointing_axis: Vector3Stamped,
+        root_link: str,
+        topic_name: str,
+        name: Optional[str] = None,
+        tip_group: Optional[str] = None,
+        root_group: Optional[str] = None,
+        max_velocity: float = 0.3,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Will orient pointing_axis at goal_point.
         :param tip_link: tip link of the kinematic chain.
@@ -1306,51 +1169,55 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pointing_axis: the axis of tip_link that will be used for pointing
         :param max_velocity: rad/s
         """
-        return self.add_motion_goal(class_name=RealTimePointing.__name__,
-                                    tip_link=tip_link,
-                                    tip_group=tip_group,
-                                    root_link=root_link,
-                                    topic_name=topic_name,
-                                    root_group=root_group,
-                                    pointing_axis=pointing_axis,
-                                    max_velocity=max_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=RealTimePointing.__name__,
+            tip_link=tip_link,
+            tip_group=tip_group,
+            root_link=root_link,
+            topic_name=topic_name,
+            root_group=root_group,
+            pointing_axis=pointing_axis,
+            max_velocity=max_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_carry_my_luggage(self,
-                             name: Optional[str] = None,
-                             tracked_human_position_topic_name: str = '/robokudovanessa/human_position',
-                             laser_topic_name: str = '/hsrb/base_scan',
-                             point_cloud_laser_topic_name: Optional[str] = None,
-                             odom_joint_name: str = 'brumbrum',
-                             root_link: Optional[str] = None,
-                             camera_link: str = 'head_rgbd_sensor_link',
-                             distance_to_target_stop_threshold: float = 1,
-                             laser_scan_age_threshold: float = 2,
-                             laser_distance_threshold: float = 0.5,
-                             laser_distance_threshold_width: float = 0.8,
-                             laser_avoidance_angle_cutout: float = np.pi / 4,
-                             laser_avoidance_sideways_buffer: float = 0.04,
-                             base_orientation_threshold: float = np.pi / 16,
-                             tracked_human_position_topic_name_timeout: int = 30,
-                             max_rotation_velocity: float = 0.5,
-                             max_rotation_velocity_head: float = 1,
-                             max_translation_velocity: float = 0.38,
-                             traj_tracking_radius: float = 0.4,
-                             height_for_camera_target: float = 1,
-                             laser_frame_id: str = 'base_range_sensor_link',
-                             target_age_threshold: float = 2,
-                             target_age_exception_threshold: float = 5,
-                             clear_path: bool = False,
-                             drive_back: bool = False,
-                             enable_laser_avoidance: bool = True,
-                             start_condition: str = '',
-                             pause_condition: str = '',
-                             end_condition: str = '') -> str:
+    def add_carry_my_luggage(
+        self,
+        name: Optional[str] = None,
+        tracked_human_position_topic_name: str = "/robokudovanessa/human_position",
+        laser_topic_name: str = "/hsrb/base_scan",
+        point_cloud_laser_topic_name: Optional[str] = None,
+        odom_joint_name: str = "brumbrum",
+        root_link: Optional[str] = None,
+        camera_link: str = "head_rgbd_sensor_link",
+        distance_to_target_stop_threshold: float = 1,
+        laser_scan_age_threshold: float = 2,
+        laser_distance_threshold: float = 0.5,
+        laser_distance_threshold_width: float = 0.8,
+        laser_avoidance_angle_cutout: float = np.pi / 4,
+        laser_avoidance_sideways_buffer: float = 0.04,
+        base_orientation_threshold: float = np.pi / 16,
+        tracked_human_position_topic_name_timeout: int = 30,
+        max_rotation_velocity: float = 0.5,
+        max_rotation_velocity_head: float = 1,
+        max_translation_velocity: float = 0.38,
+        traj_tracking_radius: float = 0.4,
+        height_for_camera_target: float = 1,
+        laser_frame_id: str = "base_range_sensor_link",
+        target_age_threshold: float = 2,
+        target_age_exception_threshold: float = 5,
+        clear_path: bool = False,
+        drive_back: bool = False,
+        enable_laser_avoidance: bool = True,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         :param name: name of the goal
         :param tracked_human_position_topic_name: name of the topic where the tracked human is published
@@ -1387,60 +1254,64 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition:
         :param end_condition:
         """
-        return self.add_motion_goal(class_name=CarryMyBullshit.__name__,
-                                    name=name,
-                                    patrick_topic_name=tracked_human_position_topic_name,
-                                    laser_topic_name=laser_topic_name,
-                                    point_cloud_laser_topic_name=point_cloud_laser_topic_name,
-                                    odom_joint_name=odom_joint_name,
-                                    root_link=root_link,
-                                    camera_link=camera_link,
-                                    distance_to_target_stop_threshold=distance_to_target_stop_threshold,
-                                    laser_scan_age_threshold=laser_scan_age_threshold,
-                                    laser_distance_threshold=laser_distance_threshold,
-                                    laser_distance_threshold_width=laser_distance_threshold_width,
-                                    laser_avoidance_angle_cutout=laser_avoidance_angle_cutout,
-                                    laser_avoidance_sideways_buffer=laser_avoidance_sideways_buffer,
-                                    base_orientation_threshold=base_orientation_threshold,
-                                    wait_for_patrick_timeout=tracked_human_position_topic_name_timeout,
-                                    max_rotation_velocity=max_rotation_velocity,
-                                    max_rotation_velocity_head=max_rotation_velocity_head,
-                                    max_translation_velocity=max_translation_velocity,
-                                    traj_tracking_radius=traj_tracking_radius,
-                                    height_for_camera_target=height_for_camera_target,
-                                    laser_frame_id=laser_frame_id,
-                                    target_age_threshold=target_age_threshold,
-                                    target_age_exception_threshold=target_age_exception_threshold,
-                                    clear_path=clear_path,
-                                    drive_back=drive_back,
-                                    enable_laser_avoidance=enable_laser_avoidance,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=CarryMyBullshit.__name__,
+            name=name,
+            patrick_topic_name=tracked_human_position_topic_name,
+            laser_topic_name=laser_topic_name,
+            point_cloud_laser_topic_name=point_cloud_laser_topic_name,
+            odom_joint_name=odom_joint_name,
+            root_link=root_link,
+            camera_link=camera_link,
+            distance_to_target_stop_threshold=distance_to_target_stop_threshold,
+            laser_scan_age_threshold=laser_scan_age_threshold,
+            laser_distance_threshold=laser_distance_threshold,
+            laser_distance_threshold_width=laser_distance_threshold_width,
+            laser_avoidance_angle_cutout=laser_avoidance_angle_cutout,
+            laser_avoidance_sideways_buffer=laser_avoidance_sideways_buffer,
+            base_orientation_threshold=base_orientation_threshold,
+            wait_for_patrick_timeout=tracked_human_position_topic_name_timeout,
+            max_rotation_velocity=max_rotation_velocity,
+            max_rotation_velocity_head=max_rotation_velocity_head,
+            max_translation_velocity=max_translation_velocity,
+            traj_tracking_radius=traj_tracking_radius,
+            height_for_camera_target=height_for_camera_target,
+            laser_frame_id=laser_frame_id,
+            target_age_threshold=target_age_threshold,
+            target_age_exception_threshold=target_age_exception_threshold,
+            clear_path=clear_path,
+            drive_back=drive_back,
+            enable_laser_avoidance=enable_laser_avoidance,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def add_follow_nav_path(self,
-                            path: Path,
-                            name: Optional[str] = None,
-                            laser_topics: Tuple[str] = ('/hsrb/base_scan',),
-                            odom_joint_name: Optional[str] = None,
-                            root_link: Optional[str] = None,
-                            camera_link: str = 'head_rgbd_sensor_link',
-                            distance_to_target_stop_threshold: float = 1,
-                            laser_scan_age_threshold: float = 2,
-                            laser_distance_threshold: float = 0.5,
-                            laser_distance_threshold_width: float = 0.8,
-                            laser_avoidance_angle_cutout: float = np.pi / 4,
-                            laser_avoidance_sideways_buffer: float = 0.04,
-                            base_orientation_threshold: float = np.pi / 16,
-                            max_rotation_velocity: float = 0.5,
-                            max_rotation_velocity_head: float = 1,
-                            max_translation_velocity: float = 0.38,
-                            traj_tracking_radius: float = 0.4,
-                            height_for_camera_target: float = 1,
-                            laser_frame_id: str = 'base_range_sensor_link',
-                            start_condition: str = '',
-                            pause_condition: str = '',
-                            end_condition: str = '') -> str:
+    def add_follow_nav_path(
+        self,
+        path: Path,
+        name: Optional[str] = None,
+        laser_topics: Tuple[str] = ("/hsrb/base_scan",),
+        odom_joint_name: Optional[str] = None,
+        root_link: Optional[str] = None,
+        camera_link: str = "head_rgbd_sensor_link",
+        distance_to_target_stop_threshold: float = 1,
+        laser_scan_age_threshold: float = 2,
+        laser_distance_threshold: float = 0.5,
+        laser_distance_threshold_width: float = 0.8,
+        laser_avoidance_angle_cutout: float = np.pi / 4,
+        laser_avoidance_sideways_buffer: float = 0.04,
+        base_orientation_threshold: float = np.pi / 16,
+        max_rotation_velocity: float = 0.5,
+        max_rotation_velocity_head: float = 1,
+        max_translation_velocity: float = 0.38,
+        traj_tracking_radius: float = 0.4,
+        height_for_camera_target: float = 1,
+        laser_frame_id: str = "base_range_sensor_link",
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+    ) -> str:
         """
         Will follow the path, orienting itself and the head towards the next points in the list.
         At the end orient itself according to the final orientation in it. All other orientations will be ignored.
@@ -1469,61 +1340,69 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param pause_condition:
         :param end_condition:
         """
-        return self.add_motion_goal(class_name=FollowNavPath.__name__,
-                                    name=name,
-                                    path=path,
-                                    laser_topics=laser_topics,
-                                    odom_joint_name=odom_joint_name,
-                                    root_link=root_link,
-                                    camera_link=camera_link,
-                                    laser_scan_age_threshold=laser_scan_age_threshold,
-                                    laser_distance_threshold=laser_distance_threshold,
-                                    laser_distance_threshold_width=laser_distance_threshold_width,
-                                    laser_avoidance_angle_cutout=laser_avoidance_angle_cutout,
-                                    laser_avoidance_sideways_buffer=laser_avoidance_sideways_buffer,
-                                    base_orientation_threshold=base_orientation_threshold,
-                                    max_rotation_velocity=max_rotation_velocity,
-                                    max_rotation_velocity_head=max_rotation_velocity_head,
-                                    max_translation_velocity=max_translation_velocity,
-                                    traj_tracking_radius=traj_tracking_radius,
-                                    height_for_camera_target=height_for_camera_target,
-                                    laser_frame_id=laser_frame_id,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition)
+        return self.add_motion_goal(
+            class_name=FollowNavPath.__name__,
+            name=name,
+            path=path,
+            laser_topics=laser_topics,
+            odom_joint_name=odom_joint_name,
+            root_link=root_link,
+            camera_link=camera_link,
+            laser_scan_age_threshold=laser_scan_age_threshold,
+            laser_distance_threshold=laser_distance_threshold,
+            laser_distance_threshold_width=laser_distance_threshold_width,
+            laser_avoidance_angle_cutout=laser_avoidance_angle_cutout,
+            laser_avoidance_sideways_buffer=laser_avoidance_sideways_buffer,
+            base_orientation_threshold=base_orientation_threshold,
+            max_rotation_velocity=max_rotation_velocity,
+            max_rotation_velocity_head=max_rotation_velocity_head,
+            max_translation_velocity=max_translation_velocity,
+            traj_tracking_radius=traj_tracking_radius,
+            height_for_camera_target=height_for_camera_target,
+            laser_frame_id=laser_frame_id,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+        )
 
-    def set_seed_configuration(self,
-                               seed_configuration: Dict[str, float],
-                               name: Optional[str] = None,
-                               group_name: Optional[str] = None):
+    def set_seed_configuration(
+        self,
+        seed_configuration: Dict[str, float],
+        name: Optional[str] = None,
+        group_name: Optional[str] = None,
+    ):
         """
         Only meant for use with projection. Changes the world state to seed_configuration before starting planning,
         without having to plan a motion to it like with add_joint_position
         """
-        raise DeprecationWarning('please use monitors.set_seed_configuration instead')
+        raise DeprecationWarning("please use monitors.set_seed_configuration instead")
 
-    def set_seed_odometry(self,
-                          base_pose: PoseStamped,
-                          name: Optional[str] = None,
-                          group_name: Optional[str] = None):
+    def set_seed_odometry(
+        self,
+        base_pose: PoseStamped,
+        name: Optional[str] = None,
+        group_name: Optional[str] = None,
+    ):
         """
         Only meant for use with projection. Overwrites the odometry transform with base_pose.
         """
-        raise DeprecationWarning('please use monitors.set_seed_odometry instead')
+        raise DeprecationWarning("please use monitors.set_seed_odometry instead")
 
-    def add_cartesian_pose_straight(self,
-                                    goal_pose: PoseStamped,
-                                    tip_link: Union[str, giskard_msgs.LinkName],
-                                    root_link: Union[str, giskard_msgs.LinkName],
-                                    name: Optional[str] = None,
-                                    reference_linear_velocity: Optional[float] = None,
-                                    reference_angular_velocity: Optional[float] = None,
-                                    weight: Optional[float] = None,
-                                    absolute: bool = False,
-                                    start_condition: str = '',
-                                    pause_condition: str = '',
-                                    end_condition: str = '',
-                                    **kwargs: goal_parameter) -> str:
+    def add_cartesian_pose_straight(
+        self,
+        goal_pose: PoseStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_linear_velocity: Optional[float] = None,
+        reference_angular_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal pose.
         The max velocities enforce a strict limit, but require a lot of additional constraints, thus making the
@@ -1537,200 +1416,199 @@ class MotionGoalWrapper(MotionStatechartNodeWrapper):
         :param reference_angular_velocity: rad/s
         :param absolute: if False, the goal pose is reevaluated if start_condition turns True.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianPoseStraight.__name__,
-                                    goal_pose=goal_pose,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    weight=weight,
-                                    reference_linear_velocity=reference_linear_velocity,
-                                    reference_angular_velocity=reference_angular_velocity,
-                                    name=name,
-                                    absolute=absolute,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianPoseStraight.__name__,
+            goal_pose=goal_pose,
+            tip_link=tip_link,
+            root_link=root_link,
+            weight=weight,
+            reference_linear_velocity=reference_linear_velocity,
+            reference_angular_velocity=reference_angular_velocity,
+            name=name,
+            absolute=absolute,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_cartesian_position_straight(self,
-                                        goal_point: PointStamped,
-                                        tip_link: Union[str, giskard_msgs.LinkName],
-                                        root_link: Union[str, giskard_msgs.LinkName],
-                                        name: Optional[str] = None,
-                                        reference_velocity: float = None,
-                                        weight: Optional[float] = None,
-                                        absolute: bool = False,
-                                        start_condition: str = '',
-                                        pause_condition: str = '',
-                                        end_condition: str = '',
-                                        **kwargs: goal_parameter) -> str:
+    def add_cartesian_position_straight(
+        self,
+        goal_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_velocity: float = None,
+        weight: Optional[float] = None,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
         """
         Same as set_translation_goal, but will try to move in a straight line.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=CartesianPositionStraight.__name__,
-                                    goal_point=goal_point,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    reference_velocity=reference_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    absolute=absolute,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+        return self.add_motion_goal(
+            class_name=CartesianPositionStraight.__name__,
+            goal_point=goal_point,
+            tip_link=tip_link,
+            root_link=root_link,
+            reference_velocity=reference_velocity,
+            weight=weight,
+            name=name,
+            absolute=absolute,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_align_perpendicular(self,
-                                reference_normal: Vector3Stamped,
-                                tip_link: Union[str, giskard_msgs.LinkName],
-                                tip_normal: Vector3Stamped,
-                                root_link: Union[str, giskard_msgs.LinkName],
-                                name: Optional[str] = None,
-                                reference_velocity: Optional[float] = None,
-                                weight: Optional[float] = None,
-                                start_condition: str = '',
-                                pause_condition: str = '',
-                                end_condition: str = '',
-                                **kwargs: goal_parameter) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=AlignPerpendicular.__name__,
-                                    tip_normal=tip_normal,
-                                    reference_normal=reference_normal,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    max_vel=reference_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    def add_align_perpendicular(
+        self,
+        reference_normal: Vector3Stamped,
+        tip_link: Union[str, PrefixedName],
+        tip_normal: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
+        return self.add_motion_goal(
+            class_name=AlignPerpendicular.__name__,
+            tip_normal=tip_normal,
+            reference_normal=reference_normal,
+            tip_link=tip_link,
+            root_link=root_link,
+            max_vel=reference_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_height(self,
-                   reference_point: PointStamped,
-                   tip_point: PointStamped,
-                   tip_link: Union[str, giskard_msgs.LinkName],
-                   root_link: Union[str, giskard_msgs.LinkName],
-                   lower_limit: float,
-                   upper_limit: float,
-                   name: Optional[str] = None,
-                   reference_velocity: Optional[float] = None,
-                   weight: Optional[float] = None,
-                   start_condition: str = '',
-                   pause_condition: str = '',
-                   end_condition: str = '',
-                   **kwargs: goal_parameter) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=HeightGoal.__name__,
-                                    tip_point=tip_point,
-                                    reference_point=reference_point,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    lower_limit=lower_limit,
-                                    upper_limit=upper_limit,
-                                    max_vel=reference_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    def add_height(
+        self,
+        reference_point: PointStamped,
+        tip_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        lower_limit: float,
+        upper_limit: float,
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
+        return self.add_motion_goal(
+            class_name=HeightGoal.__name__,
+            tip_point=tip_point,
+            reference_point=reference_point,
+            tip_link=tip_link,
+            root_link=root_link,
+            lower_limit=lower_limit,
+            upper_limit=upper_limit,
+            max_vel=reference_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_distance(self,
-                     reference_point: PointStamped,
-                     tip_point: PointStamped,
-                     tip_link: Union[str, giskard_msgs.LinkName],
-                     root_link: Union[str, giskard_msgs.LinkName],
-                     lower_limit: float,
-                     upper_limit: float,
-                     name: Optional[str] = None,
-                     reference_velocity: Optional[float] = None,
-                     weight: Optional[float] = None,
-                     start_condition: str = '',
-                     pause_condition: str = '',
-                     end_condition: str = '',
-                     **kwargs: goal_parameter) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=DistanceGoal.__name__,
-                                    tip_point=tip_point,
-                                    reference_point=reference_point,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    lower_limit=lower_limit,
-                                    upper_limit=upper_limit,
-                                    max_vel=reference_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    def add_distance(
+        self,
+        reference_point: PointStamped,
+        tip_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        root_link: Union[str, PrefixedName],
+        lower_limit: float,
+        upper_limit: float,
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
+        return self.add_motion_goal(
+            class_name=DistanceGoal.__name__,
+            tip_point=tip_point,
+            reference_point=reference_point,
+            tip_link=tip_link,
+            root_link=root_link,
+            lower_limit=lower_limit,
+            upper_limit=upper_limit,
+            max_vel=reference_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
-    def add_angle(self,
-                  reference_vector: Vector3Stamped,
-                  tip_link: Union[str, giskard_msgs.LinkName],
-                  tip_vector: Vector3Stamped,
-                  root_link: Union[str, giskard_msgs.LinkName],
-                  lower_angle: float,
-                  upper_angle: float,
-                  name: Optional[str] = None,
-                  reference_velocity: Optional[float] = None,
-                  weight: Optional[float] = None,
-                  start_condition: str = '',
-                  pause_condition: str = '',
-                  end_condition: str = '',
-                  **kwargs: goal_parameter) -> str:
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_motion_goal(class_name=AngleGoal.__name__,
-                                    tip_vector=tip_vector,
-                                    reference_vector=reference_vector,
-                                    tip_link=tip_link,
-                                    root_link=root_link,
-                                    lower_angle=lower_angle,
-                                    upper_angle=upper_angle,
-                                    max_vel=reference_velocity,
-                                    weight=weight,
-                                    name=name,
-                                    start_condition=start_condition,
-                                    pause_condition=pause_condition,
-                                    end_condition=end_condition,
-                                    **kwargs)
+    def add_angle(
+        self,
+        reference_vector: Vector3Stamped,
+        tip_link: Union[str, PrefixedName],
+        tip_vector: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        lower_angle: float,
+        upper_angle: float,
+        name: Optional[str] = None,
+        reference_velocity: Optional[float] = None,
+        weight: Optional[float] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        **kwargs: goal_parameter,
+    ) -> str:
+        return self.add_motion_goal(
+            class_name=AngleGoal.__name__,
+            tip_vector=tip_vector,
+            reference_vector=reference_vector,
+            tip_link=tip_link,
+            root_link=root_link,
+            lower_angle=lower_angle,
+            upper_angle=upper_angle,
+            max_vel=reference_velocity,
+            weight=weight,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            **kwargs,
+        )
 
 
+@dataclass
 class MonitorWrapper(MotionStatechartNodeWrapper):
-    _name_prefix = 'M'
+    _name_prefix: str = "M"
+    max_trajectory_length_set: bool = False
 
-    def reset(self):
-        super().reset()
-        self.max_trajectory_length_set = False
-
-    def add_monitor(self, *,
-                    class_name: str,
-                    name: Optional[str] = None,
-                    start_condition: str = '',
-                    pause_condition: str = '',
-                    end_condition: str = '',
-                    reset_condition: str = '',
-                    **kwargs) -> str:
+    def add_monitor(
+        self,
+        *,
+        class_name: str,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        **kwargs,
+    ) -> str:
         """
         Generic function to add a monitor.
         :param class_name: Name of a class defined in src/giskardpy/monitors
@@ -1742,270 +1620,286 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         :param kwargs: kwargs for __init__ function of motion_goal_class
         :return: the name of the monitor with added quotes to be used in logical expressions for conditions.
         """
-        return super()._add_motion_statechart_node(class_name=class_name,
-                                                   name=name,
-                                                   start_condition=start_condition,
-                                                   pause_condition=pause_condition,
-                                                   end_condition=end_condition,
-                                                   reset_condition=reset_condition,
-                                                   **kwargs)
+        return super()._add_motion_statechart_node(
+            class_name=class_name,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            **kwargs,
+        )
 
-    def add_local_minimum_reached(self,
-                                  name: Optional[str] = None,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  reset_condition: str = '') -> str:
+    def add_local_minimum_reached(
+        self,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if the world is currently in a local minimum.
         """
-        return self.add_monitor(class_name=LocalMinimumReached.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=LocalMinimumReached.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_time_above(self,
-                       threshold: float,
-                       name: Optional[str] = None,
-                       start_condition: str = '',
-                       pause_condition: str = '',
-                       end_condition: str = '',
-                       reset_condition: str = '') -> str:
+    def add_time_above(
+        self,
+        threshold: float,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if the length of the trajectory is above threshold
         """
-        return self.add_monitor(class_name=TimeAbove.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                threshold=threshold,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=TimeAbove.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            threshold=threshold,
+            reset_condition=reset_condition,
+        )
 
-    def add_joint_position(self,
-                           goal_state: Dict[str, float],
-                           name: Optional[str] = None,
-                           threshold: float = 0.01,
-                           start_condition: str = '',
-                           pause_condition: str = '',
-                           end_condition: str = '',
-                           reset_condition: str = '') -> str:
+    def add_joint_position(
+        self,
+        goal_state: Dict[str, float],
+        name: Optional[str] = None,
+        threshold: float = 0.01,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if all joints in goal_state are closer than threshold to their respective value.
         """
-        return self.add_monitor(class_name=JointGoalReached.__name__,
-                                name=name,
-                                goal_state=goal_state,
-                                threshold=threshold,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=JointGoalReached.__name__,
+            name=name,
+            goal_state=goal_state,
+            threshold=threshold,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_cartesian_pose(self,
-                           root_link: Union[str, giskard_msgs.LinkName],
-                           tip_link: Union[str, giskard_msgs.LinkName],
-                           goal_pose: PoseStamped,
-                           name: Optional[str] = None,
-                           position_threshold: float = 0.01,
-                           orientation_threshold: float = 0.01,
-                           absolute: bool = False,
-                           start_condition: str = '',
-                           pause_condition: str = '',
-                           end_condition: str = '',
-                           reset_condition: str = '') -> str:
+    def add_cartesian_pose(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        goal_pose: PoseStamped,
+        name: Optional[str] = None,
+        position_threshold: float = 0.01,
+        orientation_threshold: float = 0.01,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if tip_link is closer than the thresholds to goal_pose.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=PoseReached.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                goal_pose=goal_pose,
-                                absolute=absolute,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                position_threshold=position_threshold,
-                                orientation_threshold=orientation_threshold)
+        return self.add_monitor(
+            class_name=PoseReached.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            goal_pose=goal_pose,
+            absolute=absolute,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            position_threshold=position_threshold,
+            orientation_threshold=orientation_threshold,
+        )
 
-    def add_cartesian_position(self,
-                               root_link: Union[str, giskard_msgs.LinkName],
-                               tip_link: Union[str, giskard_msgs.LinkName],
-                               goal_point: PointStamped,
-                               name: Optional[str] = None,
-                               threshold: float = 0.01,
-                               absolute: bool = False,
-                               start_condition: str = '',
-                               pause_condition: str = '',
-                               end_condition: str = '',
-                               reset_condition: str = '') -> str:
+    def add_cartesian_position(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        goal_point: PointStamped,
+        name: Optional[str] = None,
+        threshold: float = 0.01,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if tip_link is closer than threshold to goal_point.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=PositionReached.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                goal_point=goal_point,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                absolute=absolute,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=PositionReached.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            goal_point=goal_point,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            absolute=absolute,
+            threshold=threshold,
+        )
 
-    def add_distance_to_line(self,
-                             root_link: Union[str, giskard_msgs.LinkName],
-                             tip_link: Union[str, giskard_msgs.LinkName],
-                             center_point: PointStamped,
-                             line_axis: Vector3Stamped,
-                             line_length: float,
-                             name: Optional[str] = None,
-                             start_condition: str = '',
-                             pause_condition: str = '',
-                             end_condition: str = '',
-                             reset_condition: str = '',
-                             threshold: float = 0.01) -> str:
+    def add_distance_to_line(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        center_point: PointStamped,
+        line_axis: Vector3Stamped,
+        line_length: float,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        threshold: float = 0.01,
+    ) -> str:
         """
         True if tip_link is closer than threshold to the line defined by center_point, line_axis and line_length.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=DistanceToLine.__name__,
-                                name=name,
-                                center_point=center_point,
-                                line_axis=line_axis,
-                                line_length=line_length,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=DistanceToLine.__name__,
+            name=name,
+            center_point=center_point,
+            line_axis=line_axis,
+            line_length=line_length,
+            root_link=root_link,
+            tip_link=tip_link,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            threshold=threshold,
+        )
 
-    def add_cartesian_orientation(self,
-                                  root_link: Union[str, giskard_msgs.LinkName],
-                                  tip_link: Union[str, giskard_msgs.LinkName],
-                                  goal_orientation: QuaternionStamped,
-                                  name: Optional[str] = None,
-                                  threshold: float = 0.01,
-                                  absolute: bool = False,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  reset_condition: str = '') -> str:
+    def add_cartesian_orientation(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        goal_orientation: QuaternionStamped,
+        name: Optional[str] = None,
+        threshold: float = 0.01,
+        absolute: bool = False,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if tip_link is closer than threshold to goal_orientation
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=OrientationReached.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                goal_orientation=goal_orientation,
-                                absolute=absolute,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=OrientationReached.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            goal_orientation=goal_orientation,
+            absolute=absolute,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            threshold=threshold,
+        )
 
-    def add_pointing_at(self,
-                        goal_point: PointStamped,
-                        tip_link: Union[str, giskard_msgs.LinkName],
-                        pointing_axis: Vector3Stamped,
-                        root_link: Union[str, giskard_msgs.LinkName],
-                        name: Optional[str] = None,
-                        start_condition: str = '',
-                        pause_condition: str = '',
-                        end_condition: str = '',
-                        reset_condition: str = '',
-                        threshold: float = 0.01) -> str:
+    def add_pointing_at(
+        self,
+        goal_point: PointStamped,
+        tip_link: Union[str, PrefixedName],
+        pointing_axis: Vector3Stamped,
+        root_link: Union[str, PrefixedName],
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        threshold: float = 0.01,
+    ) -> str:
         """
         True if pointing_axis of tip_link is pointing at goal_point withing threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=PointingAt.__name__,
-                                name=name,
-                                tip_link=tip_link,
-                                goal_point=goal_point,
-                                root_link=root_link,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                pointing_axis=pointing_axis,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=PointingAt.__name__,
+            name=name,
+            tip_link=tip_link,
+            goal_point=goal_point,
+            root_link=root_link,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            pointing_axis=pointing_axis,
+            threshold=threshold,
+        )
 
-    def add_vectors_aligned(self,
-                            root_link: Union[str, giskard_msgs.LinkName],
-                            tip_link: Union[str, giskard_msgs.LinkName],
-                            goal_normal: Vector3Stamped,
-                            tip_normal: Vector3Stamped,
-                            name: Optional[str] = None,
-                            start_condition: str = '',
-                            pause_condition: str = '',
-                            end_condition: str = '',
-                            reset_condition: str = '',
-                            threshold: float = 0.01) -> str:
+    def add_vectors_aligned(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        goal_normal: Vector3Stamped,
+        tip_normal: Vector3Stamped,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        threshold: float = 0.01,
+    ) -> str:
         """
         True if tip_normal of tip_link is aligned with goal_normal within threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=VectorsAligned.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                goal_normal=goal_normal,
-                                tip_normal=tip_normal,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=VectorsAligned.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            goal_normal=goal_normal,
+            tip_normal=tip_normal,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            threshold=threshold,
+        )
 
-    def add_end_motion(self,
-                       start_condition: str,
-                       name: Optional[str] = None) -> str:
+    def add_end_motion(self, start_condition: str, name: Optional[str] = None) -> str:
         """
         Ends the motion execution/planning if all start_condition are True.
         Use this to describe when your motion should end.
         """
-        return self.add_monitor(class_name=EndMotion.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition='',
-                                reset_condition='')
+        return self.add_monitor(
+            class_name=EndMotion.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition="",
+            reset_condition="",
+        )
 
-    def add_cancel_motion(self,
-                          start_condition: str,
-                          error: Optional[Exception] = None,
-                          name: Optional[str] = None) -> str:
+    def add_cancel_motion(
+        self,
+        start_condition: str,
+        error: Optional[Exception] = None,
+        name: Optional[str] = None,
+    ) -> str:
         """
         Cancels the motion if all start_condition are True and will make Giskard return the specified error code.
         Use this to describe when failure conditions.
@@ -2013,331 +1907,370 @@ class MonitorWrapper(MotionStatechartNodeWrapper):
         if error is None:
             error = Exception(start_condition)
         error = msg_converter.exception_to_error_msg(error)
-        return self.add_monitor(class_name=CancelMotion.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition='',
-                                reset_condition='',
-                                exception=error)
+        return self.add_monitor(
+            class_name=CancelMotion.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition="",
+            reset_condition="",
+            exception=error,
+        )
 
     def add_check_trajectory_length(self, length: float = 30) -> str:
         """
         A monitor that cancels the motion if the trajectory is longer than max_trajectory_length.
         """
         self.max_trajectory_length_set = True
-        length = self.add_monitor(name='max traj length',
-                                  class_name=CheckMaxTrajectoryLength.__name__,
-                                  length=length,
-                                  start_condition='',
-                                  pause_condition='',
-                                  end_condition='',
-                                  reset_condition='')
-        return self.add_cancel_motion(start_condition=length, error=MaxTrajectoryLengthException('traj too long'),
-                                      name='traj too long')
+        length = self.add_monitor(
+            name="max traj length",
+            class_name=CheckMaxTrajectoryLength.__name__,
+            length=length,
+            start_condition="",
+            pause_condition="",
+            end_condition="",
+            reset_condition="",
+        )
+        return self.add_cancel_motion(
+            start_condition=length,
+            error=MaxTrajectoryLengthException("traj too long"),
+            name="traj too long",
+        )
 
-    def add_print(self,
-                  message: str,
-                  start_condition: str,
-                  name: str) -> str:
+    def add_print(self, message: str, start_condition: str, name: str) -> str:
         """
         Debugging Monitor.
         Print a message to the terminal if all start_condition are True.
         """
-        return self.add_monitor(class_name=Print.__name__,
-                                name=name,
-                                message=message,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition=name,
-                                reset_condition='')
+        return self.add_monitor(
+            class_name=Print.__name__,
+            name=name,
+            message=message,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition=name,
+            reset_condition="",
+        )
 
-    def add_sleep(self,
-                  seconds: float,
-                  name: Optional[str] = None,
-                  start_condition: str = '') -> str:
+    def add_sleep(
+        self, seconds: float, name: Optional[str] = None, start_condition: str = ""
+    ) -> str:
         """
         Calls rospy.sleep(seconds) when start_condition are True and turns True itself afterward.
         """
-        return self.add_monitor(class_name=Sleep.__name__,
-                                name=name,
-                                seconds=seconds,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition=name,
-                                reset_condition='')
+        return self.add_monitor(
+            class_name=Sleep.__name__,
+            name=name,
+            seconds=seconds,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition=name,
+            reset_condition="",
+        )
 
-    def add_set_seed_configuration(self,
-                                   seed_configuration: Dict[str, float],
-                                   name: Optional[str] = None,
-                                   group_name: Optional[str] = None,
-                                   start_condition: str = '') -> str:
+    def add_set_seed_configuration(
+        self,
+        seed_configuration: Dict[Union[str, PrefixedName], float],
+        name: Optional[str] = None,
+        start_condition: str = "",
+    ) -> str:
         """
         Only meant for use with projection. Changes the world state to seed_configuration before starting planning,
         without having to plan a motion to it like with add_joint_position
         """
-        return self.add_monitor(class_name=SetSeedConfiguration.__name__,
-                                seed_configuration=seed_configuration,
-                                group_name=group_name,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition=name,
-                                reset_condition='')
+        return self.add_monitor(
+            class_name=SetSeedConfiguration.__name__,
+            seed_configuration=seed_configuration,
+            name=name,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition=name,
+            reset_condition="",
+        )
 
-    def add_set_seed_odometry(self,
-                              base_pose: PoseStamped,
-                              name: Optional[str] = None,
-                              group_name: Optional[str] = None,
-                              start_condition: str = '') -> str:
+    def add_set_seed_odometry(
+        self,
+        base_pose: PoseStamped,
+        name: Optional[str] = None,
+        group_name: Optional[str] = None,
+        start_condition: str = "",
+    ) -> str:
         """
         Only meant for use with projection. Overwrites the odometry transform with base_pose.
         """
-        return self.add_monitor(class_name=SetOdometry.__name__,
-                                group_name=group_name,
-                                base_pose=base_pose,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition='',
-                                end_condition=name,
-                                reset_condition='')
+        return self.add_monitor(
+            class_name=SetOdometry.__name__,
+            group_name=group_name,
+            base_pose=base_pose,
+            name=name,
+            start_condition=start_condition,
+            pause_condition="",
+            end_condition=name,
+            reset_condition="",
+        )
 
-    def add_alternator(self,
-                       name: Optional[str] = None,
-                       start_condition: str = '',
-                       pause_condition: str = '',
-                       end_condition: str = '',
-                       reset_condition: str = '',
-                       mod: int = 2) -> str:
+    def add_alternator(
+        self,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        mod: int = 2,
+    ) -> str:
         """
         Testing monitor.
         True if floor(trajectory_length) % mod == 0.
         """
         if name is None:
-            name = Alternator.__name__ + f' % {mod}'
-        return self.add_monitor(class_name=Alternator.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                mod=mod)
+            name = Alternator.__name__ + f" % {mod}"
+        return self.add_monitor(
+            class_name=Alternator.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            mod=mod,
+        )
 
-    def add_pulse(self,
-                  after_ticks: int,
-                  name: Optional[str] = None,
-                  true_for_ticks: int = 1,
-                  start_condition: str = '',
-                  pause_condition: str = '',
-                  end_condition: str = '',
-                  reset_condition: str = '') -> str:
+    def add_pulse(
+        self,
+        after_ticks: int,
+        name: Optional[str] = None,
+        true_for_ticks: int = 1,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         Testing monitor.
         Like add_alternator but as a PayloadMonitor.
         """
-        return self.add_monitor(class_name=Pulse.__name__,
-                                name=name,
-                                true_for_ticks=true_for_ticks,
-                                after_ticks=after_ticks,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=Pulse.__name__,
+            name=name,
+            true_for_ticks=true_for_ticks,
+            after_ticks=after_ticks,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_const_true(self,
-                       name: Optional[str] = None,
-                       start_condition: str = '',
-                       pause_condition: str = '',
-                       end_condition: str = '',
-                       reset_condition: str = '', ) -> str:
+    def add_const_true(
+        self,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         Testing monitor.
         Like add_alternator but as a PayloadMonitor.
         """
-        return self.add_monitor(class_name=TrueMonitor.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=TrueMonitor.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_const_false(self,
-                        name: Optional[str] = None,
-                        start_condition: str = '',
-                        pause_condition: str = '',
-                        end_condition: str = '',
-                        reset_condition: str = '') -> str:
+    def add_const_false(
+        self,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         Testing monitor.
         Like add_alternator but as a PayloadMonitor.
         """
-        return self.add_monitor(class_name=FalseMonitor.__name__,
-                                name=name,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=FalseMonitor.__name__,
+            name=name,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_vectors_perpendicular(self,
-                                  root_link: Union[str, giskard_msgs.LinkName],
-                                  tip_link: Union[str, giskard_msgs.LinkName],
-                                  reference_normal: Vector3Stamped,
-                                  tip_normal: Vector3Stamped,
-                                  name: Optional[str] = None,
-                                  start_condition: str = '',
-                                  pause_condition: str = '',
-                                  end_condition: str = '',
-                                  reset_condition: str = '',
-                                  threshold: float = 0.01) -> str:
+    def add_vectors_perpendicular(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        reference_normal: Vector3Stamped,
+        tip_normal: Vector3Stamped,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+        threshold: float = 0.01,
+    ) -> str:
         """
         True if tip_normal of tip_link is perpendicular to goal_normal within threshold.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=PerpendicularMonitor.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                reference_normal=reference_normal,
-                                tip_normal=tip_normal,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition,
-                                threshold=threshold)
+        return self.add_monitor(
+            class_name=PerpendicularMonitor.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            reference_normal=reference_normal,
+            tip_normal=tip_normal,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+            threshold=threshold,
+        )
 
-    def add_angle(self,
-                  root_link: Union[str, giskard_msgs.LinkName],
-                  tip_link: Union[str, giskard_msgs.LinkName],
-                  reference_vector: Vector3Stamped,
-                  tip_vector: Vector3Stamped,
-                  lower_angle: float,
-                  upper_angle: float,
-                  name: Optional[str] = None,
-                  start_condition: str = '',
-                  pause_condition: str = '',
-                  end_condition: str = '',
-                  reset_condition: str = '') -> str:
+    def add_angle(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        reference_vector: Vector3Stamped,
+        tip_vector: Vector3Stamped,
+        lower_angle: float,
+        upper_angle: float,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if angle between tip_vector and reference_vector is within lower and upper angle.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=AngleMonitor.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                reference_vector=reference_vector,
-                                tip_vector=tip_vector,
-                                lower_angle=lower_angle,
-                                upper_angle=upper_angle,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=AngleMonitor.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            reference_vector=reference_vector,
+            tip_vector=tip_vector,
+            lower_angle=lower_angle,
+            upper_angle=upper_angle,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_height(self,
-                   root_link: Union[str, giskard_msgs.LinkName],
-                   tip_link: Union[str, giskard_msgs.LinkName],
-                   reference_point: PointStamped,
-                   tip_point: PointStamped,
-                   lower_limit: float,
-                   upper_limit: float,
-                   name: Optional[str] = None,
-                   start_condition: str = '',
-                   pause_condition: str = '',
-                   end_condition: str = '',
-                   reset_condition: str = '') -> str:
+    def add_height(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        reference_point: PointStamped,
+        tip_point: PointStamped,
+        lower_limit: float,
+        upper_limit: float,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if distance along the z-axis of root_link between tip_point and reference_point
         is within lower and upper limit.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=HeightMonitor.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                reference_point=reference_point,
-                                tip_point=tip_point,
-                                lower_limit=lower_limit,
-                                upper_limit=upper_limit,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=HeightMonitor.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            reference_point=reference_point,
+            tip_point=tip_point,
+            lower_limit=lower_limit,
+            upper_limit=upper_limit,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
-    def add_distance(self,
-                     root_link: Union[str, giskard_msgs.LinkName],
-                     tip_link: Union[str, giskard_msgs.LinkName],
-                     reference_point: PointStamped,
-                     tip_point: PointStamped,
-                     lower_limit: float,
-                     upper_limit: float,
-                     name: Optional[str] = None,
-                     start_condition: str = '',
-                     pause_condition: str = '',
-                     end_condition: str = '',
-                     reset_condition: str = '') -> str:
+    def add_distance(
+        self,
+        root_link: Union[str, PrefixedName],
+        tip_link: Union[str, PrefixedName],
+        reference_point: PointStamped,
+        tip_point: PointStamped,
+        lower_limit: float,
+        upper_limit: float,
+        name: Optional[str] = None,
+        start_condition: str = "",
+        pause_condition: str = "",
+        end_condition: Optional[str] = "",
+        reset_condition: str = "",
+    ) -> str:
         """
         True if distance between tip_point and reference_point on the plane (that has the z-axis of
         root_link as a normal vector) is within lower and upper limit.
         """
-        if isinstance(root_link, str):
-            root_link = giskard_msgs.LinkName(name=root_link)
-        if isinstance(tip_link, str):
-            tip_link = giskard_msgs.LinkName(name=tip_link)
-        return self.add_monitor(class_name=DistanceMonitor.__name__,
-                                name=name,
-                                root_link=root_link,
-                                tip_link=tip_link,
-                                reference_point=reference_point,
-                                tip_point=tip_point,
-                                lower_limit=lower_limit,
-                                upper_limit=upper_limit,
-                                start_condition=start_condition,
-                                pause_condition=pause_condition,
-                                end_condition=end_condition,
-                                reset_condition=reset_condition)
+        return self.add_monitor(
+            class_name=DistanceMonitor.__name__,
+            name=name,
+            root_link=root_link,
+            tip_link=tip_link,
+            reference_point=reference_point,
+            tip_point=tip_point,
+            lower_limit=lower_limit,
+            upper_limit=upper_limit,
+            start_condition=start_condition,
+            pause_condition=pause_condition,
+            end_condition=end_condition,
+            reset_condition=reset_condition,
+        )
 
 
+@dataclass
 class GiskardWrapper:
-    last_feedback: Move.Feedback = None
-    _goal_handle: Optional[ClientGoalHandle]
-    _goal_result: Optional[Move_Result]
-    _result_future: Optional[Future]
-    last_execution_state: ExecutionState = None
+    """
+    Python wrapper for the ROS interface of Giskard.
+    :param giskard_node_name: node name of Giskard
+    """
 
-    def __init__(self, node_handle: Node, giskard_node_name: str = 'giskard'):
-        """
-        Python wrapper for the ROS interface of Giskard.
-        :param giskard_node_name: node name of Giskard
-        """
-        self._goal_handle = None
-        self._goal_result = None
-        self._result_future = None
-        self.node_handle = node_handle
-        self.world = WorldWrapper(node_handle=node_handle,
-                                  giskard_node_name=giskard_node_name)
+    node_handle: Node
+    giskard_node_name: str = "giskard"
+    last_feedback: Move.Feedback = None
+    _goal_handle: Optional[ClientGoalHandle] = None
+    _goal_result: Optional[Move_Result] = None
+    _result_future: Optional[Future] = None
+    last_execution_state: ExecutionState = None
+    world: World = None
+    _client: MyActionClient = None
+    monitors: MonitorWrapper = field(init=False)
+    motion_goals: MotionGoalWrapper = field(init=False)
+
+    def __post_init__(self):
+        get_middleware().loginfo("syncing world")
+        self.world = god_map.world
+        # self.world = fetch_world_from_service(self.node_handle)
+        # get_middleware().loginfo("world synced")
+        # self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
+        # self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
         self.monitors = MonitorWrapper(self)
         self.motion_goals = MotionGoalWrapper(self)
+        giskard_topic = f"{self.giskard_node_name}/command"
+        self._client = MyActionClient(self.node_handle, Move, giskard_topic)
         self.clear_motion_goals_and_monitors()
-        giskard_topic = f'{giskard_node_name}/command'
-        self._client = MyActionClient(node_handle, Move, giskard_topic)
-        self.clear_motion_goals_and_monitors()
-        sleep(.3)
+        sleep(0.3)
 
-    def set_conditions(self, node_name: str,
-                       start_condition: str,
-                       pause_condition: str,
-                       end_condition: str,
-                       reset_condition: str):
+    def set_conditions(
+        self,
+        node_name: str,
+        start_condition: str,
+        pause_condition: str,
+        end_condition: str,
+        reset_condition: str,
+    ):
         self.update_start_condition(node_name, start_condition)
         self.update_pause_condition(node_name, pause_condition)
         self.update_end_condition(node_name, end_condition)
@@ -2356,34 +2289,37 @@ class GiskardWrapper:
         self.motion_statechart_nodes[node_name].end_condition = condition
 
     def quote_node_names(self, condition: str) -> str:
-        operators = {'and', 'or', 'not', '(', ')'}
-        pattern = r'(\b(?:and|or|not)\b|\(|\))'
+        operators = {"and", "or", "not", "(", ")"}
+        pattern = r"(\b(?:and|or|not)\b|\(|\))"
         tokens = re.split(pattern, condition)
         result = []
         for token in tokens:
             if token in operators:
                 result.append(token)
-            elif token.strip() == '':
+            elif token.strip() == "":
                 result.append(token)
             else:
                 # Check if token is already quoted
                 stripped = token.strip()
-                if (stripped.startswith('"') and stripped.endswith('"')) or \
-                        (stripped.startswith("'") and stripped.endswith("'")):
+                if (stripped.startswith('"') and stripped.endswith('"')) or (
+                    stripped.startswith("'") and stripped.endswith("'")
+                ):
                     result.append(token)
                 else:
                     # Wrap stripped token in quotes, and preserve leading/trailing spaces
                     leading_spaces = len(token) - len(token.lstrip())
                     trailing_spaces = len(token) - len(token.rstrip())
                     leading = token[:leading_spaces]
-                    trailing = token[len(token.rstrip()):]
+                    trailing = token[len(token.rstrip()) :]
                     result.append(f'{leading}"{stripped}"{trailing}')
-        return ''.join(result)
+        return "".join(result)
 
     @property
     def motion_statechart_nodes(self) -> Dict[str, MotionStatechartNode]:
-        return {**self.motion_goals.motion_graph_nodes,
-                **self.monitors.motion_graph_nodes}
+        return {
+            **self.motion_goals.motion_graph_nodes,
+            **self.monitors.motion_graph_nodes,
+        }
 
     @property
     def num_nodes(self) -> int:
@@ -2396,20 +2332,26 @@ class GiskardWrapper:
         3. Adds a cancel motion monitor, start_condition = local minimum reached mit not all other monitors are True.
         4. Adds a max trajectory length monitor, if one wasn't added already.
         """
-        local_min_reached_monitor_name = self.monitors.add_local_minimum_reached('local min')
+        local_min_reached_monitor_name = self.monitors.add_local_minimum_reached(
+            "local min"
+        )
         # for node in self.motion_statechart_nodes.values():
         #     if node.end_condition and node.name != local_min_reached_monitor_name:
         #         node.end_condition = f'({node.end_condition}) and {local_min_reached_monitor_name}'
         #     else:
         #         node.end_condition = local_min_reached_monitor_name
         end_motion_condition = local_min_reached_monitor_name
-        monitor_part = self.monitors.get_anded_nodes(add_nodes_without_end_condition=False)
+        monitor_part = self.monitors.get_anded_nodes(
+            add_nodes_without_end_condition=False
+        )
         if len(monitor_part) > 0:
-            end_motion_condition += f' and {monitor_part}'
-        motion_goal_part = self.motion_goals.get_anded_nodes(add_nodes_without_end_condition=False)
+            end_motion_condition += f" and {monitor_part}"
+        motion_goal_part = self.motion_goals.get_anded_nodes(
+            add_nodes_without_end_condition=False
+        )
         if len(motion_goal_part) > 0:
             if len(end_motion_condition) > 0:
-                end_motion_condition += f' and {motion_goal_part}'
+                end_motion_condition += f" and {motion_goal_part}"
             else:
                 end_motion_condition = motion_goal_part
         self.monitors.add_end_motion(start_condition=end_motion_condition)
@@ -2420,12 +2362,14 @@ class GiskardWrapper:
         self.monitors.max_trajectory_length_set = False
 
     def add_end_on_local_minimum(self) -> None:
-        local_min_reached_monitor_name = self.monitors.add_local_minimum_reached('local min reached')
+        local_min_reached_monitor_name = self.monitors.add_local_minimum_reached(
+            "local min reached"
+        )
         self.monitors.add_end_motion(start_condition=local_min_reached_monitor_name)
 
     @property
-    def robot_name(self):
-        return self.world.robot_name
+    def robot_name(self) -> PrefixedName:
+        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0].name
 
     def clear_motion_goals_and_monitors(self):
         """
@@ -2474,7 +2418,9 @@ class GiskardWrapper:
         self.clear_motion_goals_and_monitors()
         return action_goal
 
-    def _quote_conditions(self, nodes: Dict[str, MotionStatechartNode]) -> List[MotionStatechartNode]:
+    def _quote_conditions(
+        self, nodes: Dict[str, MotionStatechartNode]
+    ) -> List[MotionStatechartNode]:
         result = []
         for node in nodes.values():
             node.start_condition = self.quote_node_names(node.start_condition)
@@ -2491,15 +2437,18 @@ class GiskardWrapper:
         try:
             future = self._client._goal_handle.cancel_goal_async()
         except AttributeError as e:
-            raise ExecutionException('Can\'t cancel goals, because there is no active one')
+            raise ExecutionException(
+                "Can't cancel goals, because there is no active one"
+            )
         return future
 
     async def get_result(self):
         self.last_execution_state = await self._client.get_result()
         return self.last_execution_state
 
-    def get_end_motion_reason(self, move_result: Optional[Move_Result] = None, show_all: bool = False) \
-            -> Dict[str, bool]:
+    def get_end_motion_reason(
+        self, move_result: Optional[Move_Result] = None, show_all: bool = False
+    ) -> Dict[str, bool]:
         """
         Analyzes a MoveResult msg to return a list of all monitors that hindered the EndMotion Monitors from becoming active.
         Uses the last received MoveResult msg from execute() or projection() when not explicitly given.
@@ -2508,7 +2457,7 @@ class GiskardWrapper:
         :return: Dict with monitor name as key and True or False as value
         """
         if not move_result and not self.last_execution_state:
-            raise Exception('No MoveResult available to analyze')
+            raise Exception("No MoveResult available to analyze")
         elif not move_result:
             execution_state = self.last_execution_state
         else:
@@ -2516,13 +2465,20 @@ class GiskardWrapper:
 
         result = {}
         if show_all:
-            return {monitor.name: state for monitor, state in
-                    zip(execution_state.monitors, execution_state.monitor_state)}
+            return {
+                monitor.name: state
+                for monitor, state in zip(
+                    execution_state.monitors, execution_state.monitor_state
+                )
+            }
 
         failedEndMotion_ids = []
         monitor: MotionStatechartNode
         for idx, monitor in enumerate(execution_state.monitors):
-            if monitor.class_name == 'EndMotion' and execution_state.monitor_state[idx] != 1:
+            if (
+                monitor.class_name == "EndMotion"
+                and execution_state.monitor_state[idx] != 1
+            ):
                 failedEndMotion_ids.append(idx)
 
         if len(failedEndMotion_ids) == 0:
@@ -2531,20 +2487,31 @@ class GiskardWrapper:
 
         def search_for_monitor_values_in_start_condition(start_condition: str):
             res = []
-            for monitor, state in zip(execution_state.monitors, execution_state.monitor_state):
-                if f'\'{monitor.name}\'' in start_condition or f'"{monitor.name}"' in start_condition and state != 1:
+            for monitor, state in zip(
+                execution_state.monitors, execution_state.monitor_state
+            ):
+                if (
+                    f"'{monitor.name}'" in start_condition
+                    or f'"{monitor.name}"' in start_condition
+                    and state != 1
+                ):
                     res.append(monitor)
             return res
 
         for endMotion_idx in failedEndMotion_ids:
             start_condition = execution_state.monitors[endMotion_idx].start_condition
-            false_monitors = search_for_monitor_values_in_start_condition(start_condition=start_condition)
+            false_monitors = search_for_monitor_values_in_start_condition(
+                start_condition=start_condition
+            )
             # repeatedly search for all inactive monitors in all start_conditions directly
             # connected to the endMotion start_condition
             for idx, false_monitor in enumerate(false_monitors):
-                if false_monitors[idx].start_condition != '1.0':
+                if false_monitors[idx].start_condition != "1.0":
                     false_monitors.extend(
-                        search_for_monitor_values_in_start_condition(false_monitor.start_condition))
+                        search_for_monitor_values_in_start_condition(
+                            false_monitor.start_condition
+                        )
+                    )
 
             for mon in false_monitors:
                 result[mon.name] = False
@@ -2552,34 +2519,55 @@ class GiskardWrapper:
         return result
 
 
-class GiskardWrapperNode(Node, GiskardWrapper):
-    is_spinning: bool
+@dataclass
+class GiskardWrapperNode(GiskardWrapper):
+    is_spinning: bool = False
+    node_name: str = "giskard_client"
+    giskard_node_name: str = "giskard"
+    avoid_name_conflict: bool = True
+    context: Optional[Context] = field(kw_only=True, default=None)
+    cli_args: Optional[List[str]] = field(kw_only=True, default=None)
+    namespace: Optional[str] = field(kw_only=True, default=None)
+    use_global_arguments: bool = field(kw_only=True, default=True)
+    enable_rosout: bool = field(kw_only=True, default=True)
+    start_parameter_services: bool = field(kw_only=True, default=True)
+    parameter_overrides: Optional[List[Parameter]] = field(kw_only=True, default=None)
+    allow_undeclared_parameters: bool = field(kw_only=True, default=False)
+    automatically_declare_parameters_from_overrides: bool = field(
+        kw_only=True, default=False
+    )
+    enable_logger_service: bool = field(kw_only=True, default=False)
+    node_handle: Node = field(init=False)
 
-    def __init__(self, node_name: str = 'giskard_client', giskard_node_name: str = 'giskard',
-                 avoid_name_conflict: bool = True,
-                 *, context: Optional[Context] = None, cli_args: Optional[List[str]] = None,
-                 namespace: Optional[str] = None, use_global_arguments: bool = True, enable_rosout: bool = True,
-                 start_parameter_services: bool = True, parameter_overrides: Optional[List[Parameter]] = None,
-                 allow_undeclared_parameters: bool = False,
-                 automatically_declare_parameters_from_overrides: bool = False,
-                 enable_logger_service: bool = False) -> None:
-        Node.__init__(self, node_name, context=context, cli_args=cli_args, namespace=namespace,
-                      use_global_arguments=use_global_arguments, enable_rosout=enable_rosout,
-                      start_parameter_services=start_parameter_services, parameter_overrides=parameter_overrides,
-                      allow_undeclared_parameters=allow_undeclared_parameters,
-                      automatically_declare_parameters_from_overrides=automatically_declare_parameters_from_overrides)
-        rospy.executor.add_node(self)
-        GiskardWrapper.__init__(self, node_handle=self, giskard_node_name=giskard_node_name)
+    def __post_init__(self):
+        self.node_handle = Node(
+            self.node_name,
+            context=self.context,
+            cli_args=self.cli_args,
+            namespace=self.namespace,
+            use_global_arguments=self.use_global_arguments,
+            enable_rosout=self.enable_rosout,
+            start_parameter_services=self.start_parameter_services,
+            parameter_overrides=self.parameter_overrides,
+            allow_undeclared_parameters=self.allow_undeclared_parameters,
+            automatically_declare_parameters_from_overrides=self.automatically_declare_parameters_from_overrides,
+        )
+        rospy.executor.add_node(self.node_handle)
         self.is_spinning = False
+        super().__post_init__()
 
     def __spin(self):
-        self.my_executor = MyMultiThreadedExecutor(thread_name_prefix='python interface')
-        self.my_executor.add_node(self)
+        self.my_executor = MyMultiThreadedExecutor(
+            thread_name_prefix="python interface"
+        )
+        self.my_executor.add_node(self.node_handle)
         self.is_spinning = True
         while rclpy.ok():
             self.my_executor.spin_once(timeout_sec=1)
         self.is_spinning = False
 
     def spin_in_background(self):
-        self.spinner = Thread(target=self.__spin, daemon=False, name='background giskard wrapper spinner')
+        self.spinner = Thread(
+            target=self.__spin, daemon=False, name="background giskard wrapper spinner"
+        )
         self.spinner.start()

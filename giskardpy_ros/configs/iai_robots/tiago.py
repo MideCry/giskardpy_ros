@@ -1,38 +1,37 @@
-from giskardpy.model.collision_avoidance_config import CollisionAvoidanceConfig
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig, RobotInterfaceConfig
 
 
-class TiagoCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-    def __init__(self, drive_joint_name: str = 'brumbrum'):
-        super().__init__()
-        self.drive_joint_name = drive_joint_name
-
-    def setup(self):
-        self.load_self_collision_matrix('self_collision_matrices/iai/tiago_dual.srdf')
-        self.overwrite_external_collision_avoidance(self.drive_joint_name,
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.2,
-                                                    hard_threshold=0.1)
-        self.fix_joints_for_collision_avoidance(['head_1_joint',
-                                                 'head_2_joint',
-                                                 'gripper_left_left_finger_joint',
-                                                 'gripper_left_right_finger_joint',
-                                                 'gripper_right_left_finger_joint',
-                                                 'gripper_right_right_finger_joint'])
-        self.overwrite_external_collision_avoidance('arm_right_7_joint',
-                                                    number_of_repeller=4,
-                                                    soft_threshold=0.05,
-                                                    hard_threshold=0.0,
-                                                    max_velocity=0.2)
-        self.overwrite_external_collision_avoidance('arm_left_7_joint',
-                                                    number_of_repeller=4,
-                                                    soft_threshold=0.05,
-                                                    hard_threshold=0.0,
-                                                    max_velocity=0.2)
-        self.set_default_self_collision_avoidance(hard_threshold=0.04,
-                                                  soft_threshold=0.08)
-        self.set_default_external_collision_avoidance(hard_threshold=0.03,
-                                                      soft_threshold=0.08)
+# class TiagoCollisionAvoidanceConfig(CollisionAvoidanceConfig):
+#     def __init__(self, drive_joint_name: str = 'brumbrum'):
+#         super().__init__()
+#         self.drive_joint_name = drive_joint_name
+#
+#     def setup(self):
+#         self.load_self_collision_matrix('self_collision_matrices/iai/tiago_dual.srdf')
+#         self.overwrite_external_collision_avoidance(self.drive_joint_name,
+#                                                     number_of_repeller=2,
+#                                                     soft_threshold=0.2,
+#                                                     hard_threshold=0.1)
+#         self.fix_joints_for_collision_avoidance(['head_1_joint',
+#                                                  'head_2_joint',
+#                                                  'gripper_left_left_finger_joint',
+#                                                  'gripper_left_right_finger_joint',
+#                                                  'gripper_right_left_finger_joint',
+#                                                  'gripper_right_right_finger_joint'])
+#         self.overwrite_external_collision_avoidance('arm_right_7_joint',
+#                                                     number_of_repeller=4,
+#                                                     soft_threshold=0.05,
+#                                                     hard_threshold=0.0,
+#                                                     max_velocity=0.2)
+#         self.overwrite_external_collision_avoidance('arm_left_7_joint',
+#                                                     number_of_repeller=4,
+#                                                     soft_threshold=0.05,
+#                                                     hard_threshold=0.0,
+#                                                     max_velocity=0.2)
+#         self.set_default_self_collision_avoidance(hard_threshold=0.04,
+#                                                   soft_threshold=0.08)
+#         self.set_default_external_collision_avoidance(hard_threshold=0.03,
+#                                                       soft_threshold=0.08)
 
 
 class TiagoJointTrajServerIAIInterface(RobotInterfaceConfig):

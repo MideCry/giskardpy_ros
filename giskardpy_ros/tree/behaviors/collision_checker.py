@@ -15,9 +15,9 @@ class CollisionChecker(GiskardBehavior):
     def __init__(self, name: str):
         super().__init__(name)
 
-    def initialise(self) -> None:
-        god_map.collision_scene.add_added_checks()
-        super().initialise()
+    # def initialise(self) -> None:
+    #     god_map.collision_scene.add_added_checks()
+    #     super().initialise()
 
     def are_self_collisions_violated(self, collsions: Collisions) -> None:
         for key, self_collisions in collsions.self_collisions.items():
@@ -26,8 +26,8 @@ class CollisionChecker(GiskardBehavior):
                     continue  # Fixme figure out why there are sometimes two default collision entries
                 distance = self_collision.contact_distance
                 if distance < 0.0:
-                    raise SelfCollisionViolatedException(f'{self_collision.original_link_a} and '
-                                                         f'{self_collision.original_link_b} violate distance threshold:'
+                    raise SelfCollisionViolatedException(f'{self_collision.original_body_a} and '
+                                                         f'{self_collision.original_body_b} violate distance threshold:'
                                                          f'{self_collision.contact_distance} < {0}')
 
     @catch_and_raise_to_blackboard(skip_on_exception=False)
