@@ -8,6 +8,7 @@ from typing import Optional, Union, List, Dict, Any, Type
 
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
+import giskardpy.casadi_wrapper as cas
 import numpy as np
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
@@ -15,6 +16,26 @@ import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
+from giskard_msgs.msg import GiskardError, MotionStatechartNode
+from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
+from giskardpy.model.joints import MovableJoint
+from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
+from giskardpy.model.world import WorldTree
+from rclpy.duration import Duration
+from rclpy.time import Time
+from rclpy_message_converter.message_converter import \
+    convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
+    convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
+from semantic_digital_twin.world_description.geometry import (
+    TriangleMesh, FileMesh,
+)
+
+from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
+    UnknownJointException, UnknownGoalException
+from giskardpy.god_map import god_map
+from giskardpy.model.collision_world_syncer import CollisionEntry
+from giskardpy.model.trajectory import Trajectory
+from giskardpy.motion_statechart.goals.goal import Goal
 from random_events.utils import SubclassJSONSerializer
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -160,7 +181,9 @@ def link_geometry_mesh_to_visualization_marker(
     marker.type = visualization_msgs.Marker.MESH_RESOURCE
     if mode.is_collision_decomposed():
         marker.mesh_resource = "file://" + data.collision_file_name_absolute
-    else:
+    elif isinstance(data, TriangleMesh):
+        marker.mesh_resource = "file://" + data.file.name
+    elif isinstance(data, FileMesh):
         marker.mesh_resource = "file://" + data.filename
     marker.scale.x = data.scale.x
     marker.scale.y = data.scale.y
