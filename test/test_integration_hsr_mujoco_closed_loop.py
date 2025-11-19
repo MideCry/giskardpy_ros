@@ -18,7 +18,6 @@ from giskardpy_ros.configs.iai_robots.hsr import (
     HSRMujocoVelocityInterface,
 )
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.god_map import god_map
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 
 
@@ -49,7 +48,6 @@ class HSRTester(GiskardTester):
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
         # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
         self.odom_root = "odom"
-        self.robot = god_map.world.groups[self.robot_name]
 
     def open_gripper(self):
         self.command_gripper(1.24)

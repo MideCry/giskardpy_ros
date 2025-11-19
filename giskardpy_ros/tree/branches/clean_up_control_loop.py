@@ -1,20 +1,20 @@
 from py_trees.composites import Sequence
 from py_trees.decorators import FailureIsSuccess
 
+from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.append_zero_velocity import SetZeroVelocity
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import (
     DebugMarkerPublisherTrajectory,
 )
-from giskardpy_ros.tree.behaviors.goal_cleanup import GoalCleanUp
 from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
 from giskardpy_ros.tree.behaviors.plot_debug_expressions import PlotDebugExpressions
 from giskardpy_ros.tree.behaviors.plot_goal_gantt_chart import PlotGanttChart
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
-from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback
+from giskardpy_ros.tree.behaviors.publish_feedback import (
+    ForcePublishFeedback,
+)
 from giskardpy_ros.tree.behaviors.reset_joint_state import ResetWorldState
-from giskardpy_ros.tree.behaviors.time import TimePlugin
 from giskardpy_ros.tree.behaviors.visualization import VisualizeTrajectory
-from giskardpy.utils.decorators import toggle_on, toggle_off
 
 
 class CleanupControlLoop(Sequence):
@@ -22,8 +22,7 @@ class CleanupControlLoop(Sequence):
 
     def __init__(self, name: str = "clean up control loop"):
         super().__init__(name, memory=True)
-        self.add_child(TimePlugin())
-        self.add_child(PublishFeedback())
+        self.add_child(ForcePublishFeedback())
         self.add_child(SetZeroVelocity("set zero vel 1"))
         self.add_child(LogTrajPlugin("log post processing"))
         self.reset_world_state = ResetWorldState()

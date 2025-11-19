@@ -1,10 +1,7 @@
-import traceback
 from threading import Lock
 
 import numpy as np
 
-from giskardpy.god_map import god_map
-from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
@@ -49,21 +46,22 @@ class PlotDebugExpressions(PlotTrajectory):
         return new_traj
 
     def plot(self):
-        trajectory = god_map.debug_expression_manager.raw_traj_to_traj(
-            god_map.qp_controller.config.control_dt
-            or god_map.qp_controller.config.mpc_dt
-        )
-        if trajectory and len(trajectory) > 0:
-            sample_period = god_map.qp_controller.config.mpc_dt
-            traj = self.split_traj(trajectory)
-            try:
-                traj.plot_trajectory(
-                    path_to_data_folder=self.path_to_data_folder,
-                    sample_period=sample_period,
-                    file_name=f"debug.pdf",
-                    filter_0_vel=False,
-                    **self.kwargs,
-                )
-            except Exception:
-                traceback.print_exc()
-                get_middleware().logwarn("failed to save debug.pdf")
+        raise NotImplementedError("needs fixing")
+        # trajectory = god_map.debug_expression_manager.raw_traj_to_traj(
+        #     GiskardBlackboard().executor.qp_controller.config.control_dt
+        #     or GiskardBlackboard().executor.qp_controller.config.mpc_dt
+        # )
+        # if trajectory and len(trajectory) > 0:
+        #     sample_period = GiskardBlackboard().executor.qp_controller.config.mpc_dt
+        #     traj = self.split_traj(trajectory)
+        #     try:
+        #         traj.plot_trajectory(
+        #             path_to_data_folder=self.path_to_data_folder,
+        #             sample_period=sample_period,
+        #             file_name=f"debug.pdf",
+        #             filter_0_vel=False,
+        #             **self.kwargs,
+        #         )
+        #     except Exception:
+        #         traceback.print_exc()
+        # get_middleware().logwarn("failed to save debug.pdf")

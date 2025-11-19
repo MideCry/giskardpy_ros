@@ -1,14 +1,21 @@
+from time import sleep
+
 import rclpy
-from geometry_msgs.msg import PoseStamped
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from rclpy import Parameter
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 from visualization_msgs.msg import InteractiveMarkerFeedback
 
+from giskardpy.motion_statechart.graph_node import EndMotion
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy_ros.python_interface.python_interface import (
     GiskardWrapper,
 )
 from giskardpy_ros.ros2 import rospy
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
+from semantic_digital_twin.spatial_types import TransformationMatrix
 
 
 class InteractiveMarkerNode:
@@ -27,6 +34,26 @@ class InteractiveMarkerNode:
         )
         self.root_link = self.giskard.node_handle.get_parameter("root_link").value
         self.tip_link = self.giskard.node_handle.get_parameter("tip_link").value
+        for i in range(100):
+            try:
+                self.root_body = (
+                    self.giskard.world.get_kinematic_structure_entity_by_name(
+                        self.root_link
+                    )
+                )
+                self.tip_body = (
+                    self.giskard.world.get_kinematic_structure_entity_by_name(
+                        self.tip_link
+                    )
+                )
+                break
+            except WorldEntityNotFoundError as e:
+                sleep(0.5)
+                self.giskard.node_handle.get_logger().error(
+                    "failed to find bodies in world, retrying in 0.5s..."
+                )
+        else:
+            raise e
 
         # Create an interactive marker server
         self.server = InteractiveMarkerServer(rospy.node, "cartesian_goals")
@@ -133,15 +160,31 @@ class InteractiveMarkerNode:
             self.giskard.node_handle.get_logger().info(
                 f"Marker feedback received: {feedback.event_type}"
             )
-            goal = PoseStamped()
-            goal.header = feedback.header
-            goal.pose = feedback.pose
-            self.giskard.motion_goals.add_cartesian_pose(
-                goal_pose=goal, tip_link=self.tip_link, root_link=self.root_link
+
+            goal = TransformationMatrix.from_xyz_quaternion(
+                pos_x=feedback.pose.position.x,
+                pos_y=feedback.pose.position.y,
+                pos_z=feedback.pose.position.z,
+                quat_x=feedback.pose.orientation.x,
+                quat_y=feedback.pose.orientation.y,
+                quat_z=feedback.pose.orientation.z,
+                quat_w=feedback.pose.orientation.w,
+                reference_frame=self.giskard.world.get_kinematic_structure_entity_by_name(
+                    feedback.header.frame_id
+                ),
             )
-            self.giskard.motion_goals.allow_all_collisions()
-            self.giskard.add_default_end_motion_conditions()
-            self.giskard.execute_async()
+
+            msc = MotionStatechart()
+            cart_goal = CartesianPose(
+                root_link=self.root_body,
+                tip_link=self.tip_body,
+                goal_pose=goal,
+            )
+            msc.add_node(cart_goal)
+            end = EndMotion()
+            msc.add_node(end)
+            end.start_condition = cart_goal.observation_variable
+            self.giskard.execute_async(msc)
 
             # reset marker pose
             self.int_marker.pose.position.x = 0.0

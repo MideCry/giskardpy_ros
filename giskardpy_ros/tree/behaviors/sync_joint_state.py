@@ -3,14 +3,12 @@ from typing import Optional
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 
-import giskardpy_ros.ros2.msg_converter as msg_converter
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 from semantic_digital_twin.world_description.world_state import WorldState
 
 
@@ -19,7 +17,6 @@ class SyncJointState(GiskardBehavior):
     @record_time
     def __init__(self, group_name: str, joint_state_topic: str = "joint_states"):
         self.data = None
-        self.group_name = group_name
         self.joint_state_topic = joint_state_topic
         if not self.joint_state_topic.startswith("/"):
             self.joint_state_topic = "/" + self.joint_state_topic
@@ -39,10 +36,15 @@ class SyncJointState(GiskardBehavior):
     @record_time
     def update(self):
         if self.data:
-            mjs = msg_converter.ros_joint_state_to_giskard_joint_state(
-                self.data, self.group_name
-            )
-            god_map.world.state.update(mjs)
+            for i, joint_name in enumerate(self.data.name):
+                connection: ActiveConnection1DOF = (
+                    GiskardBlackboard().executor.world.get_connection_by_name(
+                        joint_name
+                    )
+                )
+                connection._world.state[connection.raw_dof.name].position = (
+                    self.data.position[i]
+                )
             self.data = None
             return Status.SUCCESS
         return Status.RUNNING
@@ -81,14 +83,11 @@ class SyncJointStatePosition(GiskardBehavior):
     def cb(self, data):
         self.msg = data
 
-    def initialise(self):
-        self.last_time = rospy.node.get_clock().now()
-        super().initialise()
-
     @record_time
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
-            joint_name = PrefixedName(joint_name, self.group_name)
-            god_map.world.state[joint_name][Derivativesw.position] = position
-
+            connection: ActiveConnection1DOF = (
+                GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
+            )
+            connection._world.state[connection.raw_dof.name].position = position
         return Status.SUCCESS

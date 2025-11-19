@@ -1,23 +1,20 @@
 from copy import deepcopy
 
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
 from giskardpy.model.trajectory import Trajectory
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
-from line_profiler import profile
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class NewTrajectory(GiskardBehavior):
     @record_time
-
     def initialise(self):
-        current_js = deepcopy(god_map.world.state)
+        current_js = deepcopy(GiskardBlackboard().executor.world.state)
         trajectory = Trajectory()
         trajectory.append(current_js)
-        god_map.trajectory = trajectory
+        GiskardBlackboard().trajectory = trajectory
 
     def update(self):
         return Status.SUCCESS

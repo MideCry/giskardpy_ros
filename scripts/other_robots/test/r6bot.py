@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy_ros.configs.behavior_tree_config import (
+    ClosedLoopBTConfig,
+)
+from giskardpy_ros.configs.giskard import Giskard
+from giskardpy_ros.configs.other_robots.generic import GenericWorldConfig
+from giskardpy_ros.configs.robot_interface_config import (
+    RobotInterfaceConfig,
+)
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.ros2_interface import get_robot_description
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+
+
+class R6BotInterface(RobotInterfaceConfig):
+    def setup(self):
+        GiskardBlackboard()
+        self.sync_joint_state_topic("/joint_states")
+        self.add_joint_velocity_group_controller(
+            "/r6bot_vel_controller/commands",
+            connections=[
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6",
+            ],
+        )
+
+
+def main():
+    rospy.init_node("giskard")
+    robot_description = get_robot_description()
+    giskard = Giskard(
+        world_config=GenericWorldConfig(urdf=robot_description),
+        robot_interface_config=R6BotInterface(),
+        behavior_tree_config=ClosedLoopBTConfig(),
+        qp_controller_config=QPControllerConfig(control_dt=0.0125, mpc_dt=0.0125),
+    )
+    giskard.live()
+
+
+if __name__ == "__main__":
+    main()

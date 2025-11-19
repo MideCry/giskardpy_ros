@@ -1,26 +1,19 @@
-from giskard_msgs.action import Move
+import json
+
+from giskard_msgs.action import JsonAction
 from py_trees.common import Status
-from line_profiler import profile
 
-from giskard_msgs.msg import GiskardError
-from giskardpy.data_types.exceptions import *
-from giskardpy.god_map import god_map
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy.middleware import get_middleware
-from giskardpy_ros.tree.behaviors.publish_feedback import (
-    giskard_state_to_execution_state,
-)
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy.utils.decorators import record_time
 import giskardpy_ros.ros2.msg_converter as msg_converter
-from line_profiler import profile
-
-from semantic_digital_twin.world_description.connections import ActiveConnection
+from giskardpy.data_types.exceptions import *
+from giskardpy.middleware import get_middleware
+from giskardpy.utils.decorators import record_time
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
 
 class SetMoveResult(GiskardBehavior):
 
-    def __init__(self, name, context, print=True):
+    def __init__(self, name, context: str, print=True):
         self.print = print
         self.context = context
         super().__init__(name)
@@ -29,30 +22,36 @@ class SetMoveResult(GiskardBehavior):
     def update(self):
         e = self.get_blackboard_exception()
         if e is None:
-            move_result = Move.Result()
+            move_result = JsonAction.Result()
             GiskardBlackboard().move_action_server.set_succeeded()
         else:
-            move_result = Move.Result(error=msg_converter.exception_to_error_msg(e))
+            move_result = JsonAction.Result(
+                error=msg_converter.exception_to_error_msg(e)
+            )
             GiskardBlackboard().move_action_server.set_aborted()
 
-        trajectory = god_map.trajectory
-        joints = god_map.world.get_connections_by_type(ActiveConnection)
-        sample_period = god_map.qp_controller.config.mpc_dt
-        move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
-            trajectory, sample_period=sample_period, start_time=0, joints=joints
-        )
+        # trajectory = god_map.trajectory
+        # joints = GiskardBlackboard().executor.world.get_connections_by_type(ActiveConnection)
+        # move_result.trajectory = msg_converter.trajectory_to_ros_trajectory(
+        #     trajectory,
+        #     sample_period=GiskardBlackboard().giskard.qp_controller_config.mpc_dt,
+        #     start_time=0,
+        #     joints=joints,
+        # )
+
+        result = {
+            "life_cycle_state": GiskardBlackboard().motion_statechart.life_cycle_state.to_json(),
+            "observation_state": GiskardBlackboard().motion_statechart.observation_state.to_json(),
+        }
+
+        move_result.result = json.dumps(result)
         if isinstance(e, PreemptedException):
-            get_middleware().logwarn(f"Goal preempted: '{move_result.error.msg}'.")
+            get_middleware().logwarn(f"Goal preempted.")
         else:
             if self.print:
-                if move_result.error.type == GiskardError.SUCCESS:
-                    get_middleware().loginfo(f"{self.context} succeeded.")
-                else:
-                    get_middleware().logwarn(
-                        f"{self.context} failed: {move_result.error.msg}."
-                    )
+                get_middleware().loginfo(f"{self.context} succeeded.")
 
-        move_result.execution_state = giskard_state_to_execution_state()
+        # move_result.execution_state = giskard_state_to_execution_state()
         GiskardBlackboard().move_action_server.result_msg = move_result
-        move_result.execution_state = giskard_state_to_execution_state()
+        # move_result.execution_state = giskard_state_to_execution_state()
         return Status.SUCCESS

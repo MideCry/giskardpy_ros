@@ -1,19 +1,27 @@
 from __future__ import annotations
+
 import traceback
-import typing
 from functools import wraps
 from typing import TypeVar, Callable, TYPE_CHECKING, Optional
 
-from py_trees.common import Status, Access
+from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
+from giskardpy.executor import Executor
+from semantic_digital_twin.adapters.ros.world_synchronizer import (
+    StateSynchronizer,
+    ModelSynchronizer,
+)
 
 if TYPE_CHECKING:
+    from giskardpy.model.trajectory import Trajectory
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
     from giskardpy_ros.configs.giskard import Giskard
-    from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+    from giskardpy_ros.ros2.ros_msg_visualization import (
+        ROSMsgVisualization,
+        DebugMarkerVisualizer,
+    )
     from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
-    from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 
 
 class GiskardBlackboard:
@@ -21,13 +29,21 @@ class GiskardBlackboard:
     tree_config: BehaviorTreeConfig
     runtime: float
     move_action_server: ActionServerHandler
-    world_action_server: ActionServerHandler
     ros_visualizer: ROSMsgVisualization
+    debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
-    control_loop_max_hz: float
-    simulation_max_hz: float
     exception: Optional[Exception]
+    motion_start_time: float
+    trajectory: Trajectory
     __shared_state = {}
+
+    @property
+    def executor(self) -> Executor:
+        return self.giskard.executor
+
+    @property
+    def motion_statechart(self):
+        return self.giskard.executor.motion_statechart
 
     def __init__(self):
         self.__dict__ = self.__shared_state
@@ -62,6 +78,7 @@ T = TypeVar("T", bound=Callable)
 def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
     def decorator(func):
         if skip_on_exception:
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 if has_blackboard_exception():
@@ -73,8 +90,10 @@ def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
                         traceback.print_exc()
                     raise_to_blackboard(e)
                     return Status.FAILURE
+
             return wrapper
         else:
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 try:
@@ -85,6 +104,7 @@ def catch_and_raise_to_blackboard(function=None, *, skip_on_exception=True):
                     if not has_blackboard_exception():
                         raise_to_blackboard(e)
                     return Status.FAILURE
+
             return wrapper
 
     if function is None:

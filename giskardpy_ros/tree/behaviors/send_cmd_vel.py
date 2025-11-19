@@ -4,12 +4,14 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
+from giskardpy_ros.tree.blackboard_utils import (
+    catch_and_raise_to_blackboard,
+    GiskardBlackboard,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
 # can be used during closed-loop control, instead of for tracking a trajectory
@@ -22,8 +24,10 @@ class SendCmdVelTwist(GiskardBehavior):
         self.cmd_topic = topic_name
         self.vel_pub = rospy.node.create_publisher(Twist, self.cmd_topic, 10)
 
-        self.joint = god_map.world.get_drive_joint(joint_name=joint_name)
-        god_map.world.register_controlled_joints([self.joint.name])
+        self.joint = GiskardBlackboard().executor.world.get_drive_joint(
+            joint_name=joint_name
+        )
+        GiskardBlackboard().executor.world.register_controlled_joints([self.joint.name])
         get_middleware().loginfo(f"Created publisher for {self.cmd_topic}.")
 
     def solver_cmd_to_twist(self, cmd) -> Twist:
@@ -50,7 +54,7 @@ class SendCmdVelTwist(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     def update(self):
-        cmd = god_map.qp_solver_solution
+        cmd = GiskardBlackboard().executor.qp_solver_solution
         twist = self.solver_cmd_to_twist(cmd)
         self.vel_pub.publish(twist)
         return Status.RUNNING

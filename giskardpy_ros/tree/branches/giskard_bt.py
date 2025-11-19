@@ -73,7 +73,6 @@ class GiskardBT(BehaviourTree):
         self.root.add_child(self.post_processing_failure_is_success)
         self.root.add_child(SendResult(GiskardBlackboard().move_action_server))
         super().__init__(self.root, unicode_tree_debug=False)
-        self.switch_to_execution()
 
     def has_started(self) -> bool:
         return self.count > 1

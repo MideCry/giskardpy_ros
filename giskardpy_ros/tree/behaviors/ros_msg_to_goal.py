@@ -1,25 +1,24 @@
-import traceback
+import json
 from typing import Union
 
-from giskard_msgs.action import Move
+from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
-from giskardpy.data_types.exceptions import InvalidGoalException
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
 from giskardpy.motion_statechart.monitors.monitors import (
     TimeAbove,
     LocalMinimumReached,
-    EndMotion,
-    CancelMotion,
 )
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2.msg_converter import create_node
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
+)
+from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
+    KinematicStructureEntityKwargsTracker,
 )
 from semantic_digital_twin.world_description.connections import OmniDrive
 
@@ -32,51 +31,21 @@ class ParseActionGoal(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        move_goal: Move.Goal = GiskardBlackboard().move_action_server.goal_msg
+        move_goal: JsonAction.Goal = GiskardBlackboard().move_action_server.goal_msg
         get_middleware().loginfo(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
-        try:
-            self.parse_motion_graph(move_goal)
-        except AttributeError:
-            traceback.print_exc()
-            raise InvalidGoalException("Couldn't parse goal msg")
-        except Exception as e:
-            raise e
-        self.sanity_check()
-        # if god_map.is_collision_checking_enabled():
-        #     god_map.motion_statechart_manager.parse_collision_entries(move_goal.collisions)
+        tracker = KinematicStructureEntityKwargsTracker.from_world(
+            GiskardBlackboard().executor.world
+        )
+        kwargs = tracker.create_kwargs()
+        kwargs["world"] = GiskardBlackboard().executor.world
+        motion_statechart = MotionStatechart.from_json(
+            json.loads(move_goal.goal), **kwargs
+        )
+        GiskardBlackboard().executor.compile(motion_statechart)
         get_middleware().loginfo("Done parsing goal message.")
         return Status.SUCCESS
-
-    def parse_motion_graph(self, move_goal: Move.Goal) -> None:
-        for msg_node in move_goal.nodes:
-            get_middleware().loginfo(f"Adding node of type: '{msg_node.class_name}'")
-
-            node = create_node(msg_node, god_map.world)
-            god_map.motion_statechart_manager.add_node(node)
-
-            node.start_condition = msg_node.start_condition
-            node.pause_condition = msg_node.pause_condition
-            node.end_condition = msg_node.end_condition
-            node.reset_condition = msg_node.reset_condition
-
-        god_map.motion_statechart_manager.parse_conditions()
-
-    def sanity_check(self) -> None:
-        if (
-            not god_map.motion_statechart_manager.has_end_motion_monitor()
-            and not god_map.motion_statechart_manager.has_cancel_motion_monitor()
-        ):
-            get_middleware().logwarn(
-                f"No {EndMotion.__name__} or {CancelMotion.__name__} monitor specified. "
-                f"Motion will not stop unless cancelled externally."
-            )
-            return
-        if not god_map.motion_statechart_manager.has_end_motion_monitor():
-            get_middleware().logwarn(
-                f"No {EndMotion.__name__} monitor specified. Motion can't end successfully."
-            )
 
 
 def get_ros_msgs_constant_name_by_value(
@@ -100,24 +69,24 @@ class SetExecutionMode(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        get_middleware().loginfo(
-            f"Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg), GiskardBlackboard().move_action_server.goal_msg.type)}"
-        )
-        if GiskardBlackboard().move_action_server.is_goal_msg_type_projection():
-            GiskardBlackboard().tree.switch_to_projection()
-        elif GiskardBlackboard().move_action_server.is_goal_msg_type_execute():
-            GiskardBlackboard().tree.switch_to_execution()
-        else:
-            raise InvalidGoalException(
-                f"Goal of type {god_map.goal_msg.type} is not supported."
-            )
+        # get_middleware().loginfo(
+        #     f"Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg))}"
+        # )
+        # if GiskardBlackboard().move_action_server.is_goal_msg_type_projection():
+        #     GiskardBlackboard().tree.switch_to_projection()
+        # elif GiskardBlackboard().move_action_server.is_goal_msg_type_execute():
+        #     GiskardBlackboard().tree.switch_to_execution()
+        # else:
+        #     raise InvalidGoalException(
+        #         f"Goal of type {god_map.goal_msg.type} is not supported."
+        #     )
         return Status.SUCCESS
 
 
 class AddBaseTrajFollowerGoal(GiskardBehavior):
     def __init__(self, name: str = "add base traj goal"):
         super().__init__(name)
-        joints = god_map.world.get_connections_by_type(OmniDrive)
+        joints = GiskardBlackboard().executor.world.get_connections_by_type(OmniDrive)
         assert len(joints) == 1
         self.joint = joints[0]
 
@@ -128,7 +97,8 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
         god_map.motion_statechart_manager.add_monitor(local_min)
 
         time_monitor = TimeAbove(
-            threshold=len(god_map.trajectory) * god_map.qp_controller.config.mpc_dt,
+            threshold=len(GiskardBlackboard().trajectory)
+            * GiskardBlackboard().executor.qp_controller.config.mpc_dt,
             name="timeout",
         )
         god_map.motion_statechart_manager.add_monitor(time_monitor)
@@ -143,7 +113,7 @@ class AddBaseTrajFollowerGoal(GiskardBehavior):
             name="BaseTrajFollower",
         )
         goal.end_condition = f"{local_min.name}"
-        goal.connect_end_condition_to_all_tasks(time_monitor.name)
+        goal.apply_end_condition_to_nodes(time_monitor.name)
         god_map.motion_statechart_manager.add_goal(goal)
         god_map.motion_statechart_manager.parse_conditions()
         return Status.SUCCESS

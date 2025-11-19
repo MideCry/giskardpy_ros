@@ -3,13 +3,15 @@ from typing import Optional
 from nav_msgs.msg import Odometry
 from py_trees.common import Status
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import rospy, msg_converter
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
-from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
+from giskardpy_ros.tree.blackboard_utils import (
+    catch_and_raise_to_blackboard,
+    GiskardBlackboard,
+)
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
 class SyncOdometry(GiskardBehavior):
@@ -24,7 +26,9 @@ class SyncOdometry(GiskardBehavior):
         if not self.odometry_topic.startswith("/"):
             self.odometry_topic = "/" + self.odometry_topic
         super().__init__(str(self) + name_suffix)
-        self.joint = god_map.world.get_drive_joint(joint_name=joint_name)
+        self.joint = GiskardBlackboard().executor.world.get_drive_joint(
+            joint_name=joint_name
+        )
         self.odometry_sub = rospy.node.create_subscription(
             Odometry, self.odometry_topic, self.cb, 1
         )
@@ -40,7 +44,7 @@ class SyncOdometry(GiskardBehavior):
     @record_time
     def update(self):
         trans_matrix = msg_converter.ros_msg_to_giskard_obj(
-            self.odom.pose.pose, god_map.world
+            self.odom.pose.pose, GiskardBlackboard().executor.world
         )
         self.joint.update_transform(trans_matrix)
         return Status.SUCCESS

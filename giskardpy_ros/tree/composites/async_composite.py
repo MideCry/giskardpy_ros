@@ -35,16 +35,26 @@ class AsyncBehavior(GiskardBehavior, Composite):
         self.set_status(Status.INVALID)
         self.looped_once = False
         self.max_hz = max_hz
+        if self.max_hz is not None:
+            self.sleeper = rospy.node.create_rate(frequency=self.max_hz)
+        else:
+            self.sleeper = None
 
     def initialise(self) -> None:
         self.looped_once = False
-        self.update_thread = Thread(target=self.loop_over_plugins, name=f'async {self.name}')
+        self.update_thread = Thread(
+            target=self.loop_over_plugins, name=f"async {self.name}"
+        )
         self.update_thread.start()
         super().initialise()
 
-    def add_child(self, child: behaviour.Behaviour, success_is_running: bool = True) -> uuid.UUID:
+    def add_child(
+        self, child: behaviour.Behaviour, success_is_running: bool = True
+    ) -> uuid.UUID:
         if success_is_running:
-            success_is_running_child = SuccessIsRunning(f'success is running\n{child.name}', child)
+            success_is_running_child = SuccessIsRunning(
+                f"success is running\n{child.name}", child
+            )
             return super().add_child(success_is_running_child)
         return super().add_child(child)
 
@@ -58,9 +68,9 @@ class AsyncBehavior(GiskardBehavior, Composite):
 
     def terminate(self, new_status: Status) -> None:
         try:
-            get_middleware().loginfo(f'avg dt was {self.sleeper.avg_dt}')
+            get_middleware().loginfo(f"avg dt was {self.sleeper.avg_dt}")
         except Exception as e:
-            pass # sometimes the sleeper is not defined yet
+            pass  # sometimes the sleeper is not defined yet
         self.set_status(Status.FAILURE)
         try:
             self.update_thread.join()
@@ -75,9 +85,14 @@ class AsyncBehavior(GiskardBehavior, Composite):
         for child in self.children:
             child.stop(self.status)
 
-    def insert_behind(self, node: Behaviour, left_sibling_name: Behaviour, success_is_running: bool = True) -> None:
+    def insert_behind(
+        self,
+        node: Behaviour,
+        left_sibling_name: Behaviour,
+        success_is_running: bool = True,
+    ) -> None:
         if success_is_running:
-            node = SuccessIsRunning(f'success is running\n{node.name}', node)
+            node = SuccessIsRunning(f"success is running\n{node.name}", node)
         try:
             sibling_id = self.children.index(left_sibling_name)
         except:
@@ -107,13 +122,10 @@ class AsyncBehavior(GiskardBehavior, Composite):
     def tip(self):
         return GiskardBehavior.tip(self)
 
+    @profile
     def loop_over_plugins(self) -> None:
         try:
             self.get_blackboard().runtime = time()
-            if self.max_hz is not None:
-                self.sleeper = rospy.node.create_rate(frequency=self.max_hz)
-            else:
-                self.sleeper = None
             while self.is_running() and rclpy.ok():
                 for child in self.children:
                     if not self.is_running():
@@ -122,7 +134,9 @@ class AsyncBehavior(GiskardBehavior, Composite):
                         status = node.status
                     if status is not None:
                         self.set_status(status)
-                    assert self.status is not None, f'{child.name} did not return a status'
+                    assert (
+                        self.status is not None
+                    ), f"{child.name} did not return a status"
                     if not self.is_running():
                         return
                 self.looped_once = True

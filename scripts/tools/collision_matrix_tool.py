@@ -51,7 +51,6 @@ from giskardpy_ros.configs.robot_interface_config import (
     RobotInterfaceConfig,
     StandAloneRobotInterfaceConfig,
 )
-from giskardpy.god_map import god_map
 from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
 from giskardpy.model.collision_world_syncer import DisableCollisionReason
 from giskardpy.model.utils import robot_name_from_urdf_string
@@ -124,11 +123,11 @@ class Table(QTableWidget):
         self.update_table()
 
     def disable_link(self, link_name: str):
-        link_name = god_map.world.search_for_link_name(link_name)
+        link_name = self.world.search_for_link_name(link_name)
         self._disabled_links.add(link_name)
 
     def enable_link(self, link_name: str):
-        link_name = god_map.world.search_for_link_name(link_name)
+        link_name = self.world.search_for_link_name(link_name)
         self._disabled_links.discard(link_name)
 
     def get_widget(self, row, column):
@@ -162,8 +161,8 @@ class Table(QTableWidget):
     def update_reason(
         self, link1: str, link2: str, new_reason: Optional[DisableCollisionReason]
     ):
-        link1 = god_map.world.search_for_link_name(link1)
-        link2 = god_map.world.search_for_link_name(link2)
+        link1 = self.world.search_for_link_name(link1)
+        link2 = self.world.search_for_link_name(link2)
         key = self.sort_links(link1, link2)
         if new_reason is None:
             if key in self._reasons:
@@ -190,21 +189,19 @@ class Table(QTableWidget):
     def table_item_callback(self, row, column):
         self.ros_visualizer.clear_marker("")
         god_map.collision_scene.sync()
-        for link_name in god_map.world.link_names_with_collisions:
-            god_map.world.links[link_name].dye_collisions(
-                god_map.world.default_link_color
-            )
-        link1 = god_map.world.search_for_link_name(self.link_names[row])
-        link2 = god_map.world.search_for_link_name(self.link_names[column])
+        for link_name in self.world.link_names_with_collisions:
+            self.world.links[link_name].dye_collisions(self.world.default_link_color)
+        link1 = self.world.search_for_link_name(self.link_names[row])
+        link2 = self.world.search_for_link_name(self.link_names[column])
         key = self.sort_links(link1, link2)
         reason = self.reasons.get(key, None)
         color = reason_color_map[reason]
         color_msg = ColorRGBA(
             r=color[0] / 255.0, g=color[1] / 255.0, b=color[2] / 255.0, a=1.0
         )
-        god_map.world.links[link1].dye_collisions(color_msg)
-        god_map.world.links[link2].dye_collisions(color_msg)
-        god_map.world.clear_all_lru_caches()
+        self.world.links[link1].dye_collisions(color_msg)
+        self.world.links[link2].dye_collisions(color_msg)
+        self.world.clear_all_lru_caches()
         self.ros_visualizer.clear_marker_cache()
         self.ros_visualizer.publish_markers()
 
@@ -213,28 +210,26 @@ class Table(QTableWidget):
             disabled_color = ColorRGBA(1, 0, 0, 1)
         self.ros_visualizer.clear_marker("")
         god_map.collision_scene.sync()
-        for link_name in god_map.world.link_names_with_collisions:
+        for link_name in self.world.link_names_with_collisions:
             if link_name.short_name in self.enabled_link_names:
-                god_map.world.links[link_name].dye_collisions(
-                    god_map.world.default_link_color
+                self.world.links[link_name].dye_collisions(
+                    self.world.default_link_color
                 )
             else:
-                god_map.world.links[link_name].dye_collisions(disabled_color)
-        god_map.world.clear_all_lru_caches()
+                self.world.links[link_name].dye_collisions(disabled_color)
+        self.world.clear_all_lru_caches()
         self.ros_visualizer.publish_markers()
 
     @property
     def link_names(self) -> List[str]:
-        return list(
-            sorted(x.short_name for x in god_map.world.link_names_with_collisions)
-        )
+        return list(sorted(x.short_name for x in self.world.link_names_with_collisions))
 
     @property
     def enabled_link_names(self) -> List[str]:
         return list(
             sorted(
                 x.short_name
-                for x in god_map.world.link_names_with_collisions
+                for x in self.world.link_names_with_collisions
                 if x not in self._disabled_links
             )
         )
@@ -564,15 +559,14 @@ class Application(QMainWindow):
             behavior_tree_config=StandAloneBTConfig(),
             qp_controller_config=QPControllerConfig(),
         )
-        with god_map.world.modify_world():
+        with self.world.modify_world():
             GiskardBlackboard().giskard.world_config.setup_world()
         GiskardBlackboard().giskard.world_config.setup_collision_config()
         self.timer = QTimer()
         self.timer.start(1000)  # Time in milliseconds
         self.timer.timeout.connect(lambda: None)
         self.__srdf_path = None
-        # god_map.world = WorldTree.empty_world()
-        # god_map.world.default_link_color = ColorRGBA(0.5, 0.5, 0.5, 0.75)
+        # self.world.default_link_color = ColorRGBA(0.5, 0.5, 0.5, 0.75)
         # god_map.collision_scene = BetterPyBulletSyncer.empty()
         self.df = pd.DataFrame()
         self.initUI()
@@ -697,12 +691,12 @@ class Application(QMainWindow):
     #             QMessageBox.critical(self, 'Error', f'Parameter not found: \n{robot_description}')
 
     def load_urdf(self, urdf: str, progress_str: str):
-        god_map.world.clear()
+        self.world.clear()
         self.urdf_progress.set_progress(0, f"Loading {progress_str}")
         group_name = robot_name_from_urdf_string(urdf)
         self.urdf_progress.set_progress(10, f"Parsing {progress_str}")
-        god_map.world.add_urdf(urdf, group_name)
-        god_map.world.controlled_joints = god_map.world.movable_joint_names
+        self.world.add_urdf(urdf, group_name)
+        self.world.controlled_joints = self.world.movable_joint_names
         self.urdf_progress.set_progress(
             50, f"Applying vhacd to concave meshes of {progress_str}"
         )
@@ -710,7 +704,7 @@ class Application(QMainWindow):
         self.urdf_progress.set_progress(80, f"Updating table {progress_str}")
         reasons = {
             (link_name, link_name): DisableCollisionReason.Adjacent
-            for link_name in god_map.world.link_names
+            for link_name in self.world.link_names
         }
         self.table.update_table(reasons)
         self.set_tmp_srdf_path()
@@ -778,7 +772,7 @@ class Application(QMainWindow):
 
     @property
     def group_name(self):
-        return list(god_map.world.group_names)[0]
+        return list(self.world.group_names)[0]
 
     def get_srdf_path_with_dialog(self, save: bool) -> str:
         options = QFileDialog.Options()
@@ -811,7 +805,7 @@ class Application(QMainWindow):
         srdf_path = self.get_srdf_path_with_dialog(True)
         if srdf_path is not None:
             god_map.collision_scene.save_self_collision_matrix(
-                god_map.world.groups[self.group_name],
+                self.world.groups[self.group_name],
                 self.table.reasons,
                 self.table.disabled_link_prefix_names,
                 file_name=srdf_path,

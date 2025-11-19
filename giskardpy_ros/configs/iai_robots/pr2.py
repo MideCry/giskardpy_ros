@@ -1,20 +1,15 @@
 from dataclasses import dataclass
 
-from giskardpy.god_map import god_map
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from pkg_resources import resource_filename
+
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
-from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.pr2 import PR2
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
-    RevoluteConnection,
     ActiveConnection,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-
-from pkg_resources import resource_filename
-
 from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
 
 

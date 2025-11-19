@@ -3,16 +3,18 @@ from typing import Optional
 
 from py_trees.decorators import FailureIsSuccess
 
-from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
-from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
-
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy.god_map import god_map
-from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.ros_msg_visualization import (
+    ROSMsgVisualization,
+    DebugMarkerVisualizer,
+)
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
+from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
+from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
 from giskardpy_ros.utils.utils import is_in_github_workflow
 
 
@@ -21,7 +23,7 @@ class BehaviorTreeConfig:
     tree: GiskardBT = field(init=False)
     tree_tick_rate: float = 0.05
     debug_mode: bool = False
-    visualization_mode: VisualizationMode = VisualizationMode.CollisionsDecomposed
+    visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
 
     add_gantt_chart_plotter: bool = False
     add_goal_graph_plotter: bool = False
@@ -161,6 +163,9 @@ class BehaviorTreeConfig:
         """
         Publishes debug expressions defined in goals.
         """
+        GiskardBlackboard().debug_marker_visualizer = DebugMarkerVisualizer(
+            node_handle=rospy.node
+        )
         self.add_evaluate_debug_expressions()
         self.tree.control_loop_branch.publish_state.add_debug_marker_publisher()
 
@@ -179,12 +184,6 @@ class BehaviorTreeConfig:
         if GiskardBlackboard().tree_config.is_standalone():
             self.tree.control_loop_branch.publish_state.add_tf_publisher(
                 include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
-            )
-
-    def add_robot_description_publisher(self, topic: str = "robot_description"):
-        if GiskardBlackboard().tree_config.is_standalone():
-            self.tree.wait_for_goal.publish_state.add_robot_description_publisher(
-                topic=topic
             )
 
     def add_evaluate_debug_expressions(self):
@@ -249,7 +248,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     publish_free_variables: bool = False
     publish_tf: bool = True
     include_prefix: bool = False
-    publish_robot_description: bool = True
     visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
 
     def __post_init__(self):
@@ -272,8 +270,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
             self.add_tf_publisher(
                 include_prefix=self.include_prefix, mode=TfPublishingModes.all
             )
-        if self.publish_robot_description:
-            self.add_robot_description_publisher()
         self.add_evaluate_debug_expressions()
         if self.publish_js:
             self.add_js_publisher(include_prefix=self.include_prefix)

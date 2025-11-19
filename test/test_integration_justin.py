@@ -3,13 +3,14 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, PointStamped, Vector3Stamped
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
 
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.god_map import god_map
 from giskardpy_ros.configs.other_robots.justin import (
     WorldWithJustinConfig,
     JustinStandaloneInterface,
@@ -126,7 +127,7 @@ class JustinTestWrapper(GiskardTester):
         # self.r_gripper = rospy.ServiceProxy('r_gripper_simulator/set_joint_states', SetJointState)
         # self.l_gripper = rospy.ServiceProxy('l_gripper_simulator/set_joint_states', SetJointState)
         self.odom_root = "odom"
-        self.robot = god_map.world.groups[self.robot_name]
+        self.robot = GiskardBlackboard().executor.world.groups[self.robot_name]
 
     def reset(self):
         pass

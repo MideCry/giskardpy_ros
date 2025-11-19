@@ -8,7 +8,6 @@ from typing import Optional, Union, List, Dict, Any, Type
 
 import geometry_msgs.msg as geometry_msgs
 import giskard_msgs.msg as giskard_msgs
-import giskardpy.casadi_wrapper as cas
 import numpy as np
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
@@ -16,26 +15,6 @@ import tf2_msgs.msg as tf2_msgs
 import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
-from giskard_msgs.msg import GiskardError, MotionStatechartNode
-from giskardpy.data_types.data_types import JointStates, PrefixName, _JointState, ColorRGBA
-from giskardpy.model.joints import MovableJoint
-from giskardpy.model.links import LinkGeometry, Link, SphereGeometry, CylinderGeometry, BoxGeometry, MeshGeometry
-from giskardpy.model.world import WorldTree
-from rclpy.duration import Duration
-from rclpy.time import Time
-from rclpy_message_converter.message_converter import \
-    convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message, \
-    convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary
-from semantic_digital_twin.world_description.geometry import (
-    TriangleMesh, FileMesh,
-)
-
-from giskardpy.data_types.exceptions import GiskardException, CorruptShapeException, UnknownLinkException, \
-    UnknownJointException, UnknownGoalException
-from giskardpy.god_map import god_map
-from giskardpy.model.collision_world_syncer import CollisionEntry
-from giskardpy.model.trajectory import Trajectory
-from giskardpy.motion_statechart.goals.goal import Goal
 from random_events.utils import SubclassJSONSerializer
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -49,23 +28,22 @@ import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GiskardException,
     CorruptShapeException,
-    UnknownLinkException,
-    UnknownJointException,
     UnknownGoalException,
 )
-from giskardpy.god_map import god_map
-from giskardpy.model.collision_matrix_manager import CollisionViewRequest
+from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
-from giskardpy.motion_statechart.monitors.monitors import Monitor
-from giskardpy.motion_statechart.tasks.task import Task
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
-from giskardpy.motion_statechart.goals.goal import Goal
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
+from semantic_digital_twin.spatial_types.derivatives import Derivatives
+from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import ActiveConnection
+
+# from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (
     Shape,
     Box,
@@ -74,10 +52,9 @@ from semantic_digital_twin.world_description.geometry import (
     Mesh,
     Color,
     Scale,
+    TriangleMesh,
+    FileMesh,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.world_entity import (
     Body,
     KinematicStructureEntity,
@@ -376,7 +353,7 @@ def convert_dictionary_to_ros_message(json_data):
 
 
 def motion_statechart_node_to_ros_msg(
-    motion_graph_node: Union[Monitor, Task],
+    motion_graph_node,
 ) -> giskard_msgs.MotionStatechartNode:
     msg = giskard_msgs.MotionStatechartNode()
     msg.name = str(motion_graph_node.name)
@@ -507,8 +484,9 @@ def convert_ros_message_to_dictionary(message) -> dict:
 def msg_type_as_str(msg_type) -> str:
     type_str_parts = str(type(msg_type())).split(".")
     part1 = type_str_parts[0].split("'")[1]
-    part2 = type_str_parts[-1].split("'")[0]
-    return f"{part1}/{part2}"
+    part2 = type_str_parts[1]
+    part3 = type_str_parts[-1].split("'")[0]
+    return f"{part1}/{part2}/{part3}"
 
 
 def ros_msg_to_giskard_obj(msg, world: World):
@@ -528,18 +506,7 @@ def ros_msg_to_giskard_obj(msg, world: World):
         return collision_entry_msg_to_giskard(msg, world=world)
     elif isinstance(msg, giskard_msgs.GiskardError):
         return error_msg_to_exception(msg)
-    elif isinstance(msg, giskard_msgs.MotionStatechartNode):
-        return create_node(msg, world)
     return msg
-
-
-def create_node(
-    msg_node: giskard_msgs.MotionStatechartNode, world: World
-) -> MotionStatechartNode:
-    node_class = parse_node_class(msg_node)
-    parsed_kwargs = json_str_to_giskard_kwargs(msg_node.kwargs, world)
-    parsed_kwargs_and_replaced = convert_prefixed_name(node_class, parsed_kwargs, world)
-    return node_class(name=msg_node.name, **parsed_kwargs_and_replaced)
 
 
 def convert_prefixed_name(
@@ -594,21 +561,6 @@ def replace_str_prefixed_name(
             return world.get_kinematic_structure_entity_by_name(kwargs_value)
         elif issubclass(kwargs_type, Connection):
             return world.get_connection_by_name(kwargs_value)
-
-
-def parse_node_class(
-    msg_node: giskard_msgs.MotionStatechartNode,
-) -> Type[MotionStatechartNode]:
-    if msg_node.class_name in god_map.motion_statechart_manager.allowed_monitor_types:
-        return god_map.motion_statechart_manager.allowed_monitor_types[
-            msg_node.class_name
-        ]
-    elif msg_node.class_name in god_map.motion_statechart_manager.allowed_task_types:
-        return god_map.motion_statechart_manager.allowed_task_types[msg_node.class_name]
-    elif msg_node.class_name in god_map.motion_statechart_manager.allowed_goal_types:
-        return god_map.motion_statechart_manager.allowed_goal_types[msg_node.class_name]
-    else:
-        raise UnknownGoalException(f"unknown task type: '{msg_node.class_name}'.")
 
 
 def ros_joint_state_to_giskard_joint_state(
@@ -740,7 +692,7 @@ def quaternion_stamped_to_quaternion(
 
 def collision_entry_msg_to_giskard(
     msg: giskard_msgs.CollisionEntry, world: World
-) -> CollisionViewRequest:
+) -> CollisionRequest:
     if msg.distance == -1:
         distance = None
     else:
@@ -756,8 +708,11 @@ def collision_entry_msg_to_giskard(
     except WorldEntityNotFoundError as e:
         view2 = None
 
-    return CollisionViewRequest(
-        type_=msg.type, distance=distance, view1=view1, view2=view2
+    return CollisionRequest(
+        type_=msg.type,
+        distance=distance,
+        semantic_annotation1=view1,
+        semantic_annotation2=view2,
     )
 
 

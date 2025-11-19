@@ -11,7 +11,6 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.ros2_interface import (
     search_for_subscriber_of_node_with_type,
@@ -22,11 +21,15 @@ from giskardpy_ros.ros2.ros2_interface import (
 )
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
-from semantic_digital_twin.world_description.connections import OmniDrive, ActiveConnection
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.connections import (
+    OmniDrive,
+    ActiveConnection,
+)
+from semantic_digital_twin.world_description.world_entity import Connection
 
 
 class RobotInterfaceConfig(ABC):
@@ -38,11 +41,11 @@ class RobotInterfaceConfig(ABC):
 
     @property
     def world(self) -> World:
-        return god_map.world
+        return GiskardBlackboard().executor.world
 
     @property
     def robot(self) -> AbstractRobot:
-        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0]
+        return GiskardBlackboard().giskard.robot
 
     @property
     def tree(self) -> GiskardBT:
@@ -89,13 +92,13 @@ class RobotInterfaceConfig(ABC):
         Tell Giskard to sync the world state with a joint state topic
         """
         if group_name is None:
-            group_name = self.world.robot_name
+            group_name = self.robot.name
         self.tree.wait_for_goal.synchronization.sync_joint_state_topic(
             group_name=group_name, topic_name=topic_name
         )
         if (
             GiskardBlackboard().tree_config.is_closed_loop()
-            and group_name == self.world.robot_name
+            and group_name == self.robot.name
         ):
             self.tree.control_loop_branch.closed_loop_synchronization.sync_joint_state2_topic(
                 group_name=group_name, topic_name=topic_name
@@ -240,15 +243,21 @@ class RobotInterfaceConfig(ABC):
             namespaces
         )
 
-    def add_joint_velocity_group_controller(self, cmd_topic: str, joints: List[str]):
+    def add_joint_velocity_group_controller(
+        self, cmd_topic: str, connections: List[str]
+    ):
         """
-        For closed loop mode. Tell Giskard how it can send velocities for a group of joints.
+        For closed loop mode. Tell Giskard how it can send velocities for a group of connections.
         """
-        internal_joint_names: List[PrefixedName] = []
-        for i in range(len(joints)):
-            internal_joint_names.append(god_map.world.search_for_joint_name(joints[i]))
+        controlled_connections: List[Connection] = []
+        for i in range(len(connections)):
+            controlled_connections.append(
+                GiskardBlackboard().executor.world.get_connection_by_name(
+                    connections[i]
+                )
+            )
         self.tree.control_loop_branch.send_controls.add_joint_velocity_group_controllers(
-            cmd_topic=cmd_topic, joints=internal_joint_names
+            cmd_topic=cmd_topic, connections=controlled_connections
         )
 
 

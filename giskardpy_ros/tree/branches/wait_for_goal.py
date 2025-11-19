@@ -1,8 +1,7 @@
+from giskard_msgs.action import JsonAction
 from py_trees.composites import Sequence
 from py_trees.decorators import FailureIsSuccess
 
-from giskard_msgs.action import Move
-from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.goal_received import GoalReceived
@@ -21,7 +20,7 @@ class WaitForGoal(Sequence):
     def __init__(self, name: str = "wait for goal"):
         super().__init__(name, memory=True)
         GiskardBlackboard().move_action_server = ActionServerHandler(
-            action_name=f"{rospy.node.get_name()}/command", action_type=Move
+            action_name=f"{rospy.node.get_name()}/command", action_type=JsonAction
         )
         self.world_updater = UpdateWorld()
         self.world_updater_failure_is_success = FailureIsSuccess(

@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import (
     ExecutionException,
     FollowJointTrajectory_INVALID_JOINTS,
@@ -12,8 +11,8 @@ from giskardpy.data_types.exceptions import (
     ExecutionSucceededPrematurely,
     ExecutionPreemptedException,
 )
-from giskardpy.god_map import god_map
 from giskardpy_ros.ros2 import rospy
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
@@ -83,7 +82,7 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         if len(controlled_joint_names) == 0:
             raise ValueError(f"'{self.action_namespace}' has no joints")
 
-        for joint in god_map.world.joints.values():
+        for joint in GiskardBlackboard().executor.world.joints.values():
             if isinstance(joint, OneDofJoint):
                 if joint.free_variable.name in controlled_joint_names:
                     self.controlled_joints.append(joint)
@@ -99,7 +98,9 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
                 f"{self.action_namespace} provides the following joints "
                 f"that are not known to giskard: {controlled_joint_names}"
             )
-        god_map.world.register_controlled_joints(controlled_joint_names)
+        GiskardBlackboard().executor.world.register_controlled_joints(
+            controlled_joint_names
+        )
         controlled_joint_names = [j.name for j in self.controlled_joints]
         get_middleware().loginfo(
             f"Successfully connected to '{self.action_namespace}'."
@@ -107,20 +108,22 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         get_middleware().loginfo(
             f"Flagging the following joints as controlled: {controlled_joint_names}."
         )
-        god_map.world.register_controlled_joints(controlled_joint_names)
+        GiskardBlackboard().executor.world.register_controlled_joints(
+            controlled_joint_names
+        )
 
     @record_time
     def initialise(self):
         super().initialise()
-        trajectory = god_map.trajectory
+        trajectory = GiskardBlackboard().trajectory
         goal = FollowJointTrajectoryGoal()
-        start_time = god_map.motion_start_time
+        start_time = GiskardBlackboard().motion_start_time
         fill_velocity_values = GiskardBlackboard().fill_trajectory_velocity_values
         if fill_velocity_values is None:
             fill_velocity_values = self.fill_velocity_values
         goal.trajectory = msg_converter.trajectory_to_ros_trajectory(
             trajectory,
-            god_map.qp_controller.config.mpc_dt,
+            GiskardBlackboard().executor.qp_controller.config.mpc_dt,
             start_time,
             self.controlled_joints,
             fill_velocity_values,

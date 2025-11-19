@@ -1,4 +1,3 @@
-import threading
 from copy import deepcopy
 
 import numpy as np
@@ -11,10 +10,8 @@ from geometry_msgs.msg import (
     Vector3Stamped,
 )
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from giskardpy.god_map import god_map
 from giskardpy.model.world_config import WorldWithDiffDriveRobot
-from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
+from giskardpy.motion_statechart.data_types import DefaultWeights
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
@@ -23,8 +20,9 @@ from giskardpy.utils.math import (
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface
-from giskardpy_ros.ros2.ros2_interface import get_robot_description, load_urdf
+from giskardpy_ros.ros2.ros2_interface import load_urdf
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
 @pytest.fixture(scope="module")
@@ -354,7 +352,7 @@ class TestCollisionAvoidance:
             left_pose,
             tip_link=l_tcp,
             root_link=apartment_setup.default_root,
-            weight=WEIGHT_ABOVE_CA * 10,
+            weight=DefaultWeights.WEIGHT_ABOVE_CA * 10,
         )
         goal_point = PointStamped()
         goal_point.header.frame_id = "cabinet1_door_top_left"
@@ -364,7 +362,7 @@ class TestCollisionAvoidance:
         apartment_setup.execute()
 
         apartment_setup.set_diff_drive_tangential_to_point(
-            goal_point=goal_point, weight=WEIGHT_BELOW_CA
+            goal_point=goal_point, weight=DefaultWeights.WEIGHT_BELOW_CA
         )
         apartment_setup.api.motion_goals.add_cartesian_pose(
             left_pose, tip_link=l_tcp, root_link=apartment_setup.default_root
@@ -544,7 +542,7 @@ class TestCollisionAvoidance:
         )
         left_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
         apartment_setup.api.motion_goals.add_cartesian_pose(
-            left_pose, tip_link=tcp, root_link=god_map.world.root_link_name
+            left_pose, tip_link=tcp, root_link=apartment_setup.world.root_link_name
         )
         goal_point = PointStamped()
         goal_point.header.frame_id = "cabinet1_door_top_left"
@@ -691,7 +689,7 @@ class TestJointGoals:
         js1 = {"arm_right_5_joint": 3.0, "arm_left_5_joint": -3.0}
         # zero_pose.set_seed_configuration(start_state)
         default_pose_giskard.api.motion_goals.add_joint_position(
-            js1, weight=WEIGHT_ABOVE_CA
+            js1, weight=DefaultWeights.WEIGHT_ABOVE_CA
         )
         default_pose_giskard.api.motion_goals.allow_all_collisions()
         default_pose_giskard.execute()
@@ -731,7 +729,7 @@ class TestJointGoals:
         default_pose_giskard.api.monitors.add_set_seed_configuration(
             seed_configuration=js
         )
-        god_map.world.state[
+        default_pose_giskard.world.state[
             PrefixedName("arm_right_5_joint", "tiago_dual")
         ].velocity = 1
         # zero_pose.world.state[PrefixedName('arm_left_5_joint', 'tiago_dual')].velocity = -1
@@ -747,7 +745,7 @@ class TestJointGoals:
             seed_configuration=js
         )
         default_pose_giskard.api.motion_goals.add_joint_position(js)
-        god_map.world.state[
+        default_pose_giskard.world.state[
             PrefixedName("arm_right_5_joint", "tiago_dual")
         ].velocity = 1
         default_pose_giskard.api.motion_goals.allow_all_collisions()

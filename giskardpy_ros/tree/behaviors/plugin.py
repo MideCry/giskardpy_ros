@@ -4,9 +4,12 @@ from typing import Optional
 from py_trees.behaviour import Behaviour
 
 import giskardpy_ros.ros2.tfwrapper as tf
-from giskardpy.god_map import god_map
-from giskardpy_ros.tree.blackboard_utils import has_blackboard_exception, get_blackboard_exception, \
-    clear_blackboard_exception, GiskardBlackboard
+from giskardpy_ros.tree.blackboard_utils import (
+    has_blackboard_exception,
+    get_blackboard_exception,
+    clear_blackboard_exception,
+    GiskardBlackboard,
+)
 
 
 class GiskardBehavior(Behaviour):
@@ -17,7 +20,7 @@ class GiskardBehavior(Behaviour):
         super().__init__(name)
 
     def __str__(self):
-        return f'{self.__class__.__name__}'
+        return f"{self.__class__.__name__}"
 
     def __copy__(self):
         return type(self)(self.name)
@@ -27,7 +30,7 @@ class GiskardBehavior(Behaviour):
 
     @staticmethod
     def raise_to_blackboard(exception):
-        GiskardBlackboard().set('exception', exception)
+        GiskardBlackboard().set("exception", exception)
 
     @staticmethod
     def get_blackboard():
@@ -47,6 +50,8 @@ class GiskardBehavior(Behaviour):
 
     def transform_msg(self, target_frame, msg, timeout=1):
         try:
-            return god_map.world.transform(target_frame=target_frame, spatial_object=msg)
+            return GiskardBlackboard().executor.world.transform(
+                target_frame=target_frame, spatial_object=msg
+            )
         except KeyError as e:
             return tf.transform_msg(target_frame, msg, timeout=timeout)

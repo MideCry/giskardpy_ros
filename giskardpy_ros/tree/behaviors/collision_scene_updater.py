@@ -1,13 +1,11 @@
-from typing import Optional
-
-from line_profiler import profile
 from py_trees.common import Status
 
-from giskardpy.god_map import god_map
-from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.tree.blackboard_utils import catch_and_raise_to_blackboard
-from line_profiler import profile
+from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
+from giskardpy_ros.tree.blackboard_utils import (
+    catch_and_raise_to_blackboard,
+    GiskardBlackboard,
+)
 
 
 class CollisionSceneUpdater(GiskardBehavior):
@@ -17,5 +15,5 @@ class CollisionSceneUpdater(GiskardBehavior):
     @catch_and_raise_to_blackboard(skip_on_exception=False)
     @record_time
     def update(self):
-        god_map.collision_scene.sync()
+        GiskardBlackboard().executor.collision_scene.sync()
         return Status.SUCCESS

@@ -1,29 +1,21 @@
 from __future__ import division
-import hashlib
 
-# I only do this, because otherwise test/test_integration_pr2.py::TestWorldManipulation::test_unsupported_options
-# fails on github actions
-import urdf_parser_py.urdf as up
-
-import errno
-import inspect
-import json
 import os
-import pkgutil
-import sys
-from contextlib import contextmanager
-from functools import cached_property
-from typing import Type, Optional, Dict, Any
 
 import xacro
+from giskard_msgs.msg import WorldBody
 from shape_msgs.msg import SolidPrimitive
 
-from giskard_msgs.msg import WorldBody
-from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 
 
-def make_world_body_box(x_length: float = 1, y_length: float = 1, z_length: float = 1) -> WorldBody:
+# I only do this, because otherwise test/test_integration_pr2.py::TestWorldManipulation::test_unsupported_options
+# fails on github actions
+
+
+def make_world_body_box(
+    x_length: float = 1, y_length: float = 1, z_length: float = 1
+) -> WorldBody:
     box = WorldBody()
     box.type = WorldBody.PRIMITIVE_BODY
     box.shape.type = SolidPrimitive.BOX
@@ -60,8 +52,9 @@ def make_urdf_world_body(name, urdf):
 
 def load_xacro(path: str) -> str:
     path = get_middleware().resolve_iri(path)
-    doc = xacro.process_file(path, mappings={'radius': '0.9'})
-    return doc.toprettyxml(indent='  ')
+    doc = xacro.process_file(path, mappings={"radius": "0.9"})
+    return doc.toprettyxml(indent="  ")
+
 
 def is_in_github_workflow():
-    return 'GITHUB_WORKFLOW' in os.environ
+    return "GITHUB_WORKFLOW" in os.environ
