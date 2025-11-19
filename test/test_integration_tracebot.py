@@ -6,7 +6,7 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.iai_robots.tracy import (
     TracyStandAloneRobotInterfaceConfig,
-    TracyWorldConfig,
+    # TracyWorldConfig,
 )
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
