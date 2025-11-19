@@ -25,9 +25,7 @@ class SetMoveResult(GiskardBehavior):
             move_result = JsonAction.Result()
             GiskardBlackboard().move_action_server.set_succeeded()
         else:
-            move_result = JsonAction.Result(
-                error=msg_converter.exception_to_error_msg(e)
-            )
+            move_result = JsonAction.Result()
             GiskardBlackboard().move_action_server.set_aborted()
 
         # trajectory = god_map.trajectory
