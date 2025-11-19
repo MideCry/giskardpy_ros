@@ -2,4 +2,4 @@ repositories:
   giskard_msgs:
     type: git
     url: 'https://github.com/SemRoCo/giskard_msgs.git'
-    version: ros2-jazzy-main
+    version: ros2-semantic_world_integration

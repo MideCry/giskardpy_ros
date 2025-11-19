@@ -51,15 +51,4 @@ RUN workon giskardpy && \
     python3 -m pip install --upgrade pip && \
     pip3 install -r requirements.txt
 
-# Install qpSWIFT
-RUN workon giskardpy &&  \
-    pip3 install pybind11 && \
-    cd ~ && \
-    git clone https://github.com/SemRoCo/qpSWIFT && \
-    cd qpSWIFT && \
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build --config Release && \
-    cmake --build build --target install && \
-    cd python && \
-    pip3 install .
 
