@@ -175,10 +175,10 @@ class GiskardTester(ABC):
                 "Inside github workflow, turning off visualization"
             )
             GiskardBlackboard().tree.turn_off_visualization()
-        if "QP_SOLVER" in os.environ:
-            GiskardBlackboard().executor.qp_controller.set_qp_solver(
-                SupportedQPSolver[os.environ["QP_SOLVER"]]
-            )
+        # if "QP_SOLVER" in os.environ:
+        #     god_map.qp_controller.set_qp_solver(
+        #         SupportedQPSolver[os.environ["QP_SOLVER"]]
+        #     )
         self.robot_names = [
             v.name
             for v in GiskardBlackboard().executor.world.get_semantic_annotations_by_type(

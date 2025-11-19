@@ -25,7 +25,9 @@ RUN apt-get install -y \
             git-all \
             cmake \
             sudo \
-            pkg-config
+            pkg-config \
+            graphviz \
+            graphviz-dev
 
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc && \
     echo "source /usr/share/colcon_cd/function/colcon_cd.sh" >> ~/.bashrc
@@ -37,7 +39,7 @@ RUN mkdir -p $WORKON_HOME && \
     echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> ~/.bashrc
 # mkvirtualenv returns exit 1, but works fine \
 # so overwriting with exit 0, so this step doesn't fail
-RUN mkvirtualenv giskardpy --system-site-packages; exit 0
+RUN mkvirtualenv -p /usr/bin/python3.12 giskardpy --system-site-packages; exit 0
 RUN echo "source /root/venvs/giskardpy/bin/activate" >> ~/.bashrc
 
 # Download python-requirements
@@ -61,10 +63,3 @@ RUN workon giskardpy &&  \
     cd python && \
     pip3 install .
 
-# Install betterpybullet
-RUN workon giskardpy && \
-    mkdir -p ~/bpb && \
-    cd ~/bpb && \
-    git clone -b jazzy https://github.com/SemRoCo/bullet3.git && \
-    cd bullet3 && \
-    ./build_better_pybullet.sh \
