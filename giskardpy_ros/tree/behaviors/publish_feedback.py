@@ -36,7 +36,7 @@ class PublishFeedback(GiskardBehavior):
         if self.has_new_goal():
             self.last_goal_id = self.move_action_server.goal_id
             data["motion_statechart"] = (
-                GiskardBlackboard().motion_statechart.create_compressed_copy().to_json()
+                GiskardBlackboard().motion_statechart.create_structure_copy().to_json()
             )
         data["goal_id"] = self.last_goal_id
 
