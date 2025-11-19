@@ -1,7 +1,6 @@
 from py_trees.decorators import FailureIsRunning, SuccessIsRunning
 
 from giskardpy.utils.decorators import toggle_on, toggle_off
-from giskardpy_ros.tree.behaviors.collision_checker import CollisionChecker
 from giskardpy_ros.tree.behaviors.goal_canceled import GoalCanceled
 from giskardpy_ros.tree.behaviors.instantaneous_controller import ControllerPlugin
 from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
@@ -59,9 +58,6 @@ class ControlLoop(AsyncBehavior):
             ),
             success_is_running=False,
         )
-
-        if GiskardBlackboard().executor.collision_scene.is_collision_checking_enabled():
-            self.add_child(CollisionChecker("collision checker"))
 
         self.controller_plugin = ControllerPlugin("controller")
         self.add_child(self.controller_plugin, success_is_running=False)
