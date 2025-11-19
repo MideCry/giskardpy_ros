@@ -52,6 +52,8 @@ from semantic_digital_twin.world_description.geometry import (
     Mesh,
     Color,
     Scale,
+    TriangleMesh,
+    FileMesh,
 )
 from semantic_digital_twin.world_description.world_entity import (
     Body,
@@ -156,7 +158,9 @@ def link_geometry_mesh_to_visualization_marker(
     marker.type = visualization_msgs.Marker.MESH_RESOURCE
     if mode.is_collision_decomposed():
         marker.mesh_resource = "file://" + data.collision_file_name_absolute
-    else:
+    elif isinstance(data, TriangleMesh):
+        marker.mesh_resource = "file://" + data.file.name
+    elif isinstance(data, FileMesh):
         marker.mesh_resource = "file://" + data.filename
     marker.scale.x = data.scale.x
     marker.scale.y = data.scale.y

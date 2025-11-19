@@ -345,11 +345,10 @@ class TestJointGoals:
         }
         msc = MotionStatechart()
         joint_goal = JointPositionList(
-            name=PrefixedName("joint_goal"),
             goal_state=JointState.from_str_dict(js, giskard.api.world),
         )
         msc.add_node(joint_goal)
-        end = EndMotion(name=PrefixedName("end"))
+        end = EndMotion()
         msc.add_node(end)
         end.start_condition = joint_goal.observation_variable
         giskard.api.execute(msc)
@@ -1609,7 +1608,9 @@ class TestConstraints:
         giskard.api.motion_goals.allow_all_collisions()
         giskard.execute(expected_error_type=EmptyProblemException, local_min_end=False)
 
-    @pytest.mark.skip(reason="types of better pose do not fit with validated dataclass types")
+    @pytest.mark.skip(
+        reason="types of better pose do not fit with validated dataclass types"
+    )
     def test_add_debug_expr(self, giskard: PR2Tester, better_pose):
         giskard.api.motion_goals.add_motion_goal(
             class_name=DebugGoal.__name__, name="goal"
@@ -1758,7 +1759,9 @@ class TestConstraints:
         new_pose = giskard.compute_fk_pose("map", tip)
         compare_points(expected.pose.position, new_pose.pose.position)
 
-    @pytest.mark.skip(reason="RevoluteConnection object has no attribute joint_position_expression")
+    @pytest.mark.skip(
+        reason="RevoluteConnection object has no attribute joint_position_expression"
+    )
     def test_JointVelocityRevolute(self, giskard: PR2Tester):
         joint = giskard.api.world.get_connection_by_name("r_shoulder_lift_joint").name
         vel_limit = 0.4
@@ -2977,13 +2980,12 @@ class TestCartGoals:
 
         msc = MotionStatechart()
         cart_goal = CartesianPose(
-            name=PrefixedName("cart_goal"),
             root_link=root,
             tip_link=tip,
             goal_pose=tip_goal,
         )
         msc.add_node(cart_goal)
-        end = EndMotion(name=PrefixedName("end"))
+        end = EndMotion()
         msc.add_node(end)
         end.start_condition = cart_goal.observation_variable
         giskard.api.execute(msc)
