@@ -20,9 +20,6 @@ if TYPE_CHECKING:
 
 class TracyVelocityInterface(RobotInterfaceConfig):
 
-    def __init__(self, controller_manager_name: str = 'controller_manager'):
-        self.controller_manager_name = controller_manager_name
-
     def setup(self):
         self.sync_joint_state_topic('/left_arm/joint_states')
         self.sync_joint_state_topic('/right_arm/joint_states')
