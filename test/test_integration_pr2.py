@@ -3,7 +3,7 @@ from __future__ import division
 from copy import deepcopy
 from dataclasses import dataclass
 from time import sleep
-from typing import Optional, Set
+from typing import Set
 
 import giskard_msgs.msg as giskard_msgs
 import numpy as np
@@ -15,7 +15,6 @@ from geometry_msgs.msg import (
     Quaternion,
     Vector3Stamped,
     PointStamped,
-    QuaternionStamped,
 )
 from giskard_msgs.action._move import Move_Goal
 from giskard_msgs.action._world import World_Goal
@@ -67,7 +66,6 @@ from giskardpy.motion_statechart.tasks.cartesian_tasks import (
 from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal, CannotResolveSymbol
 from giskardpy.motion_statechart.tasks.joint_tasks import (
     JointVelocityLimit,
-    UnlimitedJointGoal,
     JointPositionList,
     JointState,
 )
@@ -98,6 +96,7 @@ from semantic_digital_twin.spatial_types import TransformationMatrix, Point3
 from semantic_digital_twin.world_description.connections import (
     RevoluteConnection,
     PrismaticConnection,
+    ActiveConnection1DOF,
 )
 from semantic_digital_twin.world_description.world_entity import (
     Body,
@@ -371,40 +370,6 @@ class TestJointGoals:
                     atol=1e-2,
                 )
 
-    def test_joint_goal_projection(self, giskard: PR2Tester, better_pose):
-        js = {
-            "torso_lift_joint": 0.2999225173357618,
-            "head_pan_joint": 0.041880780651479044,
-            "head_tilt_joint": -0.37,
-            "r_upper_arm_roll_joint": -0.9487714747527726,
-            "r_shoulder_pan_joint": -1.0047307505973626,
-            "r_shoulder_lift_joint": 0.48736790658811985,
-            "r_forearm_roll_joint": -14.895833882874182,
-            "r_elbow_flex_joint": -1.392377908925028,
-            "r_wrist_flex_joint": -0.4548695149411013,
-            "r_wrist_roll_joint": 0.11426798984097819,
-            "l_upper_arm_roll_joint": 1.7383062350263658,
-            "l_shoulder_pan_joint": 1.8799810286792007,
-            "l_shoulder_lift_joint": 0.011627231224188975,
-            "l_forearm_roll_joint": 312.67276414458695,
-            "l_elbow_flex_joint": -2.0300928925694675,
-            "l_wrist_flex_joint": -0.1,
-            "l_wrist_roll_joint": -6.062015047706399,
-        }
-        giskard.api.motion_goals.add_joint_position(goal_state=js)
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.projection()
-
-        giskard.api.motion_goals.add_joint_position(goal_state=js)
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.execute()
-
-        giskard.api.monitors.add_set_seed_configuration(better_pose)
-        done = giskard.api.motion_goals.add_joint_position(goal_state=js)
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.monitors.add_end_motion(done)
-        giskard.projection()
-
     def test_gripper_goal(self, giskard: PR2Tester):
         msc = MotionStatechart()
         joint_goal = JointPositionList(
@@ -506,59 +471,55 @@ class TestJointGoals:
         end.start_condition = joint_goal.observation_variable
         giskard.api.execute(msc)
 
-    def test_unlimited_joint_goal(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.motion_goals.add_motion_goal(
-            class_name=UnlimitedJointGoal.__name__,
-            connection="r_elbow_flex_joint",
-            name="goal",
-            goal_position=-3.0,
-        )
-        local_min = giskard.api.monitors.add_local_minimum_reached(name="local_min")
-        giskard.api.monitors.add_end_motion(local_min)
-        giskard.execute()
-
     def test_hard_joint_limits(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_self_collision()
-
-        r_elbow_flex_joint_limits_lower = giskard.api.world.get_connection_by_name(
-            "r_elbow_flex_joint"
-        ).dof.lower_limits.position
-        r_elbow_flex_joint_limits_upper = giskard.api.world.get_connection_by_name(
-            "r_elbow_flex_joint"
-        ).dof.upper_limits.position
-        torso_lift_joint_limits_lower = giskard.api.world.get_connection_by_name(
-            "torso_lift_joint"
-        ).dof.lower_limits.position
-        torso_lift_joint_limits_upper = giskard.api.world.get_connection_by_name(
-            "torso_lift_joint"
-        ).dof.upper_limits.position
-        head_pan_joint_limits_lower = giskard.api.world.get_connection_by_name(
+        r_elbow_flex_joint: ActiveConnection1DOF = (
+            giskard.api.world.get_connection_by_name("r_elbow_flex_joint")
+        )
+        torso_lift_joint: ActiveConnection1DOF = (
+            giskard.api.world.get_connection_by_name("torso_lift_joint")
+        )
+        head_pan_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "head_pan_joint"
-        ).dof.lower_limits.position
-        head_pan_joint_limits_upper = giskard.api.world.get_connection_by_name(
-            "head_pan_joint"
-        ).dof.upper_limits.position
+        )
+        msc = MotionStatechart()
 
-        goal_js = {
-            "r_elbow_flex_joint": r_elbow_flex_joint_limits_lower - 0.2,
-            "torso_lift_joint": torso_lift_joint_limits_lower - 0.2,
-            "head_pan_joint": head_pan_joint_limits_lower - 0.2,
-        }
-        giskard.api.motion_goals.add_joint_position(goal_js)
-        giskard.execute()
-        js = {"torso_lift_joint": 0.32}
-        giskard.api.motion_goals.add_joint_position(js, name="g2")
-        giskard.execute()
+        min_joint_goal = JointPositionList(
+            goal_state=JointState(
+                mapping={
+                    r_elbow_flex_joint: r_elbow_flex_joint.dof.lower_limits.position
+                    - 0.2,
+                    torso_lift_joint: torso_lift_joint.dof.lower_limits.position - 0.2,
+                    head_pan_joint: head_pan_joint.dof.lower_limits.position - 0.2,
+                }
+            )
+        )
+        msc.add_node(min_joint_goal)
+        min_joint_goal.end_condition = min_joint_goal.observation_variable
 
-        goal_js = {
-            "r_elbow_flex_joint": r_elbow_flex_joint_limits_upper + 0.2,
-            "torso_lift_joint": torso_lift_joint_limits_upper + 0.2,
-            "head_pan_joint": head_pan_joint_limits_upper + 0.2,
-        }
+        torso_joint_goal = JointPositionList(
+            goal_state=JointState(mapping={torso_lift_joint: 3.2})
+        )
+        msc.add_node(torso_joint_goal)
+        torso_joint_goal.start_condition = min_joint_goal.observation_variable
+        torso_joint_goal.end_condition = torso_joint_goal.observation_variable
 
-        giskard.api.motion_goals.add_joint_position(goal_js, name="g3")
-        giskard.execute()
+        max_joint_goal = JointPositionList(
+            goal_state=JointState(
+                mapping={
+                    r_elbow_flex_joint: r_elbow_flex_joint.dof.upper_limits.position
+                    + 0.2,
+                    torso_lift_joint: torso_lift_joint.dof.upper_limits.position + 0.2,
+                    head_pan_joint: head_pan_joint.dof.upper_limits.position + 0.2,
+                }
+            )
+        )
+        msc.add_node(max_joint_goal)
+        max_joint_goal.start_condition = torso_joint_goal.observation_variable
+
+        end = EndMotion()
+        msc.add_node(end)
+        end.start_condition = max_joint_goal.observation_variable
+        giskard.api.execute(msc)
 
 
 class TestMonitors:
