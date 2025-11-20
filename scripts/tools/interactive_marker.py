@@ -6,7 +6,10 @@ from rclpy import Parameter
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 from visualization_msgs.msg import InteractiveMarkerFeedback
 
+from giskardpy.model.collision_matrix_manager import CollisionRequest
+from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.graph_node import EndMotion
+from giskardpy.motion_statechart.monitors.payload_monitors import CountSeconds
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy_ros.python_interface.python_interface import (
@@ -16,6 +19,7 @@ from giskardpy_ros.ros2 import rospy
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.spatial_types import TransformationMatrix
+import semantic_digital_twin.spatial_types.spatial_types as cas
 
 
 class InteractiveMarkerNode:
@@ -181,9 +185,16 @@ class InteractiveMarkerNode:
                 goal_pose=goal,
             )
             msc.add_node(cart_goal)
+            max_traj = CountSeconds(seconds=20)
+            msc.add_node(max_traj)
+            collision_avoidance = CollisionAvoidance(
+                collision_entries=[CollisionRequest.avoid_all_collision()],
+            )
+            msc.add_node(collision_avoidance)
             end = EndMotion()
             msc.add_node(end)
-            end.start_condition = cart_goal.observation_variable
+            # end.start_condition = cart_goal.observation_variable
+            end.start_condition = cas.trinary_logic_or(cart_goal.observation_variable, max_traj.observation_variable)
             self.giskard.execute_async(msc)
 
             # reset marker pose
