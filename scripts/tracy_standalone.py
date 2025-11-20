@@ -1,3 +1,4 @@
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy_ros.ros2 import rospy
 from rclpy import Parameter
 
@@ -25,7 +26,8 @@ def main():
         behavior_tree_config=StandAloneBTConfig(
             publish_tf=True, publish_js=False, debug_mode=True
         ),
-        qp_controller_config=QPControllerConfig(control_dt=None, mpc_dt=0.05),
+        qp_controller_config=QPControllerConfig(control_dt=0.03, mpc_dt=0.03),
+        collision_checker_id=CollisionCheckerLib.bpb
     )
     giskard.live()
 

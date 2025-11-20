@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
+from pkg_resources import resource_filename
 
 from giskardpy.model.world_config import WorldWithFixedRobot
 from giskardpy_ros.configs.robot_interface_config import (
@@ -8,9 +9,41 @@ from giskardpy_ros.configs.robot_interface_config import (
     StandAloneRobotInterfaceConfig,
 )
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.robots.tracy import Tracy
 from semantic_digital_twin.adapters.urdf import URDFParser
+from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
+
+if TYPE_CHECKING:
+    from semantic_digital_twin.world import World
+
+class TracyVelocityInterface(RobotInterfaceConfig):
+
+    def __init__(self, controller_manager_name: str = 'controller_manager'):
+        self.controller_manager_name = controller_manager_name
+
+    def setup(self):
+        self.sync_joint_state_topic('/left_arm/joint_states')
+        self.sync_joint_state_topic('/right_arm/joint_states')
+        self.sync_joint_state_topic('/right_gripper/joint_states')
+        self.sync_joint_state_topic('/left_gripper/joint_states')
+        joints_left = ['left_shoulder_pan_joint',
+                       'left_shoulder_lift_joint',
+                       'left_elbow_joint',
+                       'left_wrist_1_joint',
+                       'left_wrist_2_joint',
+                       'left_wrist_3_joint']
+        self.add_joint_velocity_group_controller(cmd_topic='/left_arm/forward_velocity_controller/commands',
+                                                 connections=joints_left)
+        joints_right = ['right_shoulder_pan_joint',
+                        'right_shoulder_lift_joint',
+                        'right_elbow_joint',
+                        'right_wrist_1_joint',
+                        'right_wrist_2_joint',
+                        'right_wrist_3_joint']
+        self.add_joint_velocity_group_controller(cmd_topic='/right_arm/forward_velocity_controller/commands',
+                                                 connections=joints_right)
 
 
 class WorldWithTracyConfig(WorldWithFixedRobot):
@@ -20,20 +53,28 @@ class WorldWithTracyConfig(WorldWithFixedRobot):
     - Accepts URDF via argument; if not provided, reads from ROS parameter server
     - Applies conservative default motion limits
     """
-
-    def setup_collision_config(self):
-        pass
-
-    def __init__(self, urdf: Optional[str] = None, map_name: str = "map"):
+    def __init__(self, urdf: Optional[str] = None):
         super().__init__(
-            urdf=urdf, map_name=map_name
+            urdf=urdf,
+            root_name=PrefixedName("map2"),
+            urdf_view=Tracy
         )
 
+    def setup_collision_config(self):
+        path_to_srdf = resource_filename(
+            "giskardpy", "../self_collision_matrices/iai/tracy.srdf"
+        )
+        self.world.load_collision_srdf(path_to_srdf)
+
+        for body in self.robot.bodies_with_collisions:
+            collision_config = CollisionCheckingConfig(
+                buffer_zone_distance=0.03, violated_distance=0.0
+            )
+            body.set_static_collision_config(collision_config)
+
     def setup_world(self, robot_name: Optional[str] = None) -> None:
-        urdf_parser = URDFParser(urdf=self.urdf)
-        world_with_robot = urdf_parser.parse()
-        self.world = world_with_robot
-        self.tracy = Tracy.from_world(world=self.world)
+        super().setup_world()
+        self.robot = self.world.get_semantic_annotations_by_type(Tracy)[0]
 
 
 # class TracyCollisionAvoidanceConfig(LoadSelfCollisionMatrixConfig):
