@@ -2983,29 +2983,39 @@ class TestCartGoals:
         )
 
     def test_10_cart_goals(self, giskard: PR2Tester):
-        p1 = PoseStamped()
-        p1.header.stamp = rospy.node.get_clock().now().to_msg()
-        p1.header.frame_id = giskard.r_tip
-        p1.pose.position.x = -0.2
-        p1.pose.orientation.w = 1.0
-        p2 = PoseStamped()
-        p2.header.stamp = rospy.node.get_clock().now().to_msg()
-        p2.header.frame_id = giskard.r_tip
-        p2.pose.position.x = 0.2
-        p2.pose.orientation.w = 1.0
+        tip = giskard.api.world.get_kinematic_structure_entity_by_name(
+            "r_gripper_tool_frame"
+        )
+        root = giskard.api.world.get_kinematic_structure_entity_by_name(
+            "base_footprint"
+        )
+        p1 = TransformationMatrix.from_xyz_quaternion(pos_x=-0.2, reference_frame=tip)
+        p2 = TransformationMatrix.from_xyz_quaternion(pos_x=0.2, reference_frame=tip)
 
         for i in range(5):
-            giskard.api.motion_goals.allow_all_collisions()
-            giskard.api.motion_goals.add_cartesian_pose(
-                p1, giskard.r_tip, "base_footprint"
+            msc = MotionStatechart()
+            cart_goal = CartesianPose(
+                root_link=root,
+                tip_link=tip,
+                goal_pose=p1,
             )
-            giskard.execute()
+            msc.add_node(cart_goal)
+            end = EndMotion()
+            msc.add_node(end)
+            end.start_condition = cart_goal.observation_variable
+            giskard.api.execute(msc)
 
-            giskard.api.motion_goals.allow_all_collisions()
-            giskard.api.motion_goals.add_cartesian_pose(
-                p2, giskard.r_tip, "base_footprint"
+            msc = MotionStatechart()
+            cart_goal = CartesianPose(
+                root_link=root,
+                tip_link=tip,
+                goal_pose=p2,
             )
-            giskard.execute()
+            msc.add_node(cart_goal)
+            end = EndMotion()
+            msc.add_node(end)
+            end.start_condition = cart_goal.observation_variable
+            giskard.api.execute(msc)
 
     def test_cart_goal_unreachable(self, giskard: PR2Tester):
         p = PoseStamped()
