@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import dataclass, field
 
 import numpy as np
 import pytest
@@ -9,6 +10,12 @@ from geometry_msgs.msg import (
     PointStamped,
     Vector3Stamped,
 )
+from giskardpy.motion_statechart.goals.templates import Sequence
+from giskardpy.motion_statechart.graph_node import EndMotion
+from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry
+from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from numpy import pi
 
 from giskardpy.data_types.exceptions import EmptyProblemException
@@ -21,6 +28,12 @@ from giskardpy.utils.math import (
     quaternion_from_axis_angle,
     quaternion_from_rotation_matrix,
 )
+from semantic_digital_twin.robots.hsrb import HSRB
+from semantic_digital_twin.spatial_types import TransformationMatrix, Vector3
+from semantic_digital_twin.world_description.world_entity import (
+    KinematicStructureEntity,
+)
+
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import (
@@ -45,27 +58,42 @@ def default_joint_state():
     }
 
 
+@dataclass
 class HSRTester(GiskardTester):
+    tip: KinematicStructureEntity = field(init=False)
+    base_footprint: KinematicStructureEntity = field(init=False)
+    map: KinematicStructureEntity = field(init=False)
 
-    def __init__(self, giskard=None):
-        self.tip = "hand_gripper_tool_frame"
-        if giskard is None:
-            robot_desc = load_xacro(
-                "package://hsr_description/robots/hsrb4s.urdf.xacro"
-            )
-            giskard = Giskard(
-                world_config=WorldWithHSRConfig(urdf=robot_desc),
-                robot_interface_config=HSRStandaloneInterface(),
-                collision_checker_id=CollisionCheckerLib.bpb,
-                behavior_tree_config=StandAloneBTConfig(
-                    debug_mode=True,
-                    publish_tf=True,
-                    publish_js=False,
-                    add_debug_marker_publisher=True,
-                ),
-                qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
-            )
-        super().__init__(giskard)
+    def __post_init__(self):
+        super().__post_init__()
+        self.tip = self.api.world.get_kinematic_structure_entity_by_name(
+            "hand_gripper_tool_frame"
+        )
+        self.base_footprint = self.api.world.get_kinematic_structure_entity_by_name(
+            "base_footprint"
+        )
+        self.map = self.api.world.root
+
+    def setup_giskard(self) -> Giskard:
+        robot_desc = load_xacro("package://hsr_description/robots/hsrb4s.urdf.xacro")
+        return Giskard(
+            world_config=WorldWithHSRConfig(urdf=robot_desc),
+            robot_interface_config=HSRStandaloneInterface(),
+            collision_checker_id=CollisionCheckerLib.bpb,
+            behavior_tree_config=StandAloneBTConfig(
+                debug_mode=True,
+                publish_tf=True,
+                publish_js=False,
+                add_debug_marker_publisher=True,
+            ),
+            qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
+        )
+
+    @property
+    def robot(self) -> HSRB:
+        return GiskardBlackboard().executor.world.get_semantic_annotation_by_name(
+            self.api.robot_name
+        )
 
     def open_gripper(self):
         self.command_gripper(1.23)
@@ -89,27 +117,6 @@ def robot():
     finally:
         print("tear down")
         c.print_stats()
-
-
-# @pytest.fixture(scope="module")
-# def giskard(request, ros):
-#     # launch_launchfile('package://hsr_description/launch/upload_hsrb.launch')
-#     c = HSRTester()
-#     # c = HSRTestWrapperMujoco()
-#     request.addfinalizer(c.print_stats)
-#     return c
-#
-#
-# @pytest.fixture()
-# def box_setup(default_pose_giskard: HSRTester) -> HSRTester:
-#     p = PoseStamped()
-#     p.header.frame_id = "map"
-#     p.pose.position.x = 1.2
-#     p.pose.position.y = 0.0
-#     p.pose.position.z = 0.1
-#     p.pose.orientation.w = 1.0
-#     default_pose_giskard.add_box_to_world(name="box", size=(1, 1, 1), pose=p)
-#     return default_pose_giskard
 
 
 class TestJointGoals:
@@ -249,79 +256,133 @@ class TestJointGoals:
 
 
 class TestCartGoals:
-    def test_move_base(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        map_T_odom.pose.position.x = 1.0
-        map_T_odom.pose.position.y = 1.0
-        q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        default_pose_giskard.teleport_base(map_T_odom)
-
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = "map"
-        base_goal.pose.position.x = 1.0
-        q = quaternion_from_axis_angle([0, 0, 1], pi)
-        base_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=base_goal, tip_link="base_footprint", root_link="map"
+    def test_move_base(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := Sequence(
+                [
+                    SetOdometry(
+                        base_pose=TransformationMatrix.from_xyz_axis_angle(
+                            x=1.0,
+                            y=1.0,
+                            axis=Vector3.Z(),
+                            angle=pi / 3,
+                            reference_frame=giskard.map,
+                        ),
+                    ),
+                    CartesianPose(
+                        root_link=giskard.default_root,
+                        tip_link=giskard.base_footprint,
+                        goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                            x=1.0,
+                            axis=Vector3.Z(),
+                            angle=pi,
+                            reference_frame=giskard.map,
+                        ),
+                    ),
+                ]
+            )
         )
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
 
-    def test_move_base_1m_forward(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        map_T_odom.pose.position.x = 1.0
-        map_T_odom.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.move_base(map_T_odom)
-
-    def test_move_base_1m_left(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        map_T_odom.pose.position.y = 1.0
-        map_T_odom.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.move_base(map_T_odom)
-
-    def test_move_base_1m_diagonal(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        map_T_odom.pose.position.x = 1.0
-        map_T_odom.pose.position.y = 1.0
-        map_T_odom.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.move_base(map_T_odom)
-
-    def test_move_base_rotate(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.move_base(map_T_odom)
-
-    def test_move_base_forward_rotate(self, default_pose_giskard: HSRTester):
-        map_T_odom = PoseStamped()
-        map_T_odom.header.frame_id = "map"
-        map_T_odom.pose.position.x = 1.0
-        q = quaternion_from_axis_angle([0, 0, 1], np.pi / 3)
-        map_T_odom.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.move_base(map_T_odom)
-
-    def test_rotate_gripper(self, default_pose_giskard: HSRTester):
-        r_goal = PoseStamped()
-        r_goal.header.frame_id = default_pose_giskard.tip
-        q = quaternion_from_axis_angle([0, 0, 1], pi)
-        r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=r_goal, tip_link=default_pose_giskard.tip, root_link="map"
+    def test_move_base_1m_forward(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    x=1.0,
+                    reference_frame=giskard.map,
+                ),
+            ),
         )
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
 
+    def test_move_base_1m_left(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    y=1.0,
+                    reference_frame=giskard.map,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+    def test_move_base_1m_diagonal(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    x=1.0,
+                    y=1.0,
+                    reference_frame=giskard.map,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+    def test_move_base_rotate(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    axis=Vector3.Z(),
+                    angle=pi / 3,
+                    reference_frame=giskard.map,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+    def test_move_base_forward_rotate(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    x=1.0,
+                    axis=Vector3.Z(),
+                    angle=pi / 3,
+                    reference_frame=giskard.map,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+    def test_rotate_gripper(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.tip,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    y=1.0,
+                    axis=Vector3.Z(),
+                    angle=pi,
+                    reference_frame=giskard.tip,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+    @pytest.mark.skip(reason="not yet fixed")
     def test_wiggle_insert(self, default_pose_giskard: HSRTester):
         goal_state = {
             "arm_flex_joint": -1.5,

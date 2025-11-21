@@ -159,7 +159,6 @@ def position_dict_to_joint_states(joint_state_dict: Dict[str, float]) -> JointSt
 class GiskardTester(ABC):
     api: GiskardWrapperNode = field(init=False)
     giskard: Giskard = field(init=False)
-    world: World = field(init=False)
 
     total_time_spend_giskarding: int = 0
     total_time_spend_moving: int = 0
