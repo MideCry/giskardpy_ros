@@ -15,6 +15,8 @@ from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList, JointState
+
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from numpy import pi
 
@@ -121,12 +123,23 @@ def robot():
 
 class TestJointGoals:
 
-    def test_mimic_joints(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+    def test_mimic_joints(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            joint_goal := JointPositionList(
+                goal_state=JointState.from_str_dict(
+                    {"torso_lift_joint": 0.1, "hand_motor_joint": 1.23},
+                    giskard.api.world,
+                )
+            ),
+        )
+        msc.add_node(EndMotion.when_true(joint_goal))
+        giskard.api.execute(msc)
+
+        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
         )
-        default_pose_giskard.open_gripper()
-        hand_T_finger_current = default_pose_giskard.compute_fk_pose(
+        hand_T_finger_current = giskard.compute_fk_pose(
             "hand_palm_link", "hand_l_distal_link"
         )
         hand_T_finger_expected = PoseStamped()
@@ -140,12 +153,8 @@ class TestJointGoals:
         hand_T_finger_expected.pose.orientation.w = 0.999
         compare_poses(hand_T_finger_current.pose, hand_T_finger_expected.pose)
 
-        js = {"torso_lift_joint": 0.1}
-        default_pose_giskard.api.motion_goals.add_joint_position(js)
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            arm_lift_joint.position,
             0.2,
             decimal=2,
         )
@@ -158,29 +167,29 @@ class TestJointGoals:
         base_T_torso.pose.orientation.y = 0.0
         base_T_torso.pose.orientation.z = 0.0
         base_T_torso.pose.orientation.w = 1.0
-        base_T_torso2 = default_pose_giskard.compute_fk_pose(
-            "base_footprint", "torso_lift_link"
-        )
+        base_T_torso2 = giskard.compute_fk_pose("base_footprint", "torso_lift_link")
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
-    def test_mimic_joints2(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+    def test_mimic_joints2(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.base_footprint,
+                tip_link=giskard.tip,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    z=0.2,
+                    reference_frame=giskard.tip,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
         )
-        default_pose_giskard.open_gripper()
-
-        tip = "hand_gripper_tool_frame"
-        p = PoseStamped()
-        p.header.frame_id = tip
-        p.pose.position.z = 0.2
-        p.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link=tip, root_link="base_footprint"
-        )
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            arm_lift_joint.position,
             0.2,
             decimal=2,
         )
@@ -193,27 +202,30 @@ class TestJointGoals:
         base_T_torso.pose.orientation.y = 0.0
         base_T_torso.pose.orientation.z = 0.0
         base_T_torso.pose.orientation.w = 1.0
-        base_T_torso2 = default_pose_giskard.compute_fk_pose(
-            "base_footprint", "torso_lift_link"
-        )
+        base_T_torso2 = giskard.compute_fk_pose("base_footprint", "torso_lift_link")
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
-    def test_mimic_joints3(self, default_pose_giskard: HSRTester):
-        arm_lift_joint = default_pose_giskard.api.world.get_connection_by_name(
+    def test_mimic_joints3(self, giskard: HSRTester):
+        head = giskard.api.world.get_body_by_name("head_pan_link")
+        msc = MotionStatechart()
+        msc.add_node(
+            node := CartesianPose(
+                root_link=giskard.base_footprint,
+                tip_link=head,
+                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    z=0.15,
+                    reference_frame=head,
+                ),
+            ),
+        )
+        msc.add_node(EndMotion.when_true(node))
+        giskard.api.execute(msc)
+
+        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
         )
-        default_pose_giskard.open_gripper()
-        tip = "head_pan_link"
-        p = PoseStamped()
-        p.header.frame_id = tip
-        p.pose.position.z = 0.15
-        p.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link=tip, root_link="base_footprint"
-        )
-        default_pose_giskard.execute()
         np.testing.assert_almost_equal(
-            default_pose_giskard.api.world.state[arm_lift_joint.dof.name].position,
+            arm_lift_joint.position,
             0.3,
             decimal=2,
         )
@@ -226,30 +238,33 @@ class TestJointGoals:
         base_T_torso.pose.orientation.y = 0.0
         base_T_torso.pose.orientation.z = 0.0
         base_T_torso.pose.orientation.w = 1.0
-        base_T_torso2 = default_pose_giskard.compute_fk_pose(
-            "base_footprint", "torso_lift_link"
-        )
+        base_T_torso2 = giskard.compute_fk_pose("base_footprint", "torso_lift_link")
         compare_poses(base_T_torso2.pose, base_T_torso.pose)
 
-    def test_mimic_joints4(self, default_pose_giskard: HSRTester):
+    def test_mimic_joints4(self, giskard: HSRTester):
         arm_lift_joints: ActiveConnection1DOF = (
-            default_pose_giskard.apdefault_pose_giskard.apdefault_pose_giskard.apdefault_pose_giskard.api.world.get_connection_by_name(
-                "arm_lift_joint"
-            )
+            giskard.api.world.get_connection_by_name("arm_lift_joint")
         )
         assert arm_lift_joints.dof.lower_limits.velocity == -0.15
         assert arm_lift_joints.dof.upper_limits.velocity == 0.15
         torso_lift_joints: ActiveConnection1DOF = (
-            default_pose_giskard.api.world.get_connection_by_name("torso_lift_joint")
+            giskard.api.world.get_connection_by_name("torso_lift_joint")
         )
         assert torso_lift_joints.dof.lower_limits.velocity == -0.075
         assert torso_lift_joints.dof.upper_limits.velocity == 0.075
-        joint_goal = {"torso_lift_joint": 0.25}
-        default_pose_giskard.api.motion_goals.add_joint_position(joint_goal)
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
+        msc = MotionStatechart()
+        msc.add_node(
+            joint_goal := JointPositionList(
+                goal_state=JointState.from_str_dict(
+                    {"torso_lift_joint": 0.25},
+                    giskard.api.world,
+                )
+            ),
+        )
+        msc.add_node(EndMotion.when_true(joint_goal))
+        giskard.api.execute(msc)
         np.testing.assert_almost_equal(
-            default_pose_giskard.api.world.state[arm_lift_joints.dof.name].position,
+            giskard.api.world.state[arm_lift_joints.dof.name].position,
             0.5,
             decimal=2,
         )
