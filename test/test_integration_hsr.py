@@ -10,9 +10,15 @@ from geometry_msgs.msg import (
     PointStamped,
     Vector3Stamped,
 )
+
+from giskardpy.model.collision_matrix_manager import CollisionRequest
+from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.templates import Sequence
 from giskardpy.motion_statechart.graph_node import EndMotion
-from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry
+from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
+    SetOdometry,
+    SetSeedConfiguration,
+)
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList, JointState
@@ -119,6 +125,18 @@ def robot():
     finally:
         print("tear down")
         c.print_stats()
+
+
+@pytest.fixture()
+def box_setup(pocky_pose_setup: HSRTester) -> HSRTester:
+    p = PoseStamped()
+    p.header.frame_id = "map"
+    p.pose.position.x = 1.2
+    p.pose.position.y = 0.0
+    p.pose.position.z = 0.5
+    p.pose.orientation.w = 1.0
+    pocky_pose_setup.add_box_to_world(name="box", size=(1.0, 1.0, 1.0), pose=p)
+    return pocky_pose_setup
 
 
 class TestJointGoals:
@@ -448,6 +466,86 @@ class TestCartGoals:
 
 
 class TestConstraints:
+
+    def test_schnibbeln_sequence(self, box_setup: HSRTester):
+        box_name = "Schnibbler"
+        box_pose = PoseStamped()
+        box_pose.header.frame_id = box_setup.tip
+        box_pose.pose.position = Point(x=0.0, y=0.0, z=0.06)
+        box_pose.pose.orientation.w = 1.0
+        bread_name = "Bernd"
+        bread_pose = PoseStamped()
+        bread_pose.header.frame_id = "map"
+        bread_pose.pose.position = Point(x=0.91, y=0.25, z=0.62)
+        bread_pose.pose.orientation.w = 1.0
+
+        box_setup.add_box_to_world(
+            name=box_name,
+            size=(0.05, 0.01, 0.15),
+            pose=box_pose,
+            parent_link=box_setup.tip,
+        )
+        box_setup.add_box_to_world(
+            name=bread_name, size=(0.1, 0.2, 0.06), pose=bread_pose, parent_link="box"
+        )
+        # box_setup.dye_group(group_name=box_name, rgba=(0.0, 0.588, 0.784, 1.0))
+        # box_setup.dye_group(group_name=bread_name, rgba=(0.784, 0.588, 0.0, 1.0))
+        box_setup.close_gripper()
+
+        pre_schnibble_pose = PoseStamped()
+        pre_schnibble_pose.header.frame_id = "map"
+        pre_schnibble_pose.pose.position = Point(x=0.85, y=0.2, z=0.75)
+        q = quaternion_from_rotation_matrix(
+            [[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
+        )
+        pre_schnibble_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+        pre_schnibble = "Position Knife"
+        box_setup.api.motion_goals.add_cartesian_pose(
+            name=pre_schnibble,
+            goal_pose=pre_schnibble_pose,
+            tip_link=box_setup.tip,
+            root_link="map",
+            end_condition=pre_schnibble,
+        )
+        human_close = box_setup.api.monitors.add_pulse(
+            name="Human Close?",
+            after_ticks=50,
+            true_for_ticks=50,
+            start_condition=pre_schnibble,
+            end_condition="",
+        )
+
+        cut = box_setup.api.motion_goals.add_motion_goal(
+            class_name=Cutting.__name__,
+            name="Cut",
+            root_link="map",
+            tip_link=box_name,
+            depth=0.1,
+            right_shift=-0.1,
+            start_condition=pre_schnibble,
+        )
+
+        # no_contact = box_setup.api.monitors.add_const_true(name='Made Contact?',
+        #                                                start_condition=schnibble_down)
+
+        schnibbel_done = box_setup.api.monitors.add_time_above(
+            name="Done?", threshold=5, start_condition=cut
+        )
+
+        reset = f"not {schnibbel_done}"
+        box_setup.api.update_reset_condition(node_name=cut, condition=reset)
+        box_setup.api.update_reset_condition(node_name=schnibbel_done, condition=reset)
+        box_setup.api.update_end_condition(
+            node_name=human_close, condition=schnibbel_done
+        )
+
+        box_setup.api.update_pause_condition(node_name=cut, condition=human_close)
+
+        box_setup.api.monitors.add_end_motion(start_condition=schnibbel_done)
+        # box_setup.api.monitors.add_cancel_motion(start_condition=f'not {no_contact}', error=Exception('no contact'))
+        box_setup.api.motion_goals.allow_all_collisions()
+        box_setup.execute(local_min_end=False)
+        # box_setup.update_parent_link_of_group(box_name, box_setup.tip)
 
     def test_Pointing(self, giskard: HSRTester):
         kopf = "head_rgbd_sensor_gazebo_frame"
@@ -950,50 +1048,65 @@ class TestConstraints:
 
 class TestCollisionAvoidanceGoals:
 
-    def test_self_collision_avoidance_empty(self, default_pose_giskard: HSRTester):
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute(
-            expected_error_type=EmptyProblemException, local_min_end=False
+    def test_self_collision_avoidance(self, giskard: HSRTester):
+        msc = MotionStatechart()
+        msc.add_nodes(
+            [
+                cart_goal := CartesianPose(
+                    root_link=giskard.map,
+                    tip_link=giskard.tip,
+                    goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                        z=0.5,
+                        reference_frame=giskard.tip,
+                    ),
+                ),
+                CollisionAvoidance(
+                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                ),
+            ]
         )
-        current_state = {
-            k.name: v[0] for k, v in default_pose_giskard.api.world.state.items()
-        }
-        default_pose_giskard.compare_joint_state(
-            current_state, default_pose_giskard.default_pose
-        )
+        msc.add_node(EndMotion.when_true(cart_goal))
+        giskard.api.execute(msc)
 
-    def test_self_collision_avoidance(self, default_pose_giskard: HSRTester):
-        r_goal = PoseStamped()
-        r_goal.header.frame_id = default_pose_giskard.tip
-        r_goal.pose.position.z = 0.5
-        r_goal.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=r_goal, tip_link=default_pose_giskard.tip, root_link="map"
-        )
-        default_pose_giskard.execute()
+    def test_self_collision_avoidance2(self, giskard: HSRTester):
+        hand_palm_link = giskard.api.world.get_body_by_name("hand_palm_link")
 
-    def test_self_collision_avoidance2(self, default_pose_giskard: HSRTester):
-        js = {
-            "arm_flex_joint": 0.0,
-            "arm_lift_joint": 0.0,
-            "arm_roll_joint": -1.52,
-            "head_pan_joint": -0.09,
-            "head_tilt_joint": -0.62,
-            "wrist_flex_joint": -1.55,
-            "wrist_roll_joint": 0.11,
-        }
-        default_pose_giskard.api.monitors.add_set_seed_configuration(js)
-        default_pose_giskard.api.motion_goals.allow_all_collisions()
-        default_pose_giskard.execute()
-
-        goal_pose = PoseStamped()
-        goal_pose.header.frame_id = "hand_palm_link"
-        goal_pose.pose.position.x = 0.5
-        goal_pose.pose.orientation.w = 1.0
-        default_pose_giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=goal_pose, tip_link=default_pose_giskard.tip, root_link="map"
+        msc = MotionStatechart()
+        msc.add_nodes(
+            [
+                sequence := Sequence(
+                    [
+                        SetSeedConfiguration(
+                            seed_configuration=JointState.from_str_dict(
+                                {
+                                    "arm_flex_joint": 0.0,
+                                    "arm_lift_joint": 0.0,
+                                    "arm_roll_joint": -1.52,
+                                    "head_pan_joint": -0.09,
+                                    "head_tilt_joint": -0.62,
+                                    "wrist_flex_joint": -1.55,
+                                    "wrist_roll_joint": 0.11,
+                                },
+                                giskard.api.world,
+                            )
+                        ),
+                        CartesianPose(
+                            root_link=giskard.map,
+                            tip_link=giskard.tip,
+                            goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                                x=0.5,
+                                reference_frame=hand_palm_link,
+                            ),
+                        ),
+                    ]
+                ),
+                CollisionAvoidance(
+                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                ),
+            ]
         )
-        default_pose_giskard.execute()
+        msc.add_node(EndMotion.when_true(sequence))
+        giskard.api.execute(msc)
 
     def test_attached_collision1(self, box_setup: HSRTester):
         box_name = "asdf"
@@ -1064,86 +1177,6 @@ class TestCollisionAvoidanceGoals:
         base_goal.pose.orientation.w = 1.0
         box_setup.move_base(base_goal)
 
-    def test_schnibbeln_sequence(self, box_setup: HSRTester):
-        box_name = "Schnibbler"
-        box_pose = PoseStamped()
-        box_pose.header.frame_id = box_setup.tip
-        box_pose.pose.position = Point(x=0.0, y=0.0, z=0.06)
-        box_pose.pose.orientation.w = 1.0
-        bread_name = "Bernd"
-        bread_pose = PoseStamped()
-        bread_pose.header.frame_id = "map"
-        bread_pose.pose.position = Point(x=0.91, y=0.25, z=0.62)
-        bread_pose.pose.orientation.w = 1.0
-
-        box_setup.add_box_to_world(
-            name=box_name,
-            size=(0.05, 0.01, 0.15),
-            pose=box_pose,
-            parent_link=box_setup.tip,
-        )
-        box_setup.add_box_to_world(
-            name=bread_name, size=(0.1, 0.2, 0.06), pose=bread_pose, parent_link="box"
-        )
-        # box_setup.dye_group(group_name=box_name, rgba=(0.0, 0.588, 0.784, 1.0))
-        # box_setup.dye_group(group_name=bread_name, rgba=(0.784, 0.588, 0.0, 1.0))
-        box_setup.close_gripper()
-
-        pre_schnibble_pose = PoseStamped()
-        pre_schnibble_pose.header.frame_id = "map"
-        pre_schnibble_pose.pose.position = Point(x=0.85, y=0.2, z=0.75)
-        q = quaternion_from_rotation_matrix(
-            [[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
-        )
-        pre_schnibble_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        pre_schnibble = "Position Knife"
-        box_setup.api.motion_goals.add_cartesian_pose(
-            name=pre_schnibble,
-            goal_pose=pre_schnibble_pose,
-            tip_link=box_setup.tip,
-            root_link="map",
-            end_condition=pre_schnibble,
-        )
-        human_close = box_setup.api.monitors.add_pulse(
-            name="Human Close?",
-            after_ticks=50,
-            true_for_ticks=50,
-            start_condition=pre_schnibble,
-            end_condition="",
-        )
-
-        cut = box_setup.api.motion_goals.add_motion_goal(
-            class_name=Cutting.__name__,
-            name="Cut",
-            root_link="map",
-            tip_link=box_name,
-            depth=0.1,
-            right_shift=-0.1,
-            start_condition=pre_schnibble,
-        )
-
-        # no_contact = box_setup.api.monitors.add_const_true(name='Made Contact?',
-        #                                                start_condition=schnibble_down)
-
-        schnibbel_done = box_setup.api.monitors.add_time_above(
-            name="Done?", threshold=5, start_condition=cut
-        )
-
-        reset = f"not {schnibbel_done}"
-        box_setup.api.update_reset_condition(node_name=cut, condition=reset)
-        box_setup.api.update_reset_condition(node_name=schnibbel_done, condition=reset)
-        box_setup.api.update_end_condition(
-            node_name=human_close, condition=schnibbel_done
-        )
-
-        box_setup.api.update_pause_condition(node_name=cut, condition=human_close)
-
-        box_setup.api.monitors.add_end_motion(start_condition=schnibbel_done)
-        # box_setup.api.monitors.add_cancel_motion(start_condition=f'not {no_contact}', error=Exception('no contact'))
-        box_setup.api.motion_goals.allow_all_collisions()
-        box_setup.execute(local_min_end=False)
-        # box_setup.update_parent_link_of_group(box_name, box_setup.tip)
-
     def test_collision_avoidance(self, default_pose_giskard: HSRTester):
         js = {"arm_flex_joint": -np.pi / 2}
         default_pose_giskard.api.motion_goals.add_joint_position(js)
@@ -1184,17 +1217,23 @@ class TestCollisionAvoidanceGoals:
 
 
 class TestAddObject:
-    def test_add(self, default_pose_giskard):
+    def test_add(self, giskard: HSRTester):
         box1_name = "box1"
-        pose = PoseStamped()
-        pose.header.frame_id = default_pose_giskard.default_root
-        pose.pose.orientation.w = 1.0
-        pose.pose.position.x = 1.0
-        default_pose_giskard.add_box_to_world(
-            name=box1_name, size=(1, 1, 1), pose=pose, parent_link="hand_palm_link"
+        giskard.add_box_to_world(
+            name=box1_name,
+            size=(1, 1, 1),
+            pose=TransformationMatrix.from_xyz_rpy(x=1, reference_frame=giskard.map),
+            parent_link=giskard.api.world.get_body_by_name("hand_palm_link"),
         )
 
-        default_pose_giskard.api.motion_goals.add_joint_position(
-            {"arm_flex_joint": -0.7}
+        msc = MotionStatechart()
+        msc.add_node(
+            joint_goal := JointPositionList(
+                goal_state=JointState.from_str_dict(
+                    {"arm_flex_joint": -0.7},
+                    giskard.api.world,
+                )
+            ),
         )
-        default_pose_giskard.execute()
+        msc.add_node(EndMotion.when_true(joint_goal))
+        giskard.api.execute(msc)

@@ -45,6 +45,7 @@ from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
+from semantic_digital_twin.spatial_types import TransformationMatrix
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import (
@@ -64,6 +65,7 @@ from semantic_digital_twin.world_description.geometry import (
 )
 from semantic_digital_twin.world_description.world_entity import (
     Body,
+    KinematicStructureEntity,
 )
 
 
@@ -650,31 +652,17 @@ class GiskardTester(ABC):
             self.api.world.add_connection(new_connection)
         self.wait_heartbeats()
 
-    def check_add_object_result(
-        self,
-        name: str,
-        pose: Optional[PoseStamped],
-        parent_body_name: Optional[Union[str, giskard_msgs.LinkName]] = None,
-        expected_error_type: Optional[type(Exception)] = None,
-    ):
-        pass  # fixme
-
     def add_box_to_world(
         self,
         name: str,
         size: Tuple[float, float, float],
-        pose: PoseStamped,
-        parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-        expected_error_type: Optional[type(Exception)] = None,
+        pose: TransformationMatrix,
+        parent_link: Optional[KinematicStructureEntity] = None,
     ) -> None:
-        if parent_link is None:
-            parent_link = self.api.world.root
-        else:
-            parent_link = self.api.world.get_kinematic_structure_entity_by_name(
-                parent_link
-            )
+        parent_link = parent_link or self.api.world.root
+
         parent_T_pose = self.api.world.transform(
-            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            spatial_object=pose,
             target_frame=parent_link,
         )
         with self.api.world.modify_world():
@@ -691,12 +679,6 @@ class GiskardTester(ABC):
             )
             self.api.world.add_connection(connection)
         self.wait_heartbeats()
-        self.check_add_object_result(
-            name=name,
-            pose=parent_T_pose,
-            parent_body_name=parent_link,
-            expected_error_type=expected_error_type,
-        )
 
     def update_group_pose(
         self,
@@ -748,12 +730,6 @@ class GiskardTester(ABC):
             self.api.world.add_connection(connection)
             self.api.world.add_body(sphere)
         self.wait_heartbeats()
-        self.check_add_object_result(
-            name=name,
-            pose=pose,
-            parent_body_name=parent_link,
-            expected_error_type=expected_error_type,
-        )
 
     def add_cylinder_to_world(
         self,
@@ -789,12 +765,6 @@ class GiskardTester(ABC):
             self.api.world.add_connection(connection)
             self.api.world.add_body(cylinder)
         self.wait_heartbeats()
-        self.check_add_object_result(
-            name=name,
-            pose=parent_T_pose,
-            parent_body_name=parent_link,
-            expected_error_type=expected_error_type,
-        )
 
     def add_mesh_to_world(
         self,
@@ -830,12 +800,6 @@ class GiskardTester(ABC):
             self.api.world.add_connection(connection)
             self.api.world.add_body(mesh_body)
         self.wait_heartbeats()
-        self.check_add_object_result(
-            name=name,
-            pose=parent_T_pose,
-            parent_body_name=parent_link,
-            expected_error_type=expected_error_type,
-        )
 
     def add_urdf_to_world(
         self,
