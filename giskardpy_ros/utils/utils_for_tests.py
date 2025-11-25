@@ -805,11 +805,8 @@ class GiskardTester(ABC):
         self,
         name: str,
         urdf: str,
-        pose: PoseStamped,
+        pose: TransformationMatrix,
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
-        js_topic: Optional[str] = "",
-        set_js_topic: Optional[str] = "",
-        expected_error_type: Optional[type(Exception)] = None,
     ) -> None:
         if parent_link is None:
             parent_link = self.api.world.root
@@ -823,9 +820,7 @@ class GiskardTester(ABC):
             c_map_root = FixedConnection(
                 parent=parent_link,
                 child=world_with_pr2.root,
-                _connection_T_child_expression=msg_converter.ros_msg_to_giskard_obj(
-                    pose, self.api.world
-                ),
+                _connection_T_child_expression=pose,
             )
             self.api.world.merge_world(world_with_pr2, root_connection=c_map_root)
 

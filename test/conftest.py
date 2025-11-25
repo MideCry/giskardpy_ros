@@ -93,14 +93,13 @@ def giskard_better_pose(giskard_factory, better_pose):
 @pytest.fixture()
 def kitchen_setup(giskard_better_pose: GiskardTester) -> GiskardTester:
     giskard_better_pose.default_env_name = "iai_kitchen"
-    kitchen_pose = PoseStamped()
-    kitchen_pose.header.frame_id = str(giskard_better_pose.default_root)
-    kitchen_pose.pose.orientation.w = 1.0
     kitchen_urdf = load_xacro(
         "package://iai_kitchen/urdf_obj/iai_kitchen_python.urdf.xacro"
     )
     giskard_better_pose.add_urdf_to_world(
-        name=giskard_better_pose.default_env_name, urdf=kitchen_urdf, pose=kitchen_pose
+        name=giskard_better_pose.default_env_name,
+        urdf=kitchen_urdf,
+        pose=TransformationMatrix(reference_frame=giskard_better_pose.api.world.root),
     )
     return giskard_better_pose
 
