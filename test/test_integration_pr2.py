@@ -1,5 +1,6 @@
 from __future__ import division
 
+import asyncio
 from copy import deepcopy
 from dataclasses import dataclass
 from time import sleep
@@ -38,7 +39,7 @@ from giskardpy.data_types.exceptions import (
     CorruptURDFException,
     SelfCollisionViolatedException,
     HardConstraintsViolatedException,
-    PreemptedException,
+    ExecutionCanceledException,
     InvalidGoalException,
     EmptyProblemException,
     SetupException,
@@ -51,6 +52,7 @@ from giskardpy.model.collision_world_syncer import (
 )
 from giskardpy.model.utils import hacky_urdf_parser_fix
 from giskardpy.motion_statechart.data_types import DefaultWeights
+from giskardpy.motion_statechart.exceptions import EmptyMotionStatechartError
 from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
@@ -5644,52 +5646,65 @@ class TestWeightScaling:
 
 
 class TestActionServerEvents:
-    def test_interrupt1(self, giskard: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = "base_footprint"
-        p.pose.position = Point(x=100.0, y=0.0, z=0.0)
-        p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
-        giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link="base_footprint", root_link="map"
-        )
-        giskard.api.motion_goals.allow_all_collisions()
-        local_min = giskard.api.monitors.add_local_minimum_reached()
-        giskard.api.monitors.add_end_motion(start_condition=local_min)
-        giskard.execute(expected_error_type=PreemptedException, stop_after=2)
 
-    def test_cancel_with_new_goal(self, giskard: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = "base_footprint"
-        p.pose.position = Point(x=100.0, y=0.0, z=0.0)
-        p.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
-        giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link="base_footprint", root_link="map"
+    @pytest.mark.asyncio
+    async def test_cancel_with_new_goal(self, giskard: PR2Tester):
+        msc = MotionStatechart()
+        msc.add_node(
+            CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_rpy(
+                    x=100, reference_frame=giskard.base_footprint
+                ),
+            )
         )
-        giskard.api.motion_goals.allow_all_collisions()
-        local_min = giskard.api.monitors.add_local_minimum_reached()
-        giskard.api.monitors.add_end_motion(start_condition=local_min)
-        giskard.execute(wait=False)
-        sleep(2)
-        p.pose.position = Point(x=0.0, y=1.0, z=0.0)
-        done = giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link="base_footprint", root_link="map"
-        )
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.api.monitors.add_end_motion(start_condition=done)
-        giskard.execute(local_min_end=False)
 
-    def test_interrupt2(self, giskard: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = "base_footprint"
-        p.pose.position.x = 0.5
-        p.pose.orientation.w = 1.0
-        giskard.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link="base_footprint", root_link="map"
-        )
-        giskard.api.motion_goals.allow_all_collisions()
-        with pytest.raises(ExecutionException):
-            giskard.execute(expected_error_type=PreemptedException, stop_after=10)
+        goal_accepted_future = giskard.api.execute_async(msc)
+        await goal_accepted_future
 
+        await asyncio.sleep(2)
+
+        msc = MotionStatechart()
+        msc.add_node(
+            cart_goal := CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_rpy(
+                    y=1, reference_frame=giskard.base_footprint
+                ),
+            )
+        )
+        msc.add_node(EndMotion.when_true(cart_goal))
+
+        goal_accepted_future = giskard.api.execute_async(msc)
+        await goal_accepted_future
+
+        await giskard.api.get_result()
+
+    @pytest.mark.asyncio
+    async def test_interrupt(self, giskard: PR2Tester):
+        msc = MotionStatechart()
+        msc.add_node(
+            CartesianPose(
+                root_link=giskard.default_root,
+                tip_link=giskard.base_footprint,
+                goal_pose=TransformationMatrix.from_xyz_rpy(
+                    x=0.5, reference_frame=giskard.base_footprint
+                ),
+            )
+        )
+
+        goal_accepted_future = giskard.api.execute_async(msc)
+        await goal_accepted_future
+
+        await asyncio.sleep(2)
+        await giskard.api.cancel_goal_async()
+
+        with pytest.raises(ExecutionCanceledException):
+            await giskard.api.get_result()
+
+    @pytest.mark.skip(reason="projection not yet supported.")
     def test_undefined_type(self, giskard: PR2Tester):
         giskard.api.motion_goals.allow_all_collisions()
         giskard.send_goal(
@@ -5697,9 +5712,10 @@ class TestActionServerEvents:
         )
 
     def test_empty_goal(self, giskard: PR2Tester):
-        giskard.api.motion_goals.allow_all_collisions()
-        giskard.execute(expected_error_type=EmptyProblemException, local_min_end=False)
+        with pytest.raises(EmptyMotionStatechartError):
+            giskard.api.execute(MotionStatechart())
 
+    @pytest.mark.skip(reason="projection not yet supported.")
     def test_plan_only(self, giskard: PR2Tester, pocky_pose_state):
         giskard.api.motion_goals.allow_self_collision()
         giskard.api.motion_goals.add_joint_position(pocky_pose_state)

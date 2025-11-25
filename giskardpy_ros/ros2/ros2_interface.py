@@ -1,7 +1,7 @@
-import asyncio
 from typing import List, Optional, Tuple, Union, Any
 
 import xacro
+from action_msgs.msg import GoalStatus
 from rcl_interfaces.srv._get_parameters import (
     GetParameters_Request,
     GetParameters_Response,
@@ -15,11 +15,15 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.wait_for_message import wait_for_message as rclpy_wait_for_message
 from std_msgs.msg import String
 
+from giskardpy.data_types.exceptions import (
+    ExecutionAbortedException,
+    ExecutionCanceledException,
+)
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str
-from giskardpy_ros.utils.asynio_utils import wait_until_not_none, wait_until_none
+from giskardpy_ros.utils.asynio_utils import wait_until_not_none
 
 
 def wait_for_message(
@@ -189,10 +193,19 @@ class MyActionClient:
         return get_event_loop().run_until_complete(muh())
 
     async def get_result(self):
+        goal_id = self._current_goal_id
         await wait_until_not_none(lambda: self.result)
         result = self.result
         self.result = None
-        return result
+        match result.status:
+            case GoalStatus.STATUS_ABORTED:
+                raise ExecutionAbortedException()
+            case GoalStatus.STATUS_SUCCEEDED:
+                return result
+            case GoalStatus.STATUS_CANCELED:
+                raise ExecutionCanceledException(self._client._action_name, goal_id)
+            case _:
+                raise Exception(f"Unexpected status {result.status}")
 
     def __goal_accepted_cb(self, future: Future):
         goal_handle = future.result()
@@ -231,7 +244,7 @@ class MyActionClient:
         self.node_handle.get_logger().info(
             f"{self.action_name} Goal #{goal_id} result received"
         )
-        self.result = future.result().result
+        self.result = future.result()
         self._goal_handle = None
         self._current_goal_id = None
         self._result_future = None

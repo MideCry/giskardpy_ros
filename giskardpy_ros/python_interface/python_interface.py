@@ -52,6 +52,7 @@ class GiskardWrapper:
     last_execution_state: ExecutionState = None
     world: World = None
     _client: MyActionClient = None
+    _motion_statechart: MotionStatechart = field(init=False)
 
     def __post_init__(self):
         get_middleware().loginfo("syncing world")
@@ -68,14 +69,17 @@ class GiskardWrapper:
         return self.world.get_semantic_annotations_by_type(AbstractRobot)[0].name
 
     def execute_async(self, motion_statechart: MotionStatechart) -> Future:
+        self._motion_statechart = motion_statechart
+        motion_statechart.sanity_check()
         return self._send_action_goal_async(motion_statechart)
 
     def execute(self, motion_statechart: MotionStatechart):
         """
         Executes a MotionStatechart and syncs its state with the result of Giskard.
         """
+        motion_statechart.sanity_check()
         result = self._send_action_goal(motion_statechart)
-        result_json = json.loads(result.result)
+        result_json = json.loads(result.result.result)
         parsed_life_cycle_state = LifeCycleState.from_json(
             result_json["life_cycle_state"], motion_statechart=motion_statechart
         )
@@ -111,8 +115,18 @@ class GiskardWrapper:
         return future
 
     async def get_result(self):
-        self.last_execution_state = await self._client.get_result()
-        return self.last_execution_state
+        result = await self._client.get_result()
+
+        result_json = json.loads(result.result.result)
+        parsed_life_cycle_state = LifeCycleState.from_json(
+            result_json["life_cycle_state"], motion_statechart=self._motion_statechart
+        )
+        parsed_observation_state = ObservationState.from_json(
+            result_json["observation_state"], motion_statechart=self._motion_statechart
+        )
+        self._motion_statechart.life_cycle_state.data = parsed_life_cycle_state.data
+        self._motion_statechart.observation_state.data = parsed_observation_state.data
+        assert self._motion_statechart.is_end_motion()
 
     def get_end_motion_reason(
         self, move_result: Optional[JsonAction_Result] = None, show_all: bool = False
