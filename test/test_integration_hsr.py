@@ -10,12 +10,15 @@ from geometry_msgs.msg import (
     PointStamped,
     Vector3Stamped,
 )
+from numpy import pi
 
 from conftest import kitchen_setup
 from giskardpy.model.collision_matrix_manager import CollisionRequest
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Open, Close
 from giskardpy.motion_statechart.goals.templates import Sequence
+from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
     SetOdometry,
@@ -24,35 +27,26 @@ from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList, JointState
-
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from numpy import pi
-
-from giskardpy.data_types.exceptions import EmptyProblemException
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
 from giskardpy.motion_statechart.tasks.pointing import PointingCone, Pointing
-from giskardpy.motion_statechart.test_nodes.test_nodes import ConstTrueNode
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
-    quaternion_from_axis_angle,
     quaternion_from_rotation_matrix,
 )
-from semantic_digital_twin.robots.hsrb import HSRB
-from semantic_digital_twin.spatial_types import TransformationMatrix, Vector3, Point3
-from semantic_digital_twin.world_description.world_entity import (
-    KinematicStructureEntity,
-)
-
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.configs.iai_robots.hsr import (
     WorldWithHSRConfig,
     HSRStandaloneInterface,
 )
+from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
+from semantic_digital_twin.robots.hsrb import HSRB
+from semantic_digital_twin.spatial_types import TransformationMatrix, Vector3, Point3
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
+from semantic_digital_twin.world_description.world_entity import (
+    KinematicStructureEntity,
+)
 
 
 @pytest.fixture()

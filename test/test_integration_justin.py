@@ -353,7 +353,6 @@ class TestEuRobin:
             pose=box_pose,
             parent_link=kitchenette,
         )
-        dlr_kitchen_setup.dye_group(group_name=box_name, rgba=(0.0, 0.0, 1.0, 1.0))
 
         pre_grasp_pose = PoseStamped()
         pre_grasp_pose.header.frame_id = box_name

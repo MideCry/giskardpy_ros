@@ -10,7 +10,7 @@ from geometry_msgs.msg import (
     PointStamped,
 )
 
-from giskardpy.data_types.exceptions import GoalInitalizationException
+from giskardpy.motion_statechart.exceptions import GoalInitalizationException
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
 from giskardpy_ros.configs.giskard import Giskard

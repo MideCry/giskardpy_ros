@@ -14,15 +14,13 @@ from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
 from rclpy.node import Node
 
-from giskardpy.data_types.exceptions import (
-    ExecutionException,
-)
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.motion_statechart import (
     MotionStatechart,
     LifeCycleState,
     ObservationState,
 )
+from giskardpy_ros.exceptions import ExecutionException
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
 from giskardpy_ros.ros2.ros2_interface import MyActionClient

@@ -1,8 +1,5 @@
 import asyncio
-import csv
-import os
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from dataclasses import dataclass, field
 from threading import Thread
 from time import time, sleep
@@ -14,18 +11,11 @@ from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 from giskard_msgs.action._move import Move_Result, Move_Goal
 from giskard_msgs.msg import GiskardError
-from giskard_msgs.srv._dye_group import DyeGroup_Response
-from rclpy.publisher import Publisher
 from sensor_msgs.msg import JointState
-from tf2_py import LookupException, ExtrapolationException
 
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import giskardpy_ros.ros2.tfwrapper as tf
 import semantic_digital_twin.spatial_types.spatial_types as cas
-from giskardpy.data_types.exceptions import (
-    UnknownGroupException,
-    WorldException,
-)
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import (
     CollisionRequest,
@@ -37,17 +27,16 @@ from giskardpy.motion_statechart.tasks.diff_drive_goals import (
     DiffDriveTangentialToPoint,
     KeepHandInWorkspace,
 )
-from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types import TransformationMatrix
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
-from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     PrismaticConnection,
@@ -233,7 +222,7 @@ class GiskardTester(ABC):
     def has_odometry_joint(self) -> bool:
         try:
             joint = self.get_odometry_joint()
-        except WorldException as e:
+        except WorldEntityNotFoundError as e:
             return False
         return isinstance(joint, (OmniDrive,))
 
@@ -244,53 +233,11 @@ class GiskardTester(ABC):
             group_name=group_name, base_pose=base_pose
         )
 
-    def transform_msg(self, target_frame, msg, timeout=1):
-        result_msg = deepcopy(msg)
-        try:
-            if not GiskardBlackboard().tree_config.is_standalone():
-                return tf.transform_msg(target_frame, result_msg, timeout=timeout)
-            else:
-                raise LookupException("just to trigger except block")
-        except (LookupException, ExtrapolationException) as e:
-            target_frame = (
-                GiskardBlackboard()
-                .executor.world.get_kinematic_structure_entity_by_name(target_frame)
-                .name
-            )
-            try:
-                result_msg.header.frame_id = str(
-                    GiskardBlackboard()
-                    .executor.world.get_kinematic_structure_entity_by_name(
-                        result_msg.header.frame_id
-                    )
-                    .name.name
-                )
-            except UnknownGroupException:
-                pass
-            giskard_obj = msg_converter.ros_msg_to_giskard_obj(
-                result_msg, self.api.world
-            )
-            target_body = GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
-                target_frame
-            )
-            transformed_giskard_obj = GiskardBlackboard().executor.world.transform(
-                target_frame=target_body, spatial_object=giskard_obj
-            )
-            return msg_converter.to_ros_message(transformed_giskard_obj)
-
     def wait_heartbeats(self, number=5):
         behavior_tree = GiskardBlackboard().tree
         c = behavior_tree.count
         while behavior_tree.count < c + number:
             sleep(0.001)
-
-    def dye_group(
-        self,
-        group_name: str,
-        rgba: Tuple[float, float, float, float],
-        expected_error_codes=(DyeGroup_Response.SUCCESS,),
-    ):
-        pass
 
     def print_stats(self):
         giskarding_time = self.total_time_spend_giskarding
@@ -820,7 +767,7 @@ class GiskardTester(ABC):
             c_map_root = FixedConnection(
                 parent=parent_link,
                 child=world_with_pr2.root,
-                _connection_T_child_expression=pose,
+                parent_T_connection_expression=pose,
             )
             self.api.world.merge_world(world_with_pr2, root_connection=c_map_root)
 

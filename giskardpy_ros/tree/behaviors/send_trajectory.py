@@ -1,16 +1,5 @@
 from typing import List, Dict, Any
 
-from giskardpy.data_types.exceptions import (
-    ExecutionException,
-    FollowJointTrajectory_INVALID_JOINTS,
-    FollowJointTrajectory_INVALID_GOAL,
-    FollowJointTrajectory_OLD_HEADER_TIMESTAMP,
-    FollowJointTrajectory_PATH_TOLERANCE_VIOLATED,
-    FollowJointTrajectory_GOAL_TOLERANCE_VIOLATED,
-    ExecutionTimeoutException,
-    ExecutionSucceededPrematurely,
-    ExecutionPreemptedException,
-)
 from giskardpy_ros.ros2 import rospy
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types.derivatives import Derivatives

@@ -1,7 +1,7 @@
 from py_trees.common import Status
 
-from giskardpy.data_types.exceptions import ExecutionCanceledException
 from giskardpy.utils.decorators import record_time
+from giskardpy_ros.exceptions import ExecutionCanceledException
 from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard, GiskardBlackboard

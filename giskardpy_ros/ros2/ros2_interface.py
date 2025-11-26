@@ -15,11 +15,11 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.wait_for_message import wait_for_message as rclpy_wait_for_message
 from std_msgs.msg import String
 
-from giskardpy.data_types.exceptions import (
+from giskardpy.middleware import get_middleware
+from giskardpy_ros.exceptions import (
     ExecutionAbortedException,
     ExecutionCanceledException,
 )
-from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.ros2.msg_converter import msg_type_as_str

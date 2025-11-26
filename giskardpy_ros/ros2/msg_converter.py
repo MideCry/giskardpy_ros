@@ -27,8 +27,6 @@ from typing_extensions import get_origin, get_args
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GiskardException,
-    CorruptShapeException,
-    UnknownGoalException,
 )
 from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.trajectory import Trajectory
@@ -51,7 +49,6 @@ from semantic_digital_twin.world_description.geometry import (
     Sphere,
     Mesh,
     Color,
-    Scale,
     TriangleMesh,
     FileMesh,
 )
@@ -571,48 +568,6 @@ def ros_joint_state_to_giskard_joint_state(
         joint_name = PrefixedName(joint_name, prefix)
         js[joint_name][Derivatives.position] = msg.position[i]
     return js
-
-
-def world_body_to_geometry(msg: giskard_msgs.WorldBody, color: Color) -> Shape:
-    if msg.type == giskard_msgs.WorldBody.URDF_BODY:
-        raise NotImplementedError()
-    elif msg.type == giskard_msgs.WorldBody.PRIMITIVE_BODY:
-        if msg.shape.type == msg.shape.BOX:
-            scale = Scale(
-                msg.shape.dimensions[msg.shape.BOX_X],
-                msg.shape.dimensions[msg.shape.BOX_Y],
-                msg.shape.dimensions[msg.shape.BOX_Z],
-            )
-            geometry = Box(origin=cas.TransformationMatrix(), scale=scale, color=color)
-        elif msg.shape.type == msg.shape.CYLINDER:
-            geometry = Cylinder(
-                origin=cas.TransformationMatrix(),
-                height=msg.shape.dimensions[msg.shape.CYLINDER_HEIGHT],
-                width=msg.shape.dimensions[msg.shape.CYLINDER_RADIUS] * 2,
-                color=color,
-            )
-        elif msg.shape.type == msg.shape.SPHERE:
-            geometry = Sphere(
-                origin=cas.TransformationMatrix(),
-                radius=msg.shape.dimensions[msg.shape.SPHERE_RADIUS],
-                color=color,
-            )
-        else:
-            raise CorruptShapeException(
-                f"Primitive shape of type {msg.shape.type} not supported."
-            )
-    elif msg.type == giskard_msgs.WorldBody.MESH_BODY:
-        if msg.scale.x == 0 or msg.scale.y == 0 or msg.scale.z == 0:
-            raise CorruptShapeException(f"Scale of mesh contains 0: {msg.scale}")
-        geometry = Mesh(
-            origin=cas.TransformationMatrix(),
-            filename=msg.mesh,
-            scale=Scale(msg.scale.x, msg.scale.y, msg.scale.z),
-            color=color,
-        )
-    else:
-        raise CorruptShapeException(f"World body type {msg.type} not supported")
-    return geometry
 
 
 def pose_stamped_to_trans_matrix(

@@ -7,6 +7,10 @@ import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy.data_types.exceptions import *
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
+from giskardpy_ros.exceptions import (
+    ExecutionCanceledException,
+    ExecutionAbortedException,
+)
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
