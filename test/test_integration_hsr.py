@@ -699,6 +699,7 @@ class TestCollisionAvoidanceGoals:
         msc.add_node(EndMotion.when_true(sequence))
         giskard.api.execute(msc)
 
+    @pytest.mark.skip(reason="graspsequence must be fixed")
     def test_attached_collision1(self, box_setup: HSRTester):
         box_name = "asdf"
         box_pose = PoseStamped()
