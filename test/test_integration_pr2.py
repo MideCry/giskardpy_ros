@@ -16,19 +16,14 @@ from geometry_msgs.msg import (
     PointStamped,
 )
 from giskard_msgs.action._move import Move_Goal
-from giskard_msgs.msg import CollisionEntry
 from numpy import pi
 from rclpy.duration import Duration
-from rclpy.time import Time
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from conftest import kitchen_setup
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
-    SelfCollisionViolatedException,
-    SetupException,
 )
-from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import (
     CollisionRequest,
     CollisionAvoidanceTypes,
@@ -41,30 +36,22 @@ from giskardpy.motion_statechart.data_types import (
     ObservationStateValues,
 )
 from giskardpy.motion_statechart.exceptions import EmptyMotionStatechartError
-from giskardpy.motion_statechart.goals.cartesian_goals import RelativePositionSequence
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.templates import Parallel, Sequence
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion, CancelMotion
 from giskardpy.motion_statechart.monitors.monitors import LocalMinimumReached
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import SetOdometry
-from giskardpy.motion_statechart.monitors.payload_monitors import Pulse
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import (
     CartesianPose,
-    CartesianPosition,
-    CartesianOrientation,
 )
-from giskardpy.motion_statechart.tasks.goals_tests import DebugGoal
 from giskardpy.motion_statechart.tasks.joint_tasks import (
-    JointVelocityLimit,
     JointPositionList,
     JointState,
 )
 from giskardpy.motion_statechart.tasks.pointing import Pointing
-from giskardpy.motion_statechart.test_nodes.test_nodes import ConstTrueNode
-from giskardpy.qp.exceptions import HardConstraintsViolatedException
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import (
@@ -85,11 +72,8 @@ from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import (
-    compare_poses,
     GiskardTester,
-    compare_points,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot, ParallelGripper
 from semantic_digital_twin.spatial_types import (
@@ -1317,246 +1301,22 @@ class TestSelfCollisionAvoidance:
 
 class TestCollisionAvoidanceGoals:
 
-    def test_handover(self, kitchen_setup: PR2Tester):
-        js = {
-            "l_shoulder_pan_joint": 1.0252138037286773,
-            "l_shoulder_lift_joint": -0.06966848987919201,
-            "l_upper_arm_roll_joint": 1.1765832782526544,
-            "l_elbow_flex_joint": -1.9323726623855864,
-            "l_forearm_roll_joint": 1.3824994377973336,
-            "l_wrist_flex_joint": -1.8416233909065576,
-            "l_wrist_roll_joint": 2.907373693068033,
-        }
-        kitchen_setup.api.motion_goals.add_joint_position(js)
-        # kitchen_setup.api.motion_goals.allow_all_collisions()
-        kitchen_setup.execute()
-
-        p = PoseStamped()
-        p.header.frame_id = kitchen_setup.l_tip
-        p.pose.position.y = -0.08
-        p.pose.orientation.w = 1.0
-        kitchen_setup.add_box_to_world(
-            name="box", size=(0.08, 0.16, 0.16), parent_link=kitchen_setup.l_tip, pose=p
-        )
-        kitchen_setup.close_l_gripper()
-        r_goal = PoseStamped()
-        r_goal.header.frame_id = kitchen_setup.l_tip
-        r_goal.pose.position.x = 0.05
-        r_goal.pose.position.y = -0.08
-        q = quaternion_from_axis_angle([0, 0, 1], np.pi)
-        r_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        # kitchen_setup.api.motion_goals.allow_all_collisions()
-        kitchen_setup.api.motion_goals.add_cartesian_pose(
-            goal_pose=r_goal,
-            tip_link=kitchen_setup.r_tip,
-            root_link=kitchen_setup.l_tip,
-            reference_linear_velocity=0.2,
-            reference_angular_velocity=1,
-        )
-        kitchen_setup.api.motion_goals.allow_collision(
-            group1=kitchen_setup.api.robot_name, group2="box"
-        )
-        kitchen_setup.execute()
-
-        kitchen_setup.update_parent_link_of_group("box", kitchen_setup.r_tip)
-
-        r_goal2 = PoseStamped()
-        r_goal2.header.frame_id = "box"
-        r_goal2.pose.position.x -= -0.1
-        r_goal2.pose.orientation.w = 1.0
-
-        kitchen_setup.api.motion_goals.add_cartesian_pose(
-            goal_pose=r_goal2, tip_link="box", root_link=kitchen_setup.l_tip
-        )
-        kitchen_setup.api.motion_goals.allow_self_collision()
-        kitchen_setup.execute()
-        # kitchen_setup.check_cart_goal('box', r_goal2)
-
-    def test_only_collision_avoidance(self, giskard: PR2Tester):
-        giskard.execute()
-
-    def test_mesh_collision_avoidance(self, giskard: PR2Tester):
-        giskard.close_r_gripper()
-        object_name = "muh"
-        p = PoseStamped()
-        p.header.frame_id = giskard.r_tip
-        p.pose.position = Point(x=0.01, y=0.0, z=0.0)
-        q = quaternion_from_axis_angle([0, 1, 0], -np.pi / 2)
-        p.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        giskard.add_mesh_to_world(
-            name=object_name,
-            mesh="package://giskardpy_ros/data/urdfs/meshes/bowl_21.obj",
-            pose=p,
-        )
-        giskard.execute()
-
-    def test_attach_box_as_eef(self, giskard: PR2Tester):
-        pocky = "muh#pocky"
-        box_pose = PoseStamped()
-        box_pose.header.frame_id = giskard.r_tip
-        box_pose.pose.position = Point(x=0.05, y=0.0, z=0.0)
-        box_pose.pose.orientation = Quaternion(x=1.0, y=0.0, z=0.0, w=0.0)
-        giskard.add_box_to_world(
-            name=pocky,
-            size=(0.1, 0.02, 0.02),
-            pose=box_pose,
-            parent_link=giskard.r_tip,
-        )
-        p = PoseStamped()
-        p.header.frame_id = giskard.r_tip
-        p.pose.orientation.w = 1.0
-        giskard.api.motion_goals.add_cartesian_pose(p, pocky, giskard.map)
-        p = giskard.transform_msg(giskard.map, p)
-        giskard.execute()
-        p2 = giskard.compute_fk_pose(giskard.map, pocky)
-        compare_poses(p2.pose, p.pose)
-        giskard.detach_group(pocky)
-        p = PoseStamped()
-        p.header.frame_id = giskard.r_tip
-        p.pose.orientation.w = 1.0
-        p.pose.position.x = -0.1
-        giskard.api.motion_goals.add_cartesian_pose(p, giskard.r_tip, giskard.map)
-        giskard.execute()
-
     def test_hard_constraints_violated(self, kitchen_setup: PR2Tester):
-        pose = PoseStamped()
-        pose.header.frame_id = "map"
-        pose.pose.position.x = 2.0
-        pose.pose.orientation = Quaternion(w=1.0)
-        kitchen_setup.teleport_base(pose)
-        kitchen_setup.execute(expected_error_type=HardConstraintsViolatedException)
-
-    def test_base_link_in_collision(self, giskard: PR2Tester, pocky_pose_state):
-        giskard.api.motion_goals.allow_self_collision()
-        p = PoseStamped()
-        p.header.frame_id = "map"
-        p.pose.position.x = 0.0
-        p.pose.position.y = 0.0
-        p.pose.position.z = -0.2
-        p.pose.orientation.w = 1.0
-        giskard.add_box_to_world(name="box", size=(1.0, 1.0, 1.0), pose=p)
-        giskard.api.motion_goals.add_joint_position(pocky_pose_state)
-        giskard.execute()
-
-    def test_avoid_collision_with_box(self, box_setup: PR2Tester):
-        box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.05, group1=box_setup.api.robot_name.name
+        msc = MotionStatechart()
+        msc.add_node(
+            Sequence(
+                [
+                    SetOdometry(
+                        base_pose=TransformationMatrix.from_xyz_rpy(
+                            x=2.0, reference_frame=kitchen_setup.map
+                        )
+                    ),
+                    CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                ]
+            )
         )
-        box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.15, group1=box_setup.l_gripper_group, group2="box"
-        )
-        box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.10, group1=box_setup.r_gripper_group, group2="box"
-        )
-        box_setup.api.motion_goals.allow_self_collision()
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = box_setup.default_root
-        base_goal.pose.orientation.w = 1.0
-        box_setup.move_base(base_goal)
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.148)
-        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.088)
-
-    # def test_avoid_collision_drive_into_box(self, box_setup: PR2Tester):
-    # fixme doesn't work anymore because loop detector is gone
-    #     base_goal = PoseStamped()
-    #     base_goal.header.frame_id = box_setup.default_root
-    #     base_goal.pose.position.x = 0.25
-    # q = quaternion_from_axis_angle([0, 0, 1], np.pi, )
-
-    #     base_goal.pose.orientation = Quaternion(x=q[0], y=q[1], z=[2], w=[3)
-    #     box_setup.teleport_base(base_goal)
-    #     base_goal = PoseStamped()
-    #     base_goal.header.frame_id = 'base_footprint'
-    #     base_goal.pose.position.x = -1.
-    #     base_goal.pose.orientation.w = 1.
-    #     box_setup.api.motion_goals.allow_self_collision()
-    #     box_setup.api.motion_goals.add_cartesian_pose(goal_pose=base_goal, tip_link='base_footprint', root_link='map', weight=DefaultWeights.WEIGHT_BELOW_CA,
-    #                             check=False)
-    #     box_setup.execute()
-    #     box_setup.check_cpi_geq(['base_link'], 0.09)
-
-    def test_avoid_collision_lower_soft_threshold(self, box_setup: PR2Tester):
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = box_setup.default_root
-        base_goal.pose.position.x = 0.35
-        base_goal.pose.orientation.z = 1.0
-        box_setup.teleport_base(base_goal)
-        box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.05, group1=box_setup.api.robot_name.name
-        )
-        box_setup.api.motion_goals.allow_self_collision()
-        box_setup.execute()
-        box_setup.check_cpi_geq(
-            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
-            0.048,
-        )
-        box_setup.check_cpi_leq(
-            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
-            0.07,
-        )
-
-    @pytest.mark.skip(reason="Needs View PR")
-    def test_collision_override(self, box_setup: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = box_setup.default_root
-        p.pose.position.x += 0.5
-        q = quaternion_from_axis_angle(
-            [0, 0, 1],
-            np.pi,
-        )
-        p.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        box_setup.teleport_base(p)
-        box_setup.api.motion_goals.allow_self_collision()
-        box_setup.api.motion_goals.avoid_collision(
-            min_distance=0.25, group1=box_setup.api.robot_name.name, group2="box"
-        )
-        box_setup.execute()
-        box_setup.check_cpi_geq(
-            [box_setup.api.world.get_kinematic_structure_entity_by_name("base_link")],
-            distance_threshold=0.25,
-            check_self=False,
-        )
-
-    def test_ignore_all_collisions_of_links(self, box_setup: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = box_setup.default_root
-        p.pose.position.x += 0.5
-        q = quaternion_from_axis_angle(
-            [0, 0, 1],
-            np.pi,
-        )
-        p.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        box_setup.teleport_base(p)
-        box_setup.check_cpi_geq(
-            [
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "bl_caster_l_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "bl_caster_r_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "fl_caster_l_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "fl_caster_r_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "br_caster_l_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "br_caster_r_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "fr_caster_l_wheel_link"
-                ),
-                box_setup.api.world.get_kinematic_structure_entity_by_name(
-                    "fr_caster_r_wheel_link"
-                ),
-            ],
-            distance_threshold=0.25,
-            check_self=False,
-        )
+        with pytest.raises(ExecutionAbortedException):
+            kitchen_setup.api.execute(msc)
 
     def test_avoid_collision_go_around_corner(self, fake_table_setup: PR2Tester):
         msc = MotionStatechart()
@@ -1605,125 +1365,61 @@ class TestCollisionAvoidanceGoals:
             0.04,
         )
 
-    def test_allow_collision_drive_into_box(self, box_setup: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = "base_footprint"
-        p.header.stamp = rospy.node.get_clock().now().to_msg()
-        p.pose.position.x = 0.15
-        p.pose.orientation.w = 1.0
-
-        box_setup.api.motion_goals.allow_collision(group2="box")
-
-        box_setup.api.motion_goals.allow_self_collision()
-        box_setup.api.motion_goals.add_cartesian_pose(
-            goal_pose=p, tip_link="base_footprint", root_link=box_setup.default_root
-        )
-        box_setup.execute()
-
-        box_setup.check_cpi_leq(box_setup.get_l_gripper_links(), 0.0)
-        box_setup.check_cpi_leq(box_setup.get_r_gripper_links(), 0.0)
-
-    def test_avoid_collision_box_between_boxes(self, pocky_pose_setup: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.08
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world(
-            name="box",
-            size=(0.2, 0.05, 0.05),
-            parent_link=pocky_pose_setup.r_tip,
-            pose=p,
-        )
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.15
-        p.pose.position.y = 0.04
-        p.pose.position.z = 0.0
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world("bl", (0.1, 0.01, 0.2), pose=p)
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.15
-        p.pose.position.y = -0.04
-        p.pose.position.z = 0.0
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world("br", (0.1, 0.01, 0.2), pose=p)
-
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = -0.15
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.api.motion_goals.add_cartesian_pose(
-            p, pocky_pose_setup.r_tip, pocky_pose_setup.default_root
-        )
-
-        pocky_pose_setup.api.motion_goals.allow_self_collision()
-
-        pocky_pose_setup.execute()
-        pocky_pose_setup.check_cpi_geq(
-            [pocky_pose_setup.world.get_kinematic_structure_entity_by_name("box")],
-            0.048,
-        )
-
     def test_avoid_collision_box_between_3_boxes(self, pocky_pose_setup: PR2Tester):
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.08
-        p.pose.orientation.w = 1.0
         pocky_pose_setup.add_box_to_world(
             name="box",
             size=(0.2, 0.05, 0.05),
             parent_link=pocky_pose_setup.r_tip,
-            pose=p,
+            pose=TransformationMatrix.from_xyz_rpy(
+                x=0.08, reference_frame=pocky_pose_setup.r_tip
+            ),
         )
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.2
-        p.pose.position.y = 0.0
-        p.pose.position.z = 0.0
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world("b1", (0.01, 0.2, 0.2), pose=p)
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.15
-        p.pose.position.y = 0.04
-        p.pose.position.z = 0.0
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world("bl", (0.1, 0.01, 0.2), pose=p)
-        p = PoseStamped()
-        p.header.frame_id = pocky_pose_setup.r_tip
-        p.pose.position.x = 0.15
-        p.pose.position.y = -0.04
-        p.pose.position.z = 0.0
-        p.pose.orientation.w = 1.0
-        pocky_pose_setup.add_box_to_world("br", (0.1, 0.01, 0.2), pose=p)
+        pocky_pose_setup.add_box_to_world(
+            "b1",
+            (0.01, 0.2, 0.2),
+            pose=TransformationMatrix.from_xyz_rpy(
+                x=0.2, reference_frame=pocky_pose_setup.r_tip
+            ),
+        )
+        pocky_pose_setup.add_box_to_world(
+            "bl",
+            (0.1, 0.01, 0.2),
+            pose=TransformationMatrix.from_xyz_rpy(
+                x=0.15, y=0.04, reference_frame=pocky_pose_setup.r_tip
+            ),
+        )
+        pocky_pose_setup.add_box_to_world(
+            "br",
+            (0.1, 0.01, 0.2),
+            pose=TransformationMatrix.from_xyz_rpy(
+                x=0.15, y=-0.04, reference_frame=pocky_pose_setup.r_tip
+            ),
+        )
 
-        # p = PoseStamped()
-        # p.header.frame_id = pocky_pose_setup.r_tip
-        # p.pose.position = Point(-0.15, 0, 0)
-        # p.pose.orientation.w = 1.0
-        # pocky_pose_setup.api.motion_goals.add_cartesian_pose(p, pocky_pose_setup.r_tip, pocky_pose_setup.default_root)
-        x = Vector3Stamped()
-        x.header.frame_id = "box"
-        x.vector.x = 1.0
-        y = Vector3Stamped()
-        y.header.frame_id = "box"
-        y.vector.y = 1.0
-        x_map = Vector3Stamped()
-        x_map.header.frame_id = "map"
-        x_map.vector.x = 1.0
-        y_map = Vector3Stamped()
-        y_map.header.frame_id = "map"
-        y_map.vector.y = 1.0
-        pocky_pose_setup.api.motion_goals.add_align_planes(
-            tip_link="box", tip_normal=x, goal_normal=x_map, root_link="map"
-        )
-        pocky_pose_setup.api.motion_goals.add_align_planes(
-            tip_link="box", tip_normal=y, goal_normal=y_map, root_link="map"
-        )
-        pocky_pose_setup.api.motion_goals.allow_self_collision()
+        box = pocky_pose_setup.api.world.get_kinematic_structure_entity_by_name("box")
 
-        pocky_pose_setup.execute()
+        msc = MotionStatechart()
+        msc.add_nodes(
+            [
+                AlignPlanes(
+                    root_link=pocky_pose_setup.map,
+                    tip_link=box,
+                    tip_normal=Vector3.X(reference_frame=box),
+                    goal_normal=Vector3.X(reference_frame=pocky_pose_setup.map),
+                ),
+                AlignPlanes(
+                    root_link=pocky_pose_setup.map,
+                    tip_link=box,
+                    tip_normal=Vector3.Y(reference_frame=box),
+                    goal_normal=Vector3.Y(reference_frame=pocky_pose_setup.map),
+                ),
+                CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                local_min := LocalMinimumReached(),
+            ]
+        )
+        msc.add_node(EndMotion.when_true(local_min))
+
+        pocky_pose_setup.api.execute(msc)
         assert (
             "box",
             "bl",
