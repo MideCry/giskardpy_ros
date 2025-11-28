@@ -1,10 +1,6 @@
-from typing import Optional
-
 import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
-from semantic_digital_twin.world_description.connections import OmniDrive
-from swri_transform_util.wgs84_transformer import yaw_from_quaternion
 
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
@@ -13,7 +9,7 @@ from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
     GiskardBlackboard,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.world_description.connections import OmniDrive
 
 
 # can be used during closed-loop control, instead of for tracking a trajectory

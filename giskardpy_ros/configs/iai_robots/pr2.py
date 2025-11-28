@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pkg_resources import resource_filename
 
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy_ros.configs.giskard import RobotInterfaceConfig
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.robots.pr2 import PR2
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
@@ -16,10 +17,7 @@ from semantic_digital_twin.world_description.world_entity import CollisionChecki
 @dataclass
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
     odom_body_name: PrefixedName = PrefixedName("odom_combined")
-
-    def setup_world(self):
-        super().setup_world()
-        self.pr2 = PR2.from_world(world=self.world)
+    urdf_view: AbstractRobot = field(kw_only=True, default=PR2, init=False)
 
     def setup_collision_config(self):
         path_to_srdf = resource_filename(
@@ -31,7 +29,7 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
             c: ActiveConnection = self.world.get_connection_by_name(joint_name)
             c.frozen_for_collision_avoidance = True
 
-        for body in self.pr2.bodies_with_collisions:
+        for body in self.robot.bodies_with_collisions:
             collision_config = CollisionCheckingConfig(
                 buffer_zone_distance=0.1, violated_distance=0.0
             )
@@ -74,7 +72,7 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
         collision_config = CollisionCheckingConfig(
             buffer_zone_distance=0.2, violated_distance=0.1, max_avoided_bodies=2
         )
-        self.pr2.drive.set_static_collision_config_for_direct_child_bodies(
+        self.robot.drive.set_static_collision_config_for_direct_child_bodies(
             collision_config
         )
 

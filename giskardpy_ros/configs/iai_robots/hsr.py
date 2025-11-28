@@ -23,7 +23,6 @@ from semantic_digital_twin.world_description.world_entity import CollisionChecki
 
 @dataclass
 class WorldWithHSRConfig(WorldWithOmniDriveRobot):
-
     urdf_view: AbstractRobot = field(kw_only=True, default=HSRB, init=False)
 
     def setup_collision_config(self):
@@ -65,10 +64,6 @@ class WorldWithHSRConfig(WorldWithOmniDriveRobot):
                 buffer_zone_distance=0.03,
             )
         )
-
-    def setup_world(self, robot_name: Optional[str] = None) -> None:
-        super().setup_world()
-        self.robot: HSRB = self.world.get_semantic_annotations_by_type(HSRB)[0]
 
 
 class HSRStandaloneInterface(RobotInterfaceConfig):

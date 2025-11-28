@@ -298,25 +298,25 @@ def pocky_pose_setup(giskard_factory, pocky_pose_state):
 
 @pytest.fixture()
 def box_setup(pocky_pose_setup: PR2Tester) -> PR2Tester:
-    p = PoseStamped()
-    p.header.frame_id = "map"
-    p.pose.position.x = 1.2
-    p.pose.position.y = 0.0
-    p.pose.position.z = 0.5
-    p.pose.orientation.w = 1.0
-    pocky_pose_setup.add_box_to_world(name="box", size=(1.0, 1.0, 1.0), pose=p)
+    pocky_pose_setup.add_box_to_world(
+        name="box",
+        size=(1.0, 1.0, 1.0),
+        pose=TransformationMatrix.from_xyz_rpy(
+            x=1.2, z=0.5, reference_frame=pocky_pose_setup.map
+        ),
+    )
     return pocky_pose_setup
 
 
 @pytest.fixture()
 def fake_table_setup(pocky_pose_setup: PR2Tester) -> PR2Tester:
-    p = PoseStamped()
-    p.header.frame_id = "map"
-    p.pose.position.x = 1.2
-    p.pose.position.y = 0.0
-    p.pose.position.z = 0.3
-    p.pose.orientation.w = 1.0
-    pocky_pose_setup.add_box_to_world(name="box", size=(1.0, 1.0, 1.0), pose=p)
+    pocky_pose_setup.add_box_to_world(
+        name="box",
+        size=(1.0, 1.0, 1.0),
+        pose=TransformationMatrix.from_xyz_rpy(
+            x=1.2, z=0.3, reference_frame=pocky_pose_setup.map
+        ),
+    )
     return pocky_pose_setup
 
 
