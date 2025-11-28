@@ -1,16 +1,31 @@
-#!/usr/bin/env python
-import rospy
-
+from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import WorldWithHSRConfig, HSRCollisionAvoidanceConfig, \
-    HSRVelocityInterface
+from giskardpy_ros.configs.iai_robots.hsr import (
+    WorldWithHSRConfig,
+    HSRVelocityInterface,
+)
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.ros2_interface import get_robot_description
+from giskardpy_ros.utils.utils import load_xacro
 
-if __name__ == '__main__':
-    rospy.init_node('giskard')
-    debug_mode = rospy.get_param('~debug_mode', False)
-    giskard = Giskard(world_config=WorldWithHSRConfig(),
-                      collision_avoidance_config=HSRCollisionAvoidanceConfig(),
-                      robot_interface_config=HSRVelocityInterface(),
-                      behavior_tree_config=ClosedLoopBTConfig(debug_mode=debug_mode))
+
+def main():
+    rospy.init_node("giskard")
+    urdf = load_xacro("package://hsr_description/robots/hsrb4s.urdf.xacro")
+    # urdf = get_robot_description()
+    giskard = Giskard(
+        world_config=WorldWithHSRConfig(urdf=urdf),
+        collision_checker_id=CollisionCheckerLib.bpb,
+        robot_interface_config=HSRVelocityInterface(),
+        qp_controller_config=QPControllerConfig(
+            mpc_dt=0.025, prediction_horizon=15, control_dt=0.025
+        ),
+        behavior_tree_config=ClosedLoopBTConfig(debug_mode=False),
+    )
     giskard.live()
+
+
+if __name__ == "__main__":
+    main()

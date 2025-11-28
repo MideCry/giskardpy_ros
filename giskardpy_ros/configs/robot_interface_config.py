@@ -28,6 +28,7 @@ from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     ActiveConnection,
+    Connection6DoF,
 )
 from semantic_digital_twin.world_description.world_entity import Connection
 
@@ -54,7 +55,7 @@ class RobotInterfaceConfig(ABC):
     def sync_odometry_topic(
         self,
         odometry_topic: Optional[str] = None,
-        joint_name: Optional[str] = None,
+        joint: OmniDrive = None,
         sync_in_control_loop: bool = True,
     ):
         """
@@ -62,29 +63,27 @@ class RobotInterfaceConfig(ABC):
         """
         if odometry_topic is None:
             odometry_topic = search_for_unique_publisher_of_type(Odometry)
-        odom_connection = self.world.get_connection_by_name(joint_name)
-        assert isinstance(odom_connection, OmniDrive)
+        assert isinstance(joint, OmniDrive)
         self.tree.wait_for_goal.synchronization.sync_odometry_topic(
-            odometry_topic, joint_name
+            odometry_topic, joint
         )
         if sync_in_control_loop and GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_odometry_topic(
-                odometry_topic, joint_name
+                odometry_topic, joint
             )
 
     def sync_6dof_joint_with_tf_frame(
-        self, joint_name: str, tf_parent_frame: str, tf_child_frame: str
+        self, joint: Connection6DoF, tf_parent_frame: str, tf_child_frame: str
     ):
         """
         Tell Giskard to sync a 6dof joint with a tf frame.
         """
-        joint_name = self.world.get_connection_by_name(joint_name).name
         self.tree.wait_for_goal.synchronization.sync_6dof_joint_with_tf_frame(
-            joint_name, tf_parent_frame, tf_child_frame
+            joint, tf_parent_frame, tf_child_frame
         )
         if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.closed_loop_synchronization.sync_6dof_joint_with_tf_frame(
-                joint_name, tf_parent_frame, tf_child_frame
+                joint, tf_parent_frame, tf_child_frame
             )
 
     def sync_joint_state_topic(self, topic_name: str, group_name: Optional[str] = None):
@@ -107,7 +106,7 @@ class RobotInterfaceConfig(ABC):
     def add_base_cmd_velocity(
         self,
         cmd_vel_topic: Optional[str] = None,
-        joint_name: Optional[PrefixedName] = None,
+        joint: OmniDrive = None,
         track_only_velocity: bool = False,
     ):
         """
@@ -115,13 +114,13 @@ class RobotInterfaceConfig(ABC):
         :param cmd_vel_topic: a Twist topic
         :param track_only_velocity: The tracking mode. If true, any position error is not considered which makes
                                     the tracking smoother but less accurate.
-        :param joint_name: name of the omni or diff drive joint. Doesn't need to be specified if there is only one.
+        :param joint: omni or diff drive joint. Doesn't need to be specified if there is only one.
         """
         if cmd_vel_topic is None:
             cmd_vel_topic = search_for_unique_subscriber_of_type(Twist)
         if GiskardBlackboard().tree_config.is_closed_loop():
             self.tree.control_loop_branch.send_controls.add_send_cmd_velocity(
-                topic_name=cmd_vel_topic, joint_name=joint_name
+                topic_name=cmd_vel_topic, joint=joint
             )
         elif GiskardBlackboard().tree_config.is_open_loop():
             self.tree.execute_traj.add_base_traj_action_server(

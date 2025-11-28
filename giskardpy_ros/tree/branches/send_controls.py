@@ -9,7 +9,10 @@ from giskardpy_ros.tree.behaviors.joint_vel_controller_publisher import (
 from giskardpy_ros.tree.behaviors.send_cmd_vel import SendCmdVelTwist
 from giskardpy_ros.tree.composites.running_selector import RunningSelector
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
-from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
+from semantic_digital_twin.world_description.connections import (
+    ActiveConnection1DOF,
+    OmniDrive,
+)
 
 
 class SendControls(RunningSelector):
@@ -26,7 +29,5 @@ class SendControls(RunningSelector):
             JointGroupVelController(cmd_topic=cmd_topic, connections=connections)
         )
 
-    def add_send_cmd_velocity(
-        self, topic_name: str, joint_name: Optional[PrefixedName] = None
-    ):
-        self.add_child(SendCmdVelTwist(topic_name=topic_name, joint_name=joint_name))
+    def add_send_cmd_velocity(self, topic_name: str, joint: OmniDrive = None):
+        self.add_child(SendCmdVelTwist(topic_name=topic_name, joint=joint))

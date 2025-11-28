@@ -3,6 +3,8 @@ from typing import Optional
 import numpy as np
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
+from semantic_digital_twin.world_description.connections import OmniDrive
+from swri_transform_util.wgs84_transformer import yaw_from_quaternion
 
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.ros2 import rospy
@@ -18,34 +20,28 @@ from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 class SendCmdVelTwist(GiskardBehavior):
     supported_state_types = [Twist]
 
-    def __init__(self, topic_name: str, joint_name: Optional[PrefixedName] = None):
+    def __init__(self, topic_name: str, joint: OmniDrive = None):
         super().__init__()
         self.threshold = np.array([0.0, 0.0, 0.0])
         self.cmd_topic = topic_name
         self.vel_pub = rospy.node.create_publisher(Twist, self.cmd_topic, 10)
 
-        self.joint = GiskardBlackboard().executor.world.get_drive_joint(
-            joint_name=joint_name
-        )
-        GiskardBlackboard().executor.world.register_controlled_joints([self.joint.name])
+        self.joint = joint
+        self.joint.has_hardware_interface = True
         get_middleware().loginfo(f"Created publisher for {self.cmd_topic}.")
 
-    def solver_cmd_to_twist(self, cmd) -> Twist:
-        twist = Twist()
+    def solver_cmd_to_twist(self, twist) -> Twist:
         try:
-            twist.linear.x = cmd.free_variable_data[self.joint.x_velocity.name][0]
             if abs(twist.linear.x) < self.threshold[0]:
                 twist.linear.x = 0.0
         except:
             twist.linear.x = 0.0
         try:
-            twist.linear.y = cmd.free_variable_data[self.joint.y_velocity.name][0]
             if abs(twist.linear.y) < self.threshold[1]:
                 twist.linear.y = 0.0
         except:
             twist.linear.y = 0.0
         try:
-            twist.angular.z = cmd.free_variable_data[self.joint.yaw.name][0]
             if abs(twist.angular.z) < self.threshold[2]:
                 twist.angular.z = 0.0
         except:
@@ -54,9 +50,23 @@ class SendCmdVelTwist(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     def update(self):
-        cmd = GiskardBlackboard().executor.qp_solver_solution
-        twist = self.solver_cmd_to_twist(cmd)
-        self.vel_pub.publish(twist)
+        x_vel = (
+            GiskardBlackboard()
+            .executor.world.state[self.joint.x_velocity.name]
+            .velocity
+        )
+        y_vel = (
+            GiskardBlackboard()
+            .executor.world.state[self.joint.y_velocity.name]
+            .velocity
+        )
+        yaw_vel = GiskardBlackboard().executor.world.state[self.joint.yaw.name].velocity
+        cmd = Twist()
+        cmd.linear.x = x_vel
+        cmd.linear.y = y_vel
+        cmd.angular.z = yaw_vel
+        cmd = self.solver_cmd_to_twist(cmd)
+        self.vel_pub.publish(cmd)
         return Status.RUNNING
 
     def terminate(self, new_status):

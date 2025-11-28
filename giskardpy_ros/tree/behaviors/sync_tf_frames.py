@@ -1,6 +1,7 @@
 from typing import Tuple, Dict, Optional
 
 from py_trees.common import Status
+from semantic_digital_twin.spatial_types import TransformationMatrix
 
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import msg_converter
@@ -15,43 +16,39 @@ from semantic_digital_twin.world_description.connections import Connection6DoF
 
 
 class SyncTfFrames(GiskardBehavior):
-    joint_map: Dict[PrefixedName, Tuple[str, str]]
+    joint_map: Dict[Connection6DoF, Tuple[str, str]]
 
-    def __init__(
-        self, name, joint_map: Optional[Dict[PrefixedName, Tuple[str, str]]] = None
-    ):
+    def __init__(self, name):
         super().__init__(name)
-        if joint_map is None:
-            self.joint_map = {}
-        else:
-            self.joint_map = joint_map
+        self.joint_map = {}
 
     def sync_6dof_joint_with_tf_frame(
-        self, joint_name: PrefixedName, tf_parent_frame: str, tf_child_frame: str
+        self, joint: Connection6DoF, tf_parent_frame: str, tf_child_frame: str
     ):
-        if joint_name in self.joint_map:
+        if joint in self.joint_map:
             raise AttributeError(
-                f"Joint '{joint_name}' is already being tracking with a tf frame: "
-                f"'{self.joint_map[joint_name][0]}'<-'{self.joint_map[joint_name][1]}'"
+                f"Joint '{joint.name}' is already being tracking with a tf frame: "
+                f"'{self.joint_map[joint][0]}'<-'{self.joint_map[joint][1]}'"
             )
-        joint = GiskardBlackboard().executor.world.joints[joint_name]
         if not isinstance(joint, Connection6DoF):
             raise AttributeError(
-                f"Can only sync Connection6DoF with tf but '{joint_name}' is of type '{type(joint)}'."
+                f"Can only sync Connection6DoF with tf but '{joint.name}' is of type '{type(joint)}'."
             )
-        self.joint_map[joint_name] = (tf_parent_frame, tf_child_frame)
+        self.joint_map[joint] = (tf_parent_frame, tf_child_frame)
 
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        for joint_name, (tf_parent_frame, tf_child_frame) in self.joint_map.items():
-            joint: Connection6DoF = GiskardBlackboard().executor.world.joints[
-                joint_name
-            ]
+        for joint, (tf_parent_frame, tf_child_frame) in self.joint_map.items():
             parent_T_child = lookup_pose(tf_parent_frame, tf_child_frame)
-            pose = msg_converter.ros_msg_to_giskard_obj(
-                parent_T_child, GiskardBlackboard().executor.world
+            joint.origin = TransformationMatrix.from_xyz_quaternion(
+                pos_x=parent_T_child.pose.position.x,
+                pos_y=parent_T_child.pose.position.y,
+                pos_z=parent_T_child.pose.position.z,
+                quat_w=parent_T_child.pose.orientation.w,
+                quat_x=parent_T_child.pose.orientation.x,
+                quat_y=parent_T_child.pose.orientation.y,
+                quat_z=parent_T_child.pose.orientation.z,
             )
-            joint.origin = pose
 
         return Status.SUCCESS
