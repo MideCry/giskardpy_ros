@@ -10,7 +10,7 @@ from giskardpy_ros.tree.behaviors.publish_debug_expressions import (
     QPDataPublisherConfig,
 )
 from giskardpy_ros.tree.behaviors.publish_feedback import PublishFeedback
-from giskardpy_ros.tree.behaviors.publish_joint_states import PublishJointState
+from giskardpy_ros.tree.behaviors.publish_joint_states import PublishWorldState
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes, TFPublisher
 from giskardpy_ros.tree.behaviors.visualization import VisualizationBehavior
 
@@ -60,15 +60,6 @@ class PublishState(Sequence):
         node = PublishDebugExpressions(publish_config=publish_config)
         self.add_child(node)
 
-    def add_joint_state_publisher(
-        self,
-        topic_name: Optional[str] = None,
-        include_prefix: bool = False,
-        only_prismatic_and_revolute: bool = True,
-    ):
-        node = PublishJointState(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=only_prismatic_and_revolute,
-        )
+    def add_joint_state_publisher(self):
+        node = PublishWorldState()
         self.add_child(node)

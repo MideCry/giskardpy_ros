@@ -21,9 +21,7 @@ def main():
     giskard = Giskard(
         world_config=WorldWithHSRConfig(urdf=robot_description),
         robot_interface_config=HSRStandaloneInterface(),
-        behavior_tree_config=StandAloneBTConfig(
-            publish_tf=True, publish_js=False, debug_mode=True
-        ),
+        behavior_tree_config=StandAloneBTConfig(publish_tf=True, debug_mode=True),
         qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
     )
     giskard.live()

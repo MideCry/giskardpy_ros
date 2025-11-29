@@ -23,11 +23,9 @@ def main():
     giskard = Giskard(
         world_config=WorldWithTracyConfig(urdf=robot_description),
         robot_interface_config=TracyStandAloneRobotInterfaceConfig(),
-        behavior_tree_config=StandAloneBTConfig(
-            publish_tf=True, publish_js=False, debug_mode=True
-        ),
+        behavior_tree_config=StandAloneBTConfig(publish_tf=True, debug_mode=True),
         qp_controller_config=QPControllerConfig(control_dt=0.03, mpc_dt=0.03),
-        collision_checker_id=CollisionCheckerLib.bpb
+        collision_checker_id=CollisionCheckerLib.bpb,
     )
     giskard.live()
 

@@ -97,6 +97,7 @@ class Giskard:
         self.state_synchronizer = StateSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
+        self.state_synchronizer.pause()
         self.world_fetcher = FetchWorldServer(
             node=rospy.node, world=self.world_config.world
         )

@@ -200,52 +200,24 @@ class BehaviorTreeConfig:
                 log_traj=False
             )
 
-    def add_js_publisher(
-        self, topic_name: Optional[str] = None, include_prefix: bool = False
-    ):
+    def add_world_state_publisher(self):
         """
         Publishes joint states for Giskard's internal state.
         """
-        GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=True,
-        )
-        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=True,
-        )
-
-    def add_free_variable_publisher(
-        self, topic_name: Optional[str] = None, include_prefix: bool = False
-    ):
-        """
-        Publishes joint states for Giskard's internal state.
-        """
-        GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=False,
-        )
-        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher(
-            include_prefix=include_prefix,
-            topic_name=topic_name,
-            only_prismatic_and_revolute=False,
-        )
+        GiskardBlackboard().tree.wait_for_goal.publish_state.add_joint_state_publisher()
+        # GiskardBlackboard().tree.control_loop_branch.publish_state.add_joint_state_publisher()
 
 
 @dataclass
 class StandAloneBTConfig(BehaviorTreeConfig):
     """
     The default behavior tree for Giskard in standalone mode. Make sure to set up the robot interface accordingly.
-    :param publish_js: publish current world state.
+    :param publish_world_state: publish current world state.
     :param publish_tf: publish all link poses in tf.
     :param include_prefix: whether to include the robot name prefix when publishing joint states or tf
     """
 
-    publish_js: bool = False
-    publish_free_variables: bool = False
+    publish_world_state: bool = True
     publish_tf: bool = True
     include_prefix: bool = False
     visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
@@ -253,12 +225,7 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     def __post_init__(self):
         super().__post_init__()
         if is_in_github_workflow():
-            self.publish_js = False
             self.publish_tf = True
-        if self.publish_js and self.publish_free_variables:
-            raise SetupException(
-                "publish_js and publish_free_variables cannot be True at the same time."
-            )
 
     def setup(self):
         super().setup()
@@ -271,10 +238,8 @@ class StandAloneBTConfig(BehaviorTreeConfig):
                 include_prefix=self.include_prefix, mode=TfPublishingModes.all
             )
         self.add_evaluate_debug_expressions()
-        if self.publish_js:
-            self.add_js_publisher(include_prefix=self.include_prefix)
-        if self.publish_free_variables:
-            self.add_free_variable_publisher(include_prefix=False)
+        if self.publish_world_state:
+            self.add_world_state_publisher()
 
     def switch_to_projection_mode(self):
         # StandAlone specific projection logic
