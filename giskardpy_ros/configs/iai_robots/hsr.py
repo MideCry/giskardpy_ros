@@ -27,7 +27,7 @@ class WorldWithHSRConfig(WorldWithOmniDriveRobot):
 
     def setup_collision_config(self):
         path_to_srdf = resource_filename(
-            "giskardpy", "../self_collision_matrices/iai/hsrb.srdf"
+            "giskardpy", "../../self_collision_matrices/iai/hsrb.srdf"
         )
         self.world.load_collision_srdf(path_to_srdf)
         for body in self.robot.bodies_with_collisions:

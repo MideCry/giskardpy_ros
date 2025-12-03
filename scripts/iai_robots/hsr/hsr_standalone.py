@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from giskardpy_ros.utils.utils import load_xacro
 from rclpy import Parameter
 
 from giskardpy.qp.qp_controller_config import QPControllerConfig
@@ -17,7 +18,6 @@ def main():
         namespace="", parameters=[("robot_description", Parameter.Type.STRING)]
     )
     robot_description = rospy.node.get_parameter_or("robot_description").value
-    drive_joint_name = "brumbrum"
     giskard = Giskard(
         world_config=WorldWithHSRConfig(urdf=robot_description),
         robot_interface_config=HSRStandaloneInterface(),
