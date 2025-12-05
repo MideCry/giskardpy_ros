@@ -21,7 +21,7 @@ class WorldWithPR2Config(WorldWithOmniDriveRobot):
 
     def setup_collision_config(self):
         path_to_srdf = resource_filename(
-            "giskardpy", "../self_collision_matrices/iai/pr2.srdf"
+            "giskardpy", "../../self_collision_matrices/iai/pr2.srdf"
         )
         self.world.load_collision_srdf(path_to_srdf)
         frozen_joints = ["r_gripper_l_finger_joint", "l_gripper_l_finger_joint"]

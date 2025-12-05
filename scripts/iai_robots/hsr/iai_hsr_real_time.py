@@ -20,7 +20,7 @@ def main():
         collision_checker_id=CollisionCheckerLib.bpb,
         robot_interface_config=HSRVelocityInterface(),
         qp_controller_config=QPControllerConfig(
-            mpc_dt=0.025, prediction_horizon=15, control_dt=0.025
+            target_frequency=40, prediction_horizon=15
         ),
         behavior_tree_config=ClosedLoopBTConfig(debug_mode=False),
     )

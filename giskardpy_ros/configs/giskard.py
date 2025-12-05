@@ -7,14 +7,14 @@ from typing import List
 import rclpy
 
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy.executor import Executor
+from giskardpy.executor import Executor, SimulationPacer
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
+from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig, StandAloneBTConfig
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -70,11 +70,16 @@ class Giskard:
         with self.world_config.world.modify_world():
             self.world_config.setup_world()
             self.world_config.world.__class__.root.fget.cache_clear()
+            if isinstance(self.behavior_tree_config, StandAloneBTConfig):
+                real_time_factor = None
+            else:
+                real_time_factor = 1.0
             self.executor = Executor(
                 world=self.world_config.world,
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
                 tmp_folder=self.tmp_folder,
+                pacer=SimulationPacer(real_time_factor=real_time_factor)
             )
 
             self.behavior_tree_config.setup()
