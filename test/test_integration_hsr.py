@@ -94,7 +94,7 @@ class HSRTester(GiskardTester):
                 publish_tf=True,
                 add_debug_marker_publisher=True,
             ),
-            qp_controller_config=QPControllerConfig(mpc_dt=0.05, control_dt=None),
+            qp_controller_config=QPControllerConfig.create_with_simulation_defaults(),
         )
 
     @property

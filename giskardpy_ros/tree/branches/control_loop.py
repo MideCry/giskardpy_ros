@@ -1,5 +1,6 @@
 from py_trees.decorators import FailureIsRunning, SuccessIsRunning
 
+from giskardpy.executor import SimulationPacer
 from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.goal_canceled import GoalCanceled
 from giskardpy_ros.tree.behaviors.instantaneous_controller import ControllerPlugin
@@ -26,7 +27,11 @@ class ControlLoop(AsyncBehavior):
     controller_plugin: ControllerPlugin
 
     def __init__(self, name: str = "control_loop", log_traj: bool = True):
-        control_dt = GiskardBlackboard().giskard.qp_controller_config.control_dt
+        pacer = GiskardBlackboard().giskard.executor.pacer
+        if isinstance(pacer, SimulationPacer) and pacer.real_time_factor is None:
+            control_dt = None
+        else:
+            control_dt = pacer.control_dt
         if control_dt is not None:
             max_hz = 1 / control_dt
         else:
