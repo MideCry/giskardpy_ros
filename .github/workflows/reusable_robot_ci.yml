@@ -80,76 +80,70 @@ jobs:
       HOME: /root/
     steps:
       #install giskardpy and look for possible PR to sync with
-      - name: Find Corresponding PR in giskardpy
-        # searches for pull-request in giskardpy match the pull-request that triggered the workflow.
-        # Uses the pr-url, pr-number or pr-title to search the open pr's on giskardpy to find a description,
-        # which contains one of them.
-        if: github.event_name == 'pull_request'
+#      - name: Find Corresponding PR in giskardpy
+#        # searches for pull-request in giskardpy match the pull-request that triggered the workflow.
+#        # Uses the pr-url, pr-number or pr-title to search the open pr's on giskardpy to find a description,
+#        # which contains one of them.
+#        if: github.event_name == 'pull_request'
+#        run: |
+#          REPO="${{ github.repository_owner }}/giskardpy"
+#          PR_TITLE="${{ github.event.pull_request.title }}"
+#
+#          echo "Searching for PR related to $PR_TITLE in $REPO"
+#
+#          # Find PR by matching title or linked issues
+#          PR_JSON=$(gh pr list --repo "$REPO" --state open \
+#            --json number,title,url,mergeable | jq -r \
+#            ".[] | select(.title | contains(\"${PR_TITLE}\")) | @base64")
+#
+#          if [[ -n "$PR_JSON" ]]; then
+#            PR_INFO=$(echo "$PR_JSON" | base64 --decode)
+#            PR_URL=$(echo "$PR_INFO" | jq -r '.url')
+#            PR_ID=$(echo "$PR_INFO" | jq -r '.number')
+#            PR_MERGEABLE=$(echo "$PR_INFO" | jq -r '.mergeable')
+#
+#            echo "Found related PR in second repo: $PR_URL"
+#            echo "pr_found=true" >> $GITHUB_ENV
+#            echo "pr_id=$PR_ID" >> $GITHUB_ENV
+#            echo "pr_mergeable=$PR_MERGEABLE" >> $GITHUB_ENV
+#          else
+#            echo "No matching PR found in second repo."
+#            echo "pr_found=false" >> $GITHUB_ENV
+#          fi
+#        env:
+#          GH_TOKEN: ${{ github.token }}
+#      - name: Check if triggered from giskardpy
+#        if: inputs.is_trigger
+#        run: |
+#            echo "pr_found=true" >> $GITHUB_ENV
+#            echo "pr_id=${{ inputs.pr_id }}" >> $GITHUB_ENV
+#            echo "pr_mergeable=MERGEABLE" >> $GITHUB_ENV
+#      - name: Checkout giskardpy PR Branch
+#        # when a matching pr is found and merge-able, clone the repo and merge the branches of the pr.
+#        if: env.pr_found == 'true' && env.pr_mergeable == 'MERGEABLE'
+#        run: |
+#          git config --global user.email "github-actions@github.com"
+#          git config --global user.name "GitHub Actions"
+#
+#          git clone https://github.com/${{ github.repository_owner }}/giskardpy.git
+#          cd giskardpy
+#
+#          gh pr checkout --repo ${{ github.repository_owner }}/giskardpy ${{ env.pr_id }}
+#        env:
+#          GH_TOKEN: ${{ github.token }}
+#      - uses: actions/checkout@v3
+#        if: (inputs.is_trigger == false && github.event_name == 'push') || env.pr_found == 'false' || env.pr_mergeable != 'MERGEABLE'
+#        # fallback repo and branch, if event is push or no merge-able pr is found
+#        with:
+#          path: 'giskardpy'
+#          repository: ${{ github.repository_owner }}/giskardpy
+#          ref: semantic_world_integration
+      - name: install pip dependencies
         run: |
-          REPO="${{ github.repository_owner }}/giskardpy"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-
-          echo "Searching for PR related to $PR_TITLE in $REPO"
-
-          # Find PR by matching title or linked issues
-          PR_JSON=$(gh pr list --repo "$REPO" --state open \
-            --json number,title,url,mergeable | jq -r \
-            ".[] | select(.title | contains(\"${PR_TITLE}\")) | @base64")
-
-          if [[ -n "$PR_JSON" ]]; then
-            PR_INFO=$(echo "$PR_JSON" | base64 --decode)
-            PR_URL=$(echo "$PR_INFO" | jq -r '.url')
-            PR_ID=$(echo "$PR_INFO" | jq -r '.number')
-            PR_MERGEABLE=$(echo "$PR_INFO" | jq -r '.mergeable')
-
-            echo "Found related PR in second repo: $PR_URL"
-            echo "pr_found=true" >> $GITHUB_ENV
-            echo "pr_id=$PR_ID" >> $GITHUB_ENV
-            echo "pr_mergeable=$PR_MERGEABLE" >> $GITHUB_ENV
-          else
-            echo "No matching PR found in second repo."
-            echo "pr_found=false" >> $GITHUB_ENV
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Check if triggered from giskardpy
-        if: inputs.is_trigger
-        run: |
-            echo "pr_found=true" >> $GITHUB_ENV
-            echo "pr_id=${{ inputs.pr_id }}" >> $GITHUB_ENV
-            echo "pr_mergeable=MERGEABLE" >> $GITHUB_ENV
-      - name: Checkout giskardpy PR Branch
-        # when a matching pr is found and merge-able, clone the repo and merge the branches of the pr.
-        if: env.pr_found == 'true' && env.pr_mergeable == 'MERGEABLE'
-        run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
-          
-          git clone https://github.com/${{ github.repository_owner }}/giskardpy.git
-          cd giskardpy
-          
-          gh pr checkout --repo ${{ github.repository_owner }}/giskardpy ${{ env.pr_id }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - uses: actions/checkout@v3
-        if: (inputs.is_trigger == false && github.event_name == 'push') || env.pr_found == 'false' || env.pr_mergeable != 'MERGEABLE'
-        # fallback repo and branch, if event is push or no merge-able pr is found
-        with:
-          path: 'giskardpy'
-          repository: ${{ github.repository_owner }}/giskardpy
-          ref: semantic_world_integration
-      - name: install pip dependencies giskardpy
-        run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r giskardpy/requirements.txt
-          cd giskardpy
-          pip3 install -e .
-      - name: install pip dependencies semantic-digital-twin
-        run: |
-          git clone https://github.com/cram2/semantic_digital_twin.git
-          cd semantic_digital_twin
-          pip3 install -r requirements.txt
-          pip3 install -e .
+          git clone https://github.com/cram2/cognitive_robot_abstract_machine.git
+          cd cognitive_robot_abstract_machine
+          workon giskardpy
+          poetry install
       #pull github deps ================================================================================================
       - name: Create workspace I
         run: |
