@@ -1,7 +1,7 @@
 name: Reusable Robot CI
 defaults:
   run:
-    shell: bash -ieo pipefail {0}
+    shell: bash -ixo pipefail {0}
 on:
   workflow_call:
     inputs:
