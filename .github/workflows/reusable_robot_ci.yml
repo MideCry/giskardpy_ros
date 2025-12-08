@@ -146,8 +146,7 @@ jobs:
           ref: main
       - name: install pip dependencies
         run: |
-          pwd
-          cd ../cognitive_robot_abstract_machine
+          cd $GITHUB_WORKSPACE/cognitive_robot_abstract_machine
           workon giskardpy
           poetry install
       #pull github deps ================================================================================================
