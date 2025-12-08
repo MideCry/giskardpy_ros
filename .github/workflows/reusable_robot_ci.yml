@@ -79,6 +79,10 @@ jobs:
       QP_SOLVER: ${{ matrix.qp_solver }}
       HOME: /root/
     steps:
+      - name: Set Docker config path with valid permissions
+        run: |
+          mkdir -p $HOME/.docker
+          export DOCKER_CONFIG=$HOME/.docker
       #install giskardpy and look for possible PR to sync with
 #      - name: Find Corresponding PR in giskardpy
 #        # searches for pull-request in giskardpy match the pull-request that triggered the workflow.
