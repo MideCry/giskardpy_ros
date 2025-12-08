@@ -1,5 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
+from time import sleep
 
 import numpy as np
 import pytest
@@ -154,6 +155,8 @@ class TestJointGoals:
         msc.add_node(EndMotion.when_true(joint_goal))
         giskard.api.execute(msc)
 
+        sleep(0.5)  # wait for sync
+
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
         )
@@ -202,6 +205,7 @@ class TestJointGoals:
         )
         msc.add_node(EndMotion.when_true(node))
         giskard.api.execute(msc)
+        sleep(0.5)  # wait for sync
 
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
@@ -238,6 +242,8 @@ class TestJointGoals:
         )
         msc.add_node(EndMotion.when_true(node))
         giskard.api.execute(msc)
+
+        sleep(0.5)  # wait for sync
 
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
@@ -282,7 +288,7 @@ class TestJointGoals:
         msc.add_node(EndMotion.when_true(joint_goal))
         giskard.api.execute(msc)
         np.testing.assert_almost_equal(
-            giskard.api.world.state[arm_lift_joints.dof.name].position,
+            giskard.api.world.state[arm_lift_joints.dof.id].position,
             0.5,
             decimal=2,
         )

@@ -237,6 +237,8 @@ jobs:
           colcon build
           source install/setup.bash
           echo 'source $GITHUB_WORKSPACE/giskard_ws/install/setup.bash' >> ~/.bashrc
+          workon giskardpy
+          pip install -r src/giskardpy_ros/requirements.txt
       #tests ===========================================================================================================
       - if: ${{ (always()) && (runner.debug == '1') }}
 #      - if: ${{ (always()) }}
