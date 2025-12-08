@@ -138,6 +138,9 @@ jobs:
 #          path: 'giskardpy'
 #          repository: ${{ github.repository_owner }}/giskardpy
 #          ref: semantic_world_integration
+      - name: Debug clone cognitive_robot_abstract_machine 
+        run: | 
+          set -x git --version || true echo "Trying to clone..." git clone https://github.com/cram2/cognitive_robot_abstract_machine.git || { rc=$?; echo "git clone failed with rc=$rc"; exit $rc; }
       - name: install pip dependencies
         run: |
           git clone https://github.com/cram2/cognitive_robot_abstract_machine.git
