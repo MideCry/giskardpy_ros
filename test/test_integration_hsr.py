@@ -153,9 +153,13 @@ class TestJointGoals:
             ),
         )
         msc.add_node(EndMotion.when_true(joint_goal))
-        giskard.api.execute(msc)
 
-        sleep(0.5)  # wait for sync
+        state_version = giskard.api.world.state.version
+        giskard.api.execute(msc)
+        for i in range(100):
+            if giskard.api.world.state.version != state_version:
+                break
+            sleep(0.01)
 
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
@@ -204,8 +208,13 @@ class TestJointGoals:
             ),
         )
         msc.add_node(EndMotion.when_true(node))
+
+        state_version = giskard.api.world.state.version
         giskard.api.execute(msc)
-        sleep(0.5)  # wait for sync
+        for i in range(100):
+            if giskard.api.world.state.version != state_version:
+                break
+            sleep(0.01)  # wait for sync
 
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
@@ -241,9 +250,13 @@ class TestJointGoals:
             ),
         )
         msc.add_node(EndMotion.when_true(node))
-        giskard.api.execute(msc)
 
-        sleep(0.5)  # wait for sync
+        state_version = giskard.api.world.state.version
+        giskard.api.execute(msc)
+        for i in range(100):
+            if giskard.api.world.state.version != state_version:
+                break
+            sleep(0.01)
 
         arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
             "arm_lift_joint"
@@ -286,7 +299,12 @@ class TestJointGoals:
             ),
         )
         msc.add_node(EndMotion.when_true(joint_goal))
+        state_version = giskard.api.world.state.version
         giskard.api.execute(msc)
+        for i in range(100):
+            if giskard.api.world.state.version != state_version:
+                break
+            sleep(0.01)
         np.testing.assert_almost_equal(
             giskard.api.world.state[arm_lift_joints.dof.id].position,
             0.5,
