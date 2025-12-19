@@ -42,7 +42,7 @@ class SyncJointState(GiskardBehavior):
                         joint_name
                     )
                 )
-                connection._world.state[connection.raw_dof.name].position = (
+                connection._world.state[connection.raw_dof.id].position = (
                     self.data.position[i]
                 )
             self.data = None
@@ -89,5 +89,5 @@ class SyncJointStatePosition(GiskardBehavior):
             connection: ActiveConnection1DOF = (
                 GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
             )
-            connection._world.state[connection.raw_dof.name].position = position
+            connection._world.state[connection.raw_dof.id].position = position
         return Status.SUCCESS

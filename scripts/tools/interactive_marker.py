@@ -187,16 +187,13 @@ class InteractiveMarkerNode:
             msc.add_node(cart_goal)
             max_traj = CountSeconds(seconds=20)
             msc.add_node(max_traj)
-            collision_avoidance = CollisionAvoidance(
-                collision_entries=[CollisionRequest.avoid_all_collision()],
-            )
-            msc.add_node(collision_avoidance)
             end = EndMotion()
             msc.add_node(end)
             # end.start_condition = cart_goal.observation_variable
-            end.start_condition = cas.trinary_logic_or(cart_goal.observation_variable, max_traj.observation_variable)
+            end.start_condition = cas.trinary_logic_or(
+                cart_goal.observation_variable, max_traj.observation_variable
+            )
             self.giskard.execute_async(msc)
-
             # reset marker pose
             self.int_marker.pose.position.x = 0.0
             self.int_marker.pose.position.y = 0.0

@@ -31,7 +31,7 @@ class ControlLoop(AsyncBehavior):
         if isinstance(pacer, SimulationPacer) and pacer.real_time_factor is None:
             control_dt = None
         else:
-            control_dt = pacer.control_dt
+            control_dt = 1 / pacer.target_frequency
         if control_dt is not None:
             max_hz = 1 / control_dt
         else:
