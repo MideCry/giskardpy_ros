@@ -667,7 +667,7 @@ class TestConstraints:
                         root_link=kitchen_setup.base_footprint,
                         tip_link=kitchen_setup.r_tip,
                         goal_pose=HomogeneousTransformationMatrix.from_point_rotation_matrix(
-                            point=Point3(x_init=-0.3, z_init=0.6),
+                            point=Point3(x=-0.3, z=0.6),
                             rotation_matrix=RotationMatrix(
                                 [
                                     [0, 0, -1, 0],
@@ -1459,7 +1459,7 @@ class TestCollisionAvoidanceGoals:
                         root_link=giskard.torso_lift_link,
                         tip_link=giskard.l_tip,
                         goal_pose=HomogeneousTransformationMatrix.from_point_rotation_matrix(
-                            point=Point3(x_init=0.4),
+                            point=Point3(x=0.4),
                             rotation_matrix=RotationMatrix(
                                 [
                                     [-1, 0, 0, 0],
