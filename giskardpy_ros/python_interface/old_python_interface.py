@@ -12,22 +12,23 @@ from giskard_msgs.srv._dye_group import DyeGroup_Response
 from giskardpy.data_types.data_types import goal_parameter
 from giskardpy_ros.python_interface.python_interface import GiskardWrapper
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA
+from rclpy.node import Node
 
 
 class OldGiskardWrapper(GiskardWrapper):
     max_trajectory_length_set: bool
 
-    def __init__(self, node_name: str = 'giskard'):
-        super().__init__(node_name)
+    def __init__(self, node_handle: Node, giskard_node_name: str = 'giskard'):
+        super().__init__(node_handle=node_handle, giskard_node_name=giskard_node_name)
 
-    def execute(self, wait: bool = True, add_default: bool = True) -> Move_Result:
+    def execute(self, add_default: bool = True) -> Move_Result:
         if add_default:
             self.add_default_end_motion_conditions()
-        return super().execute(wait)
+        return super().execute()
 
-    def projection(self, wait: bool = True) -> Move_Result:
+    def projection(self) -> Move_Result:
         self.add_default_end_motion_conditions()
-        return super().projection(wait)
+        return super().projection()
 
     def _create_action_goal(self) -> Move_Goal:
         if not self.motion_goals._collision_entries:
@@ -754,8 +755,7 @@ class OldGiskardWrapper(GiskardWrapper):
         :return: WorldResult
         """
         return self.world.register_group(new_group_name=new_group_name,
-                                         root_link_name=root_link_name,
-                                         root_link_group_name=root_link_group_name)
+                                         root_link_name=root_link_name)
 
     def clear_world(self) -> World_Result:
         """
