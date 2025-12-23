@@ -2,7 +2,7 @@ from typing import Optional
 
 from nav_msgs.msg import Odometry
 from py_trees.common import Status
-from semantic_digital_twin.spatial_types import TransformationMatrix
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 from semantic_digital_twin.world_description.connections import OmniDrive
 
 from giskardpy.middleware import get_middleware
@@ -43,7 +43,7 @@ class SyncOdometry(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        self.joint.origin = TransformationMatrix.from_xyz_quaternion(
+        self.joint.origin = HomogeneousTransformationMatrix.from_xyz_quaternion(
             pos_x=self.odom.pose.pose.position.x,
             pos_y=self.odom.pose.pose.position.y,
             pos_z=self.odom.pose.pose.position.z,

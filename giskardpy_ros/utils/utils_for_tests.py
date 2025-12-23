@@ -26,7 +26,7 @@ from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
-from semantic_digital_twin.spatial_types import TransformationMatrix
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 from semantic_digital_twin.world_description.connections import (
     OmniDrive,
     FixedConnection,
@@ -46,13 +46,13 @@ from semantic_digital_twin.world_description.world_entity import (
 
 
 def compare_poses(
-    actual_pose: Union[cas.TransformationMatrix, Pose],
-    desired_pose: Union[cas.TransformationMatrix, Pose],
+    actual_pose: Union[cas.HomogeneousTransformationMatrix, Pose],
+    desired_pose: Union[cas.HomogeneousTransformationMatrix, Pose],
     decimal: int = 2,
 ) -> None:
-    if isinstance(actual_pose, cas.TransformationMatrix):
+    if isinstance(actual_pose, cas.HomogeneousTransformationMatrix):
         actual_pose = msg_converter.to_ros_message(actual_pose).pose
-    if isinstance(desired_pose, cas.TransformationMatrix):
+    if isinstance(desired_pose, cas.HomogeneousTransformationMatrix):
         desired_pose = msg_converter.to_ros_message(desired_pose).pose
     compare_points(
         actual_point=actual_pose.position,
@@ -264,7 +264,7 @@ class GiskardTester(ABC):
         self,
         name: str,
         size: Tuple[float, float, float],
-        pose: TransformationMatrix,
+        pose: HomogeneousTransformationMatrix,
         parent_link: Optional[KinematicStructureEntity] = None,
     ) -> None:
         parent_link = parent_link or self.api.world.root
@@ -387,7 +387,7 @@ class GiskardTester(ABC):
         self,
         name: str,
         urdf: str,
-        pose: TransformationMatrix,
+        pose: HomogeneousTransformationMatrix,
         parent_link: Optional[Union[str, giskard_msgs.LinkName]] = None,
     ) -> None:
         if parent_link is None:
