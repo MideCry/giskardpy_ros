@@ -43,7 +43,11 @@ from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
 from semantic_digital_twin.robots.hsrb import HSRB
-from semantic_digital_twin.spatial_types import TransformationMatrix, Vector3, Point3
+from semantic_digital_twin.spatial_types import (
+    HomogeneousTransformationMatrix,
+    Vector3,
+    Point3,
+)
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 from semantic_digital_twin.world_description.world_entity import (
     KinematicStructureEntity,
@@ -133,7 +137,7 @@ def box_setup(giskard: HSRTester) -> HSRTester:
     giskard.add_box_to_world(
         name="box",
         size=(1.0, 1.0, 1.0),
-        pose=TransformationMatrix.from_xyz_rpy(
+        pose=HomogeneousTransformationMatrix.from_xyz_rpy(
             x=1.2, z=0.1, reference_frame=giskard.map
         ),
     )
@@ -201,7 +205,7 @@ class TestJointGoals:
             node := CartesianPose(
                 root_link=giskard.base_footprint,
                 tip_link=giskard.tip,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     z=0.2,
                     reference_frame=giskard.tip,
                 ),
@@ -243,7 +247,7 @@ class TestJointGoals:
             node := CartesianPose(
                 root_link=giskard.base_footprint,
                 tip_link=head,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     z=0.15,
                     reference_frame=head,
                 ),
@@ -319,7 +323,7 @@ class TestCartGoals:
             node := Sequence(
                 [
                     SetOdometry(
-                        base_pose=TransformationMatrix.from_xyz_axis_angle(
+                        base_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                             x=1.0,
                             y=1.0,
                             axis=Vector3.Z(),
@@ -330,7 +334,7 @@ class TestCartGoals:
                     CartesianPose(
                         root_link=giskard.default_root,
                         tip_link=giskard.base_footprint,
-                        goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                        goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                             x=1.0,
                             axis=Vector3.Z(),
                             angle=pi,
@@ -349,7 +353,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.base_footprint,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     x=1.0,
                     reference_frame=giskard.map,
                 ),
@@ -364,7 +368,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.base_footprint,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     y=1.0,
                     reference_frame=giskard.map,
                 ),
@@ -379,7 +383,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.base_footprint,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     x=1.0,
                     y=1.0,
                     reference_frame=giskard.map,
@@ -395,7 +399,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.base_footprint,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     axis=Vector3.Z(),
                     angle=pi / 3,
                     reference_frame=giskard.map,
@@ -411,7 +415,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.base_footprint,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     x=1.0,
                     axis=Vector3.Z(),
                     angle=pi / 3,
@@ -428,7 +432,7 @@ class TestCartGoals:
             node := CartesianPose(
                 root_link=giskard.default_root,
                 tip_link=giskard.tip,
-                goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                     y=1.0,
                     axis=Vector3.Z(),
                     angle=pi,
@@ -498,7 +502,7 @@ class TestConstraints:
         box_setup.add_box_to_world(
             name="Schnibbler",
             size=(0.05, 0.01, 0.15),
-            pose=TransformationMatrix.from_xyz_rpy(
+            pose=HomogeneousTransformationMatrix.from_xyz_rpy(
                 z=0.06, reference_frame=box_setup.tip
             ),
             parent_link=box_setup.tip,
@@ -506,7 +510,7 @@ class TestConstraints:
         box_setup.add_box_to_world(
             name="Bernd",
             size=(0.1, 0.2, 0.06),
-            pose=TransformationMatrix.from_xyz_rpy(
+            pose=HomogeneousTransformationMatrix.from_xyz_rpy(
                 x=0.91, y=0.25, z=0.62, reference_frame=box_setup.map
             ),
             parent_link=box,
@@ -622,14 +626,14 @@ class TestConstraints:
                         CartesianPose(
                             root_link=kitchen_setup.map,
                             tip_link=kitchen_setup.base_footprint,
-                            goal_pose=TransformationMatrix.from_xyz_rpy(
+                            goal_pose=HomogeneousTransformationMatrix.from_xyz_rpy(
                                 x=0.3, y=-0.5, z=0.0, reference_frame=kitchen_setup.map
                             ),
                         ),
                         CartesianPose(
                             root_link=kitchen_setup.map,
                             tip_link=kitchen_setup.tip,
-                            goal_pose=TransformationMatrix.from_xyz_rpy(
+                            goal_pose=HomogeneousTransformationMatrix.from_xyz_rpy(
                                 x=0,
                                 y=0,
                                 z=0.0,
@@ -669,7 +673,7 @@ class TestCollisionAvoidanceGoals:
                 cart_goal := CartesianPose(
                     root_link=giskard.map,
                     tip_link=giskard.tip,
-                    goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                    goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                         z=0.5,
                         reference_frame=giskard.tip,
                     ),
@@ -707,7 +711,7 @@ class TestCollisionAvoidanceGoals:
                         CartesianPose(
                             root_link=giskard.map,
                             tip_link=giskard.tip,
-                            goal_pose=TransformationMatrix.from_xyz_axis_angle(
+                            goal_pose=HomogeneousTransformationMatrix.from_xyz_axis_angle(
                                 x=0.5,
                                 reference_frame=hand_palm_link,
                             ),
@@ -811,7 +815,7 @@ class TestCollisionAvoidanceGoals:
         giskard.add_box_to_world(
             name="box",
             size=(1, 1, 0.01),
-            pose=TransformationMatrix.from_xyz_rpy(
+            pose=HomogeneousTransformationMatrix.from_xyz_rpy(
                 x=0.9, z=0.5, reference_frame=giskard.map
             ),
         )
@@ -858,7 +862,9 @@ class TestAddObject:
         giskard.add_box_to_world(
             name=box1_name,
             size=(1, 1, 1),
-            pose=TransformationMatrix.from_xyz_rpy(x=1, reference_frame=giskard.map),
+            pose=HomogeneousTransformationMatrix.from_xyz_rpy(
+                x=1, reference_frame=giskard.map
+            ),
             parent_link=giskard.api.world.get_body_by_name("hand_palm_link"),
         )
 

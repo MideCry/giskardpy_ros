@@ -1,7 +1,7 @@
 from typing import Tuple, Dict, Optional
 
 from py_trees.common import Status
-from semantic_digital_twin.spatial_types import TransformationMatrix
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.ros2 import msg_converter
@@ -41,7 +41,7 @@ class SyncTfFrames(GiskardBehavior):
     def update(self):
         for joint, (tf_parent_frame, tf_child_frame) in self.joint_map.items():
             parent_T_child = lookup_pose(tf_parent_frame, tf_child_frame)
-            joint.origin = TransformationMatrix.from_xyz_quaternion(
+            joint.origin = HomogeneousTransformationMatrix.from_xyz_quaternion(
                 pos_x=parent_T_child.pose.position.x,
                 pos_y=parent_T_child.pose.position.y,
                 pos_z=parent_T_child.pose.position.z,

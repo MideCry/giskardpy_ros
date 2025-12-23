@@ -70,7 +70,7 @@ def is_ros_message(obj: Any) -> bool:
 
 # %% to ros
 def to_ros_message(data):
-    if isinstance(data, cas.TransformationMatrix):
+    if isinstance(data, cas.HomogeneousTransformationMatrix):
         return trans_matrix_to_pose_stamped(data)
     if isinstance(data, cas.Point3):
         return point3_to_point_stamped(data)
@@ -171,7 +171,7 @@ def color_rgba_to_ros_msg(data: Color) -> std_msgs.ColorRGBA:
 
 
 def trans_matrix_to_pose_stamped(
-    data: cas.TransformationMatrix,
+    data: cas.HomogeneousTransformationMatrix,
 ) -> geometry_msgs.PoseStamped:
     pose_stamped = geometry_msgs.PoseStamped()
     pose_stamped.header.frame_id = str(data.reference_frame.name.name)
@@ -212,7 +212,7 @@ def point3_to_point_stamped(data: cas.Point3) -> geometry_msgs.PointStamped:
 
 
 def trans_matrix_to_transform_stamped(
-    data: cas.TransformationMatrix,
+    data: cas.HomogeneousTransformationMatrix,
 ) -> geometry_msgs.TransformStamped:
     transform_stamped = geometry_msgs.TransformStamped()
     transform_stamped.header.frame_id = data.reference_frame.name.name
@@ -571,19 +571,19 @@ def ros_joint_state_to_giskard_joint_state(
 
 def pose_stamped_to_trans_matrix(
     msg: geometry_msgs.PoseStamped, world: World
-) -> cas.TransformationMatrix:
+) -> cas.HomogeneousTransformationMatrix:
     p = cas.Point3(
-        x_init=msg.pose.position.x,
-        y_init=msg.pose.position.y,
-        z_init=msg.pose.position.z,
+        x=msg.pose.position.x,
+        y=msg.pose.position.y,
+        z=msg.pose.position.z,
     )
     R = cas.Quaternion(
-        x_init=msg.pose.orientation.x,
-        y_init=msg.pose.orientation.y,
-        z_init=msg.pose.orientation.z,
-        w_init=msg.pose.orientation.w,
+        x=msg.pose.orientation.x,
+        y=msg.pose.orientation.y,
+        z=msg.pose.orientation.z,
+        w=msg.pose.orientation.w,
     ).to_rotation_matrix()
-    result = cas.TransformationMatrix.from_point_rotation_matrix(
+    result = cas.HomogeneousTransformationMatrix.from_point_rotation_matrix(
         point=p,
         rotation_matrix=R,
         reference_frame=world.get_kinematic_structure_entity_by_name(
@@ -593,12 +593,14 @@ def pose_stamped_to_trans_matrix(
     return result
 
 
-def pose_to_trans_matrix(msg: geometry_msgs.Pose) -> cas.TransformationMatrix:
+def pose_to_trans_matrix(
+    msg: geometry_msgs.Pose,
+) -> cas.HomogeneousTransformationMatrix:
     p = cas.Point3(msg.position.x, msg.position.y, msg.position.z)
     R = cas.Quaternion(
         msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w
     ).to_rotation_matrix()
-    result = cas.TransformationMatrix.from_point_rotation_matrix(
+    result = cas.HomogeneousTransformationMatrix.from_point_rotation_matrix(
         point=p, rotation_matrix=R, reference_frame=None
     )
     return result
