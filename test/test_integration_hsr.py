@@ -20,7 +20,7 @@ from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
 )
 from giskardpy.motion_statechart.monitors.payload_monitors import (
     Pulse,
-    CountTicks,
+    CountControlCycles,
     CheckControlCycleCount,
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
@@ -100,6 +100,7 @@ class HSRTester(GiskardTester):
                 publish_tf=True,
                 add_debug_marker_publisher=True,
                 add_gantt_chart_plotter=True,
+                add_trajectory_plotter=True,
             ),
             qp_controller_config=QPControllerConfig.create_with_simulation_defaults(),
         )
@@ -536,7 +537,7 @@ class TestConstraints:
                     tip_link=box_setup.tip,
                     root_link=box_setup.map,
                 ),
-                human_close := Pulse(name="Human Close?", length=10),
+                human_close := Pulse(name="Human Close?", delay=5, length=15),
                 cutting := Cutting(
                     name="Cut",
                     root_link=box_setup.map,
@@ -551,14 +552,6 @@ class TestConstraints:
         cutting.start_condition = pre_schnibble.observation_variable
         schnibbel_done.start_condition = cutting.observation_variable
         human_close.start_condition = pre_schnibble.observation_variable
-        #
-        # human_close = box_setup.api.monitors.add_pulse(
-        #     name="Human Close?",
-        #     after_ticks=50,
-        #     true_for_ticks=50,
-        #     start_condition=pre_schnibble,
-        #     end_condition="",
-        # )
 
         reset = trinary_logic_not(schnibbel_done.observation_variable)
         cutting.reset_condition = reset

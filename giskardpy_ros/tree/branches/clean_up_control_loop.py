@@ -6,15 +6,12 @@ from giskardpy_ros.tree.behaviors.append_zero_velocity import SetZeroVelocity
 from giskardpy_ros.tree.behaviors.debug_marker_publisher import (
     DebugMarkerPublisherTrajectory,
 )
-from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
-from giskardpy_ros.tree.behaviors.plot_debug_expressions import PlotDebugExpressions
 from giskardpy_ros.tree.behaviors.plot_goal_gantt_chart import PlotGanttChart
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
 from giskardpy_ros.tree.behaviors.publish_feedback import (
     ForcePublishFeedback,
 )
 from giskardpy_ros.tree.behaviors.reset_joint_state import ResetWorldState
-from giskardpy_ros.tree.behaviors.visualization import VisualizeTrajectory
 
 
 class CleanupControlLoop(Sequence):
@@ -24,7 +21,6 @@ class CleanupControlLoop(Sequence):
         super().__init__(name, memory=True)
         self.add_child(ForcePublishFeedback())
         self.add_child(SetZeroVelocity("set zero vel 1"))
-        self.add_child(LogTrajPlugin("log post processing"))
         self.reset_world_state = ResetWorldState()
         self.reset_world_state_failure_is_success = FailureIsSuccess(
             "ignore failure", self.reset_world_state
@@ -38,20 +34,6 @@ class CleanupControlLoop(Sequence):
             ),
             index=-1,
         )
-
-    def add_plot_debug_trajectory(
-        self, normalize_position: bool = False, wait: bool = False
-    ):
-        self.add_child(
-            PlotDebugExpressions(
-                "plot debug trajectory",
-                wait=wait,
-                normalize_position=normalize_position,
-            )
-        )
-
-    def add_visualize_trajectory(self):
-        self.add_child(VisualizeTrajectory())
 
     def add_debug_visualize_trajectory(self):
         self.add_child(DebugMarkerPublisherTrajectory())

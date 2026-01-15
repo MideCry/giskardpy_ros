@@ -35,24 +35,3 @@ class VisualizationBehavior(GiskardBehavior):
             sleep(0.1)
         # rospy.sleep(0.01)
         return py_trees.common.Status.SUCCESS
-
-
-class VisualizeTrajectory(GiskardBehavior):
-
-    def __init__(
-        self,
-        mode: VisualizationMode = VisualizationMode.CollisionsDecomposed,
-        name: Optional[str] = None,
-        ensure_publish: bool = False,
-    ):
-        super().__init__(name)
-        self.ensure_publish = ensure_publish
-        self.every_x = 10
-
-    @catch_and_raise_to_blackboard
-    @record_time
-    def update(self):
-        GiskardBlackboard().ros_visualizer.publish_trajectory_markers(
-            trajectory=GiskardBlackboard().trajectory, every_x=self.every_x
-        )
-        return py_trees.common.Status.SUCCESS
