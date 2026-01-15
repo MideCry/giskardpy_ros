@@ -537,7 +537,7 @@ class TestConstraints:
                     tip_link=box_setup.tip,
                     root_link=box_setup.map,
                 ),
-                human_close := Pulse(name="Human Close?", delay=5, length=15),
+                human_close := Pulse(name="Human Close?", delay=15, length=15),
                 cutting := Cutting(
                     name="Cut",
                     root_link=box_setup.map,
@@ -545,7 +545,7 @@ class TestConstraints:
                     cut_depth=0.1,
                     right_shift=-0.1,
                 ),
-                schnibbel_done := CheckControlCycleCount(name="Done?", threshold=100),
+                schnibbel_done := CheckControlCycleCount(name="Done?", threshold=120),
             ]
         )
         pre_schnibble.end_condition = pre_schnibble.observation_variable

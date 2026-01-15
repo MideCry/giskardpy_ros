@@ -30,7 +30,9 @@ class PlotGanttChart(GiskardBehavior):
                 + f"gantt_charts/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf"
             )
             GiskardBlackboard().motion_statechart.plot_gantt_chart(
-                file_name, context=GiskardBlackboard().executor.build_context
+                file_name,
+                context=GiskardBlackboard().executor.build_context,
+                second_length_in_cm=1.5,
             )
         except Exception as e:
             get_middleware().logwarn(f"Failed to create goal gantt chart: {e}.")
