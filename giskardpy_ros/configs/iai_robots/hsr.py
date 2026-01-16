@@ -93,7 +93,7 @@ class HSRVelocityInterface(RobotInterfaceConfig):
 
         omni_drive = self.world.get_connections_by_type(OmniDrive)[0]
         self.sync_odometry_topic(
-            "/omni_base_controller/wheel_odom",
+            "/laser_odom",
             omni_drive,
         )
 
