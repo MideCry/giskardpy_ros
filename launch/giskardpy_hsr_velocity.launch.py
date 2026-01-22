@@ -30,13 +30,13 @@ def generate_launch_description():
             # Static transform publisher (example, modify as needed for your robot)
             # IncludeLaunchDescription(
             #    PythonLaunchDescriptionSource(upload_pr2_launch)
+            # # ),
+            # Node(
+            #     package="rviz2",
+            #     executable="rviz2",
+            #     name="rviz2",
+            #     output="screen",
             # ),
-            Node(
-                package="rviz2",
-                executable="rviz2",
-                name="rviz2",
-                output="screen",
-            ),
             Node(
                 package="giskardpy_ros",
                 executable="hsr_velocity",

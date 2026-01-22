@@ -270,6 +270,7 @@ class ClosedLoopBTConfig(BehaviorTreeConfig):
         self.add_visualization_marker_publisher(
             add_to_sync=True, add_to_control_loop=False, mode=self.visualization_mode
         )
+        self.add_world_state_publisher()
 
     def switch_to_projection_mode(self):
         self.tree.control_loop_branch.switch_to_projection()
