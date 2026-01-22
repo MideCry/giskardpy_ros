@@ -36,7 +36,7 @@ class DebugMarkerVisualizer:
         for node in motion_statechart.nodes:
             for debug_expression in node._debug_expressions:
                 match debug_expression.expression:
-                    case cas.TransformationMatrix():
+                    case cas.HomogeneousTransformationMatrix():
                         new_markers = self.transformation_matrix_to_marker(
                             debug_expression
                         )
