@@ -10,7 +10,6 @@ import numpy as np
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 
-import giskardpy_ros.ros2.msg_converter as msg_converter
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.middleware import get_middleware
 from giskardpy.model.collision_matrix_manager import (
@@ -22,6 +21,10 @@ from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import is_in_github_workflow
+from semantic_digital_twin.adapters.ros import (
+    Ros2ToSemDTConverter,
+    SemDTToRos2Converter,
+)
 from semantic_digital_twin.adapters.urdf import URDFParser
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
@@ -51,9 +54,9 @@ def compare_poses(
     decimal: int = 2,
 ) -> None:
     if isinstance(actual_pose, cas.HomogeneousTransformationMatrix):
-        actual_pose = msg_converter.to_ros_message(actual_pose).pose
+        actual_pose = SemDTToRos2Converter.convert(actual_pose).pose
     if isinstance(desired_pose, cas.HomogeneousTransformationMatrix):
-        desired_pose = msg_converter.to_ros_message(desired_pose).pose
+        desired_pose = SemDTToRos2Converter.convert(desired_pose).pose
     compare_points(
         actual_point=actual_pose.position,
         desired_point=desired_pose.position,
@@ -72,9 +75,9 @@ def compare_points(
     decimal: int = 2,
 ) -> None:
     if isinstance(actual_point, cas.Point3):
-        actual_point = msg_converter.to_ros_message(actual_point).point
+        actual_point = SemDTToRos2Converter.convert(actual_point).point
     if isinstance(desired_point, cas.Point3):
-        desired_point = msg_converter.to_ros_message(desired_point).point
+        desired_point = SemDTToRos2Converter.convert(desired_point).point
     np.testing.assert_almost_equal(actual_point.x, desired_point.x, decimal=decimal)
     np.testing.assert_almost_equal(actual_point.y, desired_point.y, decimal=decimal)
     np.testing.assert_almost_equal(actual_point.z, desired_point.z, decimal=decimal)
@@ -175,7 +178,7 @@ class GiskardTester(ABC):
                 tip_link
             ),
         )
-        return msg_converter.to_ros_message(root_T_tip)
+        return SemDTToRos2Converter.convert(root_T_tip.to_pose())
 
     def compute_fk_point(self, root_link: str, tip_link: str) -> PointStamped:
         root_T_tip = (
@@ -190,7 +193,7 @@ class GiskardTester(ABC):
             )
             .to_position()
         )
-        return msg_converter.to_ros_message(root_T_tip)
+        return SemDTToRos2Converter.convert(root_T_tip)
 
     def has_odometry_joint(self) -> bool:
         try:
@@ -310,7 +313,7 @@ class GiskardTester(ABC):
             connection = FixedConnection(
                 parent=parent_link,
                 child=sphere,
-                parent_T_connection_expression=msg_converter.ros_msg_to_giskard_obj(
+                parent_T_connection_expression=Ros2ToSemDTConverter.convert(
                     pose, self.api.world
                 ),
             )
@@ -332,7 +335,7 @@ class GiskardTester(ABC):
                 parent_link
             )
         parent_T_pose = self.api.world.transform(
-            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            spatial_object=Ros2ToSemDTConverter.convert(pose, self.api.world),
             target_frame=parent_link,
         )
         with self.api.world.modify_world():
@@ -365,7 +368,7 @@ class GiskardTester(ABC):
                 parent_link
             )
         parent_T_pose = self.api.world.transform(
-            spatial_object=msg_converter.ros_msg_to_giskard_obj(pose, self.api.world),
+            spatial_object=Ros2ToSemDTConverter.convert(pose, self.api.world),
             target_frame=parent_link,
         )
         with self.api.world.modify_world():

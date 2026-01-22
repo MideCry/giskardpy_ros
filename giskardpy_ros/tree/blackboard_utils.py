@@ -24,7 +24,6 @@ class GiskardBlackboard:
     tree_config: BehaviorTreeConfig
     runtime: float
     move_action_server: ActionServerHandler
-    ros_visualizer: ROSMsgVisualization
     debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]

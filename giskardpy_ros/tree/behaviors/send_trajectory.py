@@ -13,7 +13,6 @@ import py_trees
 from action_msgs.msg import GoalStatus
 from py_trees_ros.actions import ActionClient
 
-import giskardpy_ros.ros2.msg_converter as msg_converter
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy.middleware import get_middleware
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard, GiskardBlackboard
@@ -110,13 +109,14 @@ class SendFollowJointTrajectory(ActionClient, GiskardBehavior):
         fill_velocity_values = GiskardBlackboard().fill_trajectory_velocity_values
         if fill_velocity_values is None:
             fill_velocity_values = self.fill_velocity_values
-        goal.trajectory = msg_converter.trajectory_to_ros_trajectory(
-            trajectory,
-            GiskardBlackboard().executor.qp_controller.config.mpc_dt,
-            start_time,
-            self.controlled_joints,
-            fill_velocity_values,
-        )
+        # fixme new converter
+        # goal.trajectory = msg_converter.trajectory_to_ros_trajectory(
+        #     trajectory,
+        #     GiskardBlackboard().executor.qp_controller.config.mpc_dt,
+        #     start_time,
+        #     self.controlled_joints,
+        #     fill_velocity_values,
+        # )
 
         if self.path_tolerance is not None:
             for i, joint_name in enumerate(goal.trajectory.joint_names):

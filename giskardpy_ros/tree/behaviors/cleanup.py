@@ -30,12 +30,6 @@ class CleanUp(GiskardBehavior):
     def initialise(self):
         if self.clear_markers_:
             self.clear_markers()
-        if (
-            GiskardBlackboard().tree.control_loop_branch.publish_state.debug_marker_publisher
-            is not None
-        ):
-            self.clear_markers()
-            GiskardBlackboard().ros_visualizer.publish_markers(force=True)
         GiskardBlackboard().executor.world.compiled_all_fks = None
         GiskardBlackboard().executor.collision_scene.reset_cache()
 
