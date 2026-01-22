@@ -4,6 +4,7 @@ from time import sleep
 
 import numpy as np
 import pytest
+from geometry_msgs.msg import PoseStamped, PointStamped, Vector3Stamped, Point
 from numpy import pi
 
 from conftest import kitchen_setup
