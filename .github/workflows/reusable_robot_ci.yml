@@ -152,6 +152,7 @@ jobs:
       - name: install pip dependencies
         run: |
           cd $GITHUB_WORKSPACE/cognitive_robot_abstract_machine
+          git submodule update --init --recursive
           workon giskardpy
           poetry install
       #pull github deps ================================================================================================
