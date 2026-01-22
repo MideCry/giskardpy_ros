@@ -4,13 +4,7 @@ from time import sleep
 
 import numpy as np
 import pytest
-from geometry_msgs.msg import (
-    PoseStamped,
-    Point,
-    Quaternion,
-    PointStamped,
-    Vector3Stamped,
-)
+from geometry_msgs.msg import PoseStamped, PointStamped, Vector3Stamped, Point
 from numpy import pi
 
 from conftest import kitchen_setup
@@ -24,6 +18,11 @@ from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
     SetOdometry,
     SetSeedConfiguration,
+)
+from giskardpy.motion_statechart.monitors.payload_monitors import (
+    Pulse,
+    CountControlCycles,
+    CheckControlCycleCount,
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
@@ -42,11 +41,14 @@ from giskardpy_ros.configs.iai_robots.hsr import (
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
+from krrood.symbolic_math.symbolic_math import trinary_logic_not
 from semantic_digital_twin.robots.hsrb import HSRB
 from semantic_digital_twin.spatial_types import (
     HomogeneousTransformationMatrix,
     Vector3,
     Point3,
+    Quaternion,
+    RotationMatrix,
 )
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 from semantic_digital_twin.world_description.world_entity import (
@@ -98,6 +100,8 @@ class HSRTester(GiskardTester):
                 debug_mode=True,
                 publish_tf=True,
                 add_debug_marker_publisher=True,
+                add_gantt_chart_plotter=True,
+                add_trajectory_plotter=True,
             ),
             qp_controller_config=QPControllerConfig.create_with_simulation_defaults(),
         )
@@ -495,7 +499,6 @@ class TestCartGoals:
 
 class TestConstraints:
 
-    @pytest.mark.skip(reason="needs loop template")
     def test_schnibbeln_sequence(self, box_setup: HSRTester):
         box = box_setup.api.world.get_body_by_name("box")
 
@@ -507,6 +510,7 @@ class TestConstraints:
             ),
             parent_link=box_setup.tip,
         )
+        schnibbler = box_setup.api.world.get_body_by_name("Schnibbler")
         box_setup.add_box_to_world(
             name="Bernd",
             size=(0.1, 0.2, 0.06),
@@ -515,62 +519,49 @@ class TestConstraints:
             ),
             parent_link=box,
         )
-        # box_setup.close_gripper()
 
-        pre_schnibble_pose = PoseStamped()
-        pre_schnibble_pose.header.frame_id = "map"
-        pre_schnibble_pose.pose.position = Point(x=0.85, y=0.2, z=0.75)
-        q = quaternion_from_rotation_matrix(
-            [[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
-        )
-        pre_schnibble_pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-        pre_schnibble = "Position Knife"
-        box_setup.api.motion_goals.add_cartesian_pose(
-            name=pre_schnibble,
-            goal_pose=pre_schnibble_pose,
-            tip_link=box_setup.tip,
-            root_link="map",
-            end_condition=pre_schnibble,
-        )
-        human_close = box_setup.api.monitors.add_pulse(
-            name="Human Close?",
-            after_ticks=50,
-            true_for_ticks=50,
-            start_condition=pre_schnibble,
-            end_condition="",
+        pre_schnibble_pose = HomogeneousTransformationMatrix.from_point_rotation_matrix(
+            point=Point3(0.85, 0.2, 0.75, reference_frame=box_setup.map),
+            rotation_matrix=RotationMatrix(
+                [[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]],
+                reference_frame=box_setup.map,
+            ),
+            reference_frame=box_setup.map,
         )
 
-        cut = box_setup.api.motion_goals.add_motion_goal(
-            class_name=Cutting.__name__,
-            name="Cut",
-            root_link="map",
-            tip_link=box_name,
-            depth=0.1,
-            right_shift=-0.1,
-            start_condition=pre_schnibble,
+        msc = MotionStatechart()
+        msc.add_nodes(
+            [
+                pre_schnibble := CartesianPose(
+                    name="Position Knife",
+                    goal_pose=pre_schnibble_pose,
+                    tip_link=box_setup.tip,
+                    root_link=box_setup.map,
+                ),
+                human_close := Pulse(name="Human Close?", delay=15, length=15),
+                cutting := Cutting(
+                    name="Cut",
+                    root_link=box_setup.map,
+                    tip_link=schnibbler,
+                    cut_depth=0.1,
+                    right_shift=-0.1,
+                ),
+                schnibbel_done := CheckControlCycleCount(name="Done?", threshold=120),
+            ]
         )
+        pre_schnibble.end_condition = pre_schnibble.observation_variable
+        cutting.start_condition = pre_schnibble.observation_variable
+        schnibbel_done.start_condition = cutting.observation_variable
+        human_close.start_condition = pre_schnibble.observation_variable
 
-        # no_contact = box_setup.api.monitors.add_const_true(name='Made Contact?',
-        #                                                start_condition=schnibble_down)
+        reset = trinary_logic_not(schnibbel_done.observation_variable)
+        cutting.reset_condition = reset
+        schnibbel_done.reset_condition = reset
+        human_close.end_condition = schnibbel_done.observation_variable
+        cutting.pause_condition = human_close.observation_variable
 
-        schnibbel_done = box_setup.api.monitors.add_time_above(
-            name="Done?", threshold=5, start_condition=cut
-        )
-
-        reset = f"not {schnibbel_done}"
-        box_setup.api.update_reset_condition(node_name=cut, condition=reset)
-        box_setup.api.update_reset_condition(node_name=schnibbel_done, condition=reset)
-        box_setup.api.update_end_condition(
-            node_name=human_close, condition=schnibbel_done
-        )
-
-        box_setup.api.update_pause_condition(node_name=cut, condition=human_close)
-
-        box_setup.api.monitors.add_end_motion(start_condition=schnibbel_done)
-        # box_setup.api.monitors.add_cancel_motion(start_condition=f'not {no_contact}', error=Exception('no contact'))
-        box_setup.api.motion_goals.allow_all_collisions()
-        box_setup.execute(local_min_end=False)
-        # box_setup.update_parent_link_of_group(box_name, box_setup.tip)
+        msc.add_node(EndMotion.when_true(schnibbel_done))
+        box_setup.api.execute(msc)
 
     def test_Pointing(self, giskard: HSRTester):
         kopf = giskard.api.world.get_body_by_name("head_rgbd_sensor_gazebo_frame")

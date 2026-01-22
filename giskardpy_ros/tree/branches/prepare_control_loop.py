@@ -1,7 +1,6 @@
 from py_trees.composites import Sequence
 
 from giskardpy_ros.tree.behaviors.cleanup import CleanUpPlanning
-from giskardpy_ros.tree.behaviors.new_trajectory import NewTrajectory
 from giskardpy_ros.tree.behaviors.plot_motion_graph import PlotMotionGraph
 from giskardpy_ros.tree.behaviors.ros_msg_to_goal import (
     ParseActionGoal,
@@ -18,7 +17,6 @@ class PrepareControlLoop(Sequence):
         super().__init__(name, memory=True)
         self.has_compile_debug_expressions = False
         self.add_child(CleanUpPlanning("CleanUpPlanning"))
-        self.add_child(NewTrajectory("NewTrajectory"))
         self.add_child(SetExecutionMode())
         self.add_child(ParseActionGoal("RosMsgToGoal"))
         self.add_child(SetTrackingStartTime("start tracking time"))

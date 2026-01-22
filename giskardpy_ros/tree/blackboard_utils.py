@@ -8,13 +8,8 @@ from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import DontPrintStackTrace
 from giskardpy.executor import Executor
-from semantic_digital_twin.adapters.ros.world_synchronizer import (
-    StateSynchronizer,
-    ModelSynchronizer,
-)
 
 if TYPE_CHECKING:
-    from giskardpy.model.trajectory import Trajectory
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
     from giskardpy_ros.configs.giskard import Giskard
     from giskardpy_ros.ros2.ros_msg_visualization import (
@@ -34,7 +29,6 @@ class GiskardBlackboard:
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
     motion_start_time: float
-    trajectory: Trajectory
     __shared_state = {}
 
     @property

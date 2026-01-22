@@ -12,12 +12,9 @@ import numpy as np
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
 import tf2_msgs.msg as tf2_msgs
-import trajectory_msgs.msg as trajectory_msgs
 import visualization_msgs.msg as visualization_msgs
 from geometry_msgs.msg import TransformStamped
 from random_events.utils import SubclassJSONSerializer
-from rclpy.duration import Duration
-from rclpy.time import Time
 from rclpy_message_converter.message_converter import (
     convert_dictionary_to_ros_message as original_convert_dictionary_to_ros_message,
     convert_ros_message_to_dictionary as original_convert_ros_message_to_dictionary,
@@ -29,7 +26,6 @@ from giskardpy.data_types.exceptions import (
     GiskardException,
 )
 from giskardpy.model.collision_matrix_manager import CollisionRequest
-from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.utils.math import quaternion_from_rotation_matrix
 from giskardpy.utils.utils import get_all_classes_in_module
@@ -39,7 +35,6 @@ from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world import World
-from semantic_digital_twin.world_description.connections import ActiveConnection
 
 # from semantic_digital_twin.exceptions import SemanticAnnotationNotFoundError
 from semantic_digital_twin.world_description.geometry import (
@@ -226,40 +221,6 @@ def trans_matrix_to_transform_stamped(
         x=orientation[0], y=orientation[1], z=orientation[2], w=orientation[3]
     )
     return transform_stamped
-
-
-def trajectory_to_ros_trajectory(
-    data: Trajectory,
-    sample_period: float,
-    start_time: Union[Time, float],
-    joints: List[ActiveConnection],
-    fill_velocity_values: bool = True,
-) -> trajectory_msgs.JointTrajectory:
-    if isinstance(start_time, (int, float)):
-        start_time = Time(seconds=start_time)
-    trajectory_msg = trajectory_msgs.JointTrajectory()
-    trajectory_msg.header.stamp = start_time.to_msg()
-    trajectory_msg.joint_names = []
-    for time, traj_point in enumerate(data):
-        p = trajectory_msgs.JointTrajectoryPoint()
-        p.time_from_start = Duration(seconds=time * sample_period).to_msg()
-        for joint in joints:
-            for free_variable in joint.active_dofs:
-                if free_variable.name in traj_point:
-                    if time == 0:
-                        joint_name = free_variable.name
-                        if isinstance(joint_name, PrefixedName):
-                            joint_name = joint_name.name
-                        trajectory_msg.joint_names.append(joint_name)
-                    p.positions.append(traj_point[free_variable.name].position)
-                    if fill_velocity_values:
-                        p.velocities.append(traj_point[free_variable.name].velocity)
-                else:
-                    raise NotImplementedError(
-                        "generated traj does not contain all joints"
-                    )
-        trajectory_msg.points.append(p)
-    return trajectory_msg
 
 
 def world_to_tf_message(world: World, include_prefix: bool) -> tf2_msgs.TFMessage:

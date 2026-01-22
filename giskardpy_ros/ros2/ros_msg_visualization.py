@@ -1,4 +1,3 @@
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, List
 
@@ -11,7 +10,6 @@ from visualization_msgs.msg import MarkerArray, Marker
 import giskardpy_ros.ros2.msg_converter as msg_converter
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.model.collision_world_syncer import Collisions
-from giskardpy.model.trajectory import Trajectory
 from giskardpy.motion_statechart.graph_node import DebugExpression
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.utils.decorators import clear_memo, memoize
@@ -388,40 +386,6 @@ class ROSMsgVisualization:
             )
             if len(marker_array.markers) > 0:
                 self.publisher.publish(marker_array)
-
-    def publish_trajectory_markers(
-        self,
-        trajectory: Trajectory,
-        every_x: int = 10,
-        start_alpha: float = 0.5,
-        stop_alpha: float = 1.0,
-        namespace: str = "trajectory",
-    ) -> None:
-        self.clear_marker(namespace)
-        marker_array = MarkerArray()
-
-        def compute_alpha(i):
-            if i < 0 or i >= len(trajectory):
-                raise ValueError(f"Index {i} is out of range {len(trajectory)}")
-            return start_alpha + i * (stop_alpha - start_alpha) / (len(trajectory) - 1)
-
-        with GiskardBlackboard().executor.world.reset_joint_state_context():
-            for point_id, joint_state in trajectory.items():
-                if point_id % every_x == 0 or point_id == len(trajectory) - 1:
-                    GiskardBlackboard().executor.world.state = joint_state
-                    GiskardBlackboard().executor.world.notify_state_change()
-                    if self.mode not in [
-                        VisualizationMode.Visuals,
-                        VisualizationMode.VisualsFrameLocked,
-                    ]:
-                        GiskardBlackboard().executor.collision_scene.sync()
-                    markers = self.create_world_markers(
-                        name_space=namespace, marker_id_offset=len(marker_array.markers)
-                    )
-                    for m in markers:
-                        m.color.a = compute_alpha(point_id)
-                    marker_array.markers.extend(deepcopy(markers))
-        self.publisher.publish(marker_array)
 
     def clear_marker(self, ns: str):
         msg = MarkerArray()

@@ -61,12 +61,8 @@ class BehaviorTreeConfig:
             # self.add_goal_graph_plotter()
             if self.add_trajectory_plotter:
                 self._add_trajectory_plotter(wait=True)
-            if self.add_debug_trajectory_plotter:
-                self._add_debug_trajectory_plotter(wait=True)
             if self.add_debug_marker_publisher:
                 self._add_debug_marker_publisher()
-            if self.add_trajectory_visualizer:
-                self._add_trajectory_visualizer()
             if self.add_debug_trajectory_visualizer:
                 self._add_debug_trajectory_visualizer()
             if self.add_gantt_chart_plotter:
@@ -134,22 +130,8 @@ class BehaviorTreeConfig:
         """
         self.tree.cleanup_control_loop.add_plot_trajectory(normalize_position, wait)
 
-    def _add_trajectory_visualizer(self):
-        self.tree.cleanup_control_loop.add_visualize_trajectory()
-
     def _add_debug_trajectory_visualizer(self):
         self.tree.cleanup_control_loop.add_debug_visualize_trajectory()
-
-    def _add_debug_trajectory_plotter(
-        self, normalize_position: bool = False, wait: bool = False
-    ):
-        """
-        Plots debug expressions defined in goals.
-        """
-        self.add_evaluate_debug_expressions()
-        self.tree.cleanup_control_loop.add_plot_debug_trajectory(
-            normalize_position=normalize_position, wait=wait
-        )
 
     def _add_gantt_chart_plotter(self):
         self.add_evaluate_debug_expressions()
