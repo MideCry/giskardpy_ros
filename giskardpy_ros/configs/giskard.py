@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 import rclpy
+
 from sqlalchemy.orm import sessionmaker
 
 from giskardpy.data_types.exceptions import SetupException
@@ -16,7 +17,11 @@ from giskardpy.model.collision_world_syncer import (
 )
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig, StandAloneBTConfig
+from giskardpy.ros_executor import Ros2Executor
+from giskardpy_ros.configs.behavior_tree_config import (
+    BehaviorTreeConfig,
+    StandAloneBTConfig,
+)
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -24,7 +29,8 @@ from krrood.ormatic.utils import create_engine
 from semantic_digital_twin.adapters.ros.world_fetcher import FetchWorldServer
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
     ModelSynchronizer,
-    StateSynchronizer, ModelReloadSynchronizer,
+    StateSynchronizer,
+    ModelReloadSynchronizer,
 )
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.world_description.connections import ActiveConnection
@@ -78,12 +84,13 @@ class Giskard:
                 real_time_factor = None
             else:
                 real_time_factor = 1.0
-            self.executor = Executor(
+            self.executor = Ros2Executor(
+                ros_node=rospy.node,
                 world=self.world_config.world,
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
                 tmp_folder=self.tmp_folder,
-                pacer=SimulationPacer(real_time_factor=real_time_factor)
+                pacer=SimulationPacer(real_time_factor=real_time_factor),
             )
 
             self.behavior_tree_config.setup()
