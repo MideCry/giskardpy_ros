@@ -48,5 +48,8 @@ RUN workon giskardpy \
     && sudo apt-get install libeigen3-dev \
     && python3 -m pip install --upgrade pip \
     && git clone https://github.com/cram2/cognitive_robot_abstract_machine.git \
+    && cd cognitive_robot_abstract_machine \
+    && git submodule update --init --recursive\
     && pip install poetry \
+    && cd ..\
     && rm -rf cognitive_robot_abstract_machine

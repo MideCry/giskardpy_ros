@@ -18,7 +18,7 @@ from giskardpy_ros.tree.blackboard_utils import (
     GiskardBlackboard,
 )
 from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
-    KinematicStructureEntityKwargsTracker,
+    WorldEntityWithIDKwargsTracker,
 )
 from semantic_digital_twin.world_description.connections import OmniDrive
 
@@ -35,7 +35,7 @@ class ParseActionGoal(GiskardBehavior):
         get_middleware().loginfo(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
-        tracker = KinematicStructureEntityKwargsTracker.from_world(
+        tracker = WorldEntityWithIDKwargsTracker.from_world(
             GiskardBlackboard().executor.world
         )
         kwargs = tracker.create_kwargs()

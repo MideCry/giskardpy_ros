@@ -4,7 +4,6 @@ from giskardpy.executor import SimulationPacer
 from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.goal_canceled import GoalCanceled
 from giskardpy_ros.tree.behaviors.instantaneous_controller import ControllerPlugin
-from giskardpy_ros.tree.behaviors.log_trajectory import LogTrajPlugin
 from giskardpy_ros.tree.behaviors.time import RosTime
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.publish_state import PublishState
@@ -23,7 +22,6 @@ class ControlLoop(AsyncBehavior):
 
     ros_time: RosTime
     send_controls: SendControls
-    log_traj: LogTrajPlugin
     controller_plugin: ControllerPlugin
 
     def __init__(self, name: str = "control_loop", log_traj: bool = True):
@@ -67,10 +65,6 @@ class ControlLoop(AsyncBehavior):
         self.controller_plugin = ControllerPlugin("controller")
         self.add_child(self.controller_plugin, success_is_running=False)
 
-        self.log_traj = LogTrajPlugin("add traj point")
-
-        if log_traj:
-            self.add_child(self.log_traj)
         self.add_child(self.publish_state)
 
     @toggle_on("in_projection")
