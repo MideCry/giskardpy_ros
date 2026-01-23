@@ -53,10 +53,10 @@ from giskardpy_ros.configs.robot_interface_config import (
 )
 from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
 from giskardpy.model.collision_world_syncer import DisableCollisionReason
-from giskardpy.model.utils import robot_name_from_urdf_string
 from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_digital_twin.utils import robot_name_from_urdf_string
 
 reason_color_map = {
     DisableCollisionReason.Never: (163, 177, 233),  # blue
