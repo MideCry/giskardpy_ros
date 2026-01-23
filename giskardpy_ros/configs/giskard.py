@@ -111,7 +111,7 @@ class Giskard:
             "SEMANTIC_DIGITAL_TWIN_DATABASE_URI"
         )
         assert (
-                semantic_digital_twin_database_uri is not None
+            semantic_digital_twin_database_uri is not None
         ), "Please set the SEMANTIC_DIGITAL_TWIN_DATABASE_URI environment variable."
 
         engine = create_engine(semantic_digital_twin_database_uri)
