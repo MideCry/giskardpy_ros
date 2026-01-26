@@ -14,10 +14,15 @@ from giskardpy_ros.ros2 import rospy
 
 def main():
     rospy.init_node("giskard")
+    default_robot_desc = load_xacro(
+        "package://hsr_description/robots/hsrb4s.urdf.xacro"
+    )
     rospy.node.declare_parameters(
         namespace="", parameters=[("robot_description", Parameter.Type.STRING)]
     )
     robot_description = rospy.node.get_parameter_or("robot_description").value
+    if robot_description is None:
+        robot_description = default_robot_desc
     giskard = Giskard(
         world_config=WorldWithHSRConfig(urdf=robot_description),
         robot_interface_config=HSRStandaloneInterface(),
