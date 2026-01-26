@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import signal
+import sys
 import traceback
 from typing import Set, Tuple, List, Optional, Dict, Union
 
+import pandas as pd
 import rclpy
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import (
     QApplication,
@@ -24,38 +28,26 @@ from PyQt5.QtWidgets import (
     QLabel,
     QDialog,
     QDialogButtonBox,
-    QComboBox,
     QFrame,
     QScrollArea,
 )
-from PyQt5.QtCore import Qt, QTimer
-import pandas as pd
-import sys
-import os
-
-from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.rospy import ROS2Wrapper
 from std_msgs.msg import ColorRGBA
 
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware, set_middleware
 from giskardpy.model.world_config import EmptyWorld
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import (
-    BehaviorTreeConfig,
     StandAloneBTConfig,
 )
 from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.other_robots.justin import WorldWithJustinConfig
 from giskardpy_ros.configs.robot_interface_config import (
-    RobotInterfaceConfig,
     StandAloneRobotInterfaceConfig,
 )
-from giskardpy.model.better_pybullet_syncer import BulletCollisionDetector
-from giskardpy.model.collision_world_syncer import DisableCollisionReason
-from giskardpy_ros.ros2.ros_msg_visualization import ROSMsgVisualization
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.rospy import ROS2Wrapper
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.utils import robot_name_from_urdf_string
 
 reason_color_map = {

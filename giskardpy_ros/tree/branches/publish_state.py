@@ -1,8 +1,5 @@
-from typing import Optional
-
 from py_trees.composites import Sequence
 
-from giskardpy_ros.tree.behaviors.debug_marker_publisher import DebugMarkerPublisher
 from giskardpy_ros.tree.behaviors.publish_debug_expressions import (
     PublishDebugExpressions,
     QPDataPublisherConfig,
@@ -13,15 +10,9 @@ from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes, TFPubli
 
 
 class PublishState(Sequence):
-    debug_marker_publisher: Optional[DebugMarkerPublisher]
 
     def __init__(self, name: str = "publish state"):
         super().__init__(name, memory=True)
-        self.debug_marker_publisher = None
-
-    def add_debug_marker_publisher(self):
-        self.debug_marker_publisher = DebugMarkerPublisher()
-        self.add_child(self.debug_marker_publisher)
 
     def add_publish_feedback(self):
         self.add_child(PublishFeedback())

@@ -2,10 +2,6 @@ from dataclasses import dataclass, field
 
 from py_trees.decorators import FailureIsSuccess
 
-from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.ros_msg_visualization import (
-    DebugMarkerVisualizer,
-)
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
 from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
@@ -54,14 +50,8 @@ class BehaviorTreeConfig:
         GiskardBlackboard().tree_config = self
         self.tree = GiskardBT()
         if self.debug_mode:
-            # self.add_gantt_chart_plotter()
-            # self.add_goal_graph_plotter()
             if self.add_trajectory_plotter:
                 self._add_trajectory_plotter(wait=True)
-            if self.add_debug_marker_publisher:
-                self._add_debug_marker_publisher()
-            if self.add_debug_trajectory_visualizer:
-                self._add_debug_trajectory_visualizer()
             if self.add_gantt_chart_plotter:
                 self._add_gantt_chart_plotter()
             if self.add_goal_graph_plotter:
@@ -102,9 +92,6 @@ class BehaviorTreeConfig:
         """
         self.tree.cleanup_control_loop.add_plot_trajectory(normalize_position, wait)
 
-    def _add_debug_trajectory_visualizer(self):
-        self.tree.cleanup_control_loop.add_debug_visualize_trajectory()
-
     def _add_gantt_chart_plotter(self):
         self.add_evaluate_debug_expressions()
         self.tree.cleanup_control_loop.add_plot_gantt_chart()
@@ -112,16 +99,6 @@ class BehaviorTreeConfig:
     def _add_goal_graph_plotter(self):
         self.add_evaluate_debug_expressions()
         self.tree.prepare_control_loop.add_plot_goal_graph()
-
-    def _add_debug_marker_publisher(self):
-        """
-        Publishes debug expressions defined in goals.
-        """
-        GiskardBlackboard().debug_marker_visualizer = DebugMarkerVisualizer(
-            node_handle=rospy.node
-        )
-        self.add_evaluate_debug_expressions()
-        self.tree.control_loop_branch.publish_state.add_debug_marker_publisher()
 
     def add_tf_publisher(
         self,
