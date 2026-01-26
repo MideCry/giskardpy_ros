@@ -117,7 +117,6 @@ class JustinTestWrapper(GiskardTester):
                 collision_avoidance_config=JustinCollisionAvoidanceConfig(),
                 robot_interface_config=JustinStandaloneInterface(),
                 behavior_tree_config=StandAloneBTConfig(
-                    publish_tf=True,
                     debug_mode=True,
                     visualization_mode=VisualizationMode.VisualsFrameLocked,
                 ),

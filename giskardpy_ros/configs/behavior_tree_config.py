@@ -4,7 +4,6 @@ from py_trees.decorators import FailureIsSuccess
 
 from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 from giskardpy_ros.tree.behaviors.publish_debug_expressions import QPDataPublisherConfig
-from giskardpy_ros.tree.behaviors.tf_publisher import TfPublishingModes
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.tree.branches.giskard_bt import GiskardBT
 from giskardpy_ros.tree.branches.send_trajectories import ExecuteTraj
@@ -49,6 +48,7 @@ class BehaviorTreeConfig:
         """
         GiskardBlackboard().tree_config = self
         self.tree = GiskardBT()
+        self.add_tf_publisher()
         if self.debug_mode:
             if self.add_trajectory_plotter:
                 self._add_trajectory_plotter(wait=True)
@@ -100,22 +100,13 @@ class BehaviorTreeConfig:
         self.add_evaluate_debug_expressions()
         self.tree.prepare_control_loop.add_plot_goal_graph()
 
-    def add_tf_publisher(
-        self,
-        include_prefix: bool = True,
-        tf_topic: str = "tf",
-        mode: TfPublishingModes = TfPublishingModes.attached_and_world_objects,
-    ):
+    def add_tf_publisher(self):
         """
         Publishes tf for Giskard's internal state.
         """
-        self.tree.wait_for_goal.publish_state.add_tf_publisher(
-            include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
-        )
+        self.tree.wait_for_goal.publish_state.add_tf_publisher()
         if GiskardBlackboard().tree_config.is_standalone():
-            self.tree.control_loop_branch.publish_state.add_tf_publisher(
-                include_prefix=include_prefix, tf_topic=tf_topic, mode=mode
-            )
+            self.tree.control_loop_branch.publish_state.add_tf_publisher()
 
     def add_evaluate_debug_expressions(self):
         self.tree.prepare_control_loop.add_compile_debug_expressions()
@@ -145,12 +136,9 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     The default behavior tree for Giskard in standalone mode. Make sure to set up the robot interface accordingly.
     :param publish_world_state: publish current world state.
     :param publish_tf: publish all link poses in tf.
-    :param include_prefix: whether to include the robot name prefix when publishing joint states or tf
     """
 
     publish_world_state: bool = True
-    publish_tf: bool = True
-    include_prefix: bool = False
     visualization_mode: VisualizationMode = VisualizationMode.VisualsFrameLocked
 
     def __post_init__(self):
@@ -161,10 +149,6 @@ class StandAloneBTConfig(BehaviorTreeConfig):
     def setup(self):
         super().setup()
         self.tree.control_loop_branch.add_projection_behaviors()
-        if self.publish_tf:
-            self.add_tf_publisher(
-                include_prefix=self.include_prefix, mode=TfPublishingModes.all
-            )
         self.add_evaluate_debug_expressions()
         if self.publish_world_state:
             self.add_world_state_publisher()

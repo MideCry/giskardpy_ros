@@ -116,7 +116,9 @@ class Giskard:
         self.world_fetcher = FetchWorldServer(
             node=rospy.node, world=self.world_config.world
         )
-        self.tf_publisher = TFPublisher(node=rospy.node, world=self.world_config.world)
+        self.tf_publisher = TFPublisher.create_with_ignore_existing_tf(
+            node=rospy.node, world=self.world_config.world
+        )
         self.tf_publisher.pause()
         self.viz_marker_publisher = VizMarkerPublisher(
             node=rospy.node, world=self.world_config.world

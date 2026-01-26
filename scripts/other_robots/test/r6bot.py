@@ -31,6 +31,7 @@ class R6BotInterface(RobotInterfaceConfig):
 
 
 def main():
+    # ros2 launch ros2_control_demo_example_7 r6bot_controller.launch.py
     rospy.init_node("giskard")
     robot_description = get_robot_description()
     giskard = Giskard(
