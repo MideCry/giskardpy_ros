@@ -12,11 +12,14 @@ from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_matrix_manager import (
+from semantic_digital_twin.collision_checking.collision_matrix_manager import (
     CollisionRequest,
     CollisionAvoidanceTypes,
 )
-from giskardpy.model.collisions import Collisions, GiskardCollision
+from semantic_digital_twin.collision_checking.collisions import (
+    Collisions,
+    GiskardCollision,
+)
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard

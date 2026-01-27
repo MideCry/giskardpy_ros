@@ -26,11 +26,11 @@ from conftest import kitchen_setup
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
 )
-from giskardpy.model.collision_matrix_manager import (
+from semantic_digital_twin.collision_checking.collision_matrix_manager import (
     CollisionRequest,
     CollisionAvoidanceTypes,
 )
-from giskardpy.model.collision_world_syncer import (
+from semantic_digital_twin.collision_checking.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.motion_statechart.data_types import (

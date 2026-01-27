@@ -8,8 +8,12 @@ from geometry_msgs.msg import PoseStamped, PointStamped, Vector3Stamped, Point
 from numpy import pi
 
 from conftest import kitchen_setup
-from giskardpy.model.collision_matrix_manager import CollisionRequest
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from semantic_digital_twin.collision_checking.collision_matrix_manager import (
+    CollisionRequest,
+)
+from semantic_digital_twin.collision_checking.collision_world_syncer import (
+    CollisionCheckerLib,
+)
 from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Open, Close
 from giskardpy.motion_statechart.goals.templates import Sequence
@@ -21,7 +25,6 @@ from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
 )
 from giskardpy.motion_statechart.monitors.payload_monitors import (
     Pulse,
-    CountControlCycles,
     CheckControlCycleCount,
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart

@@ -1,4 +1,6 @@
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from semantic_digital_twin.collision_checking.collision_world_syncer import (
+    CollisionCheckerLib,
+)
 from giskardpy_ros.ros2 import rospy
 from rclpy import Parameter
 from rclpy.exceptions import ParameterUninitializedException

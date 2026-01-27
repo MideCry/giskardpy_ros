@@ -9,7 +9,7 @@ import rclpy
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.executor import Executor, SimulationPacer
 from giskardpy.middleware import get_middleware
-from giskardpy.model.collision_world_syncer import (
+from semantic_digital_twin.collision_checking.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.model.world_config import WorldConfig

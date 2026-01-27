@@ -1,4 +1,6 @@
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
+from semantic_digital_twin.collision_checking.collision_world_syncer import (
+    CollisionCheckerLib,
+)
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
 from giskardpy_ros.configs.giskard import Giskard
@@ -7,7 +9,6 @@ from giskardpy_ros.configs.iai_robots.hsr import (
     HSRVelocityInterface,
 )
 from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.ros2_interface import get_robot_description
 from giskardpy_ros.utils.utils import load_xacro
 
 

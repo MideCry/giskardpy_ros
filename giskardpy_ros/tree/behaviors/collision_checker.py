@@ -1,12 +1,11 @@
 from py_trees.common import Status
 
 from giskardpy.data_types.exceptions import SelfCollisionViolatedException
-from giskardpy.model.collision_world_syncer import Collisions
+from semantic_digital_twin.collision_checking.collision_world_syncer import Collisions
 from giskardpy.utils.decorators import record_time
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
-    GiskardBlackboard,
 )
 
 
