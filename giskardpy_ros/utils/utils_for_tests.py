@@ -136,15 +136,6 @@ class GiskardTester(ABC):
         self.async_loop = asyncio.new_event_loop()
         self.giskard = self.setup_giskard()
         self.giskard.setup()
-        if is_in_github_workflow():
-            get_middleware().loginfo(
-                "Inside github workflow, turning off visualization"
-            )
-            GiskardBlackboard().tree.turn_off_visualization()
-        # if "QP_SOLVER" in os.environ:
-        #     god_map.qp_controller.set_qp_solver(
-        #         SupportedQPSolver[os.environ["QP_SOLVER"]]
-        #     )
         self.robot_names = [
             v.name
             for v in GiskardBlackboard().executor.world.get_semantic_annotations_by_type(
