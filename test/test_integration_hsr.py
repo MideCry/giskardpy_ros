@@ -160,15 +160,11 @@ class TestJointGoals:
             ),
         )
         msc.add_node(EndMotion.when_true(joint_goal))
-
-        state_version = giskard.api.world.state.version
         giskard.api.execute(msc)
-        for i in range(100):
-            if giskard.api.world.state.version != state_version:
-                break
-            sleep(0.01)
 
-        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
+        arm_lift_joint: (
+            ActiveConnection1DOF
+        ) = GiskardBlackboard().giskard.world_config.world.get_connection_by_name(
             "arm_lift_joint"
         )
         hand_T_finger_current = giskard.compute_fk_pose(
@@ -216,14 +212,11 @@ class TestJointGoals:
         )
         msc.add_node(EndMotion.when_true(node))
 
-        state_version = giskard.api.world.state.version
         giskard.api.execute(msc)
-        for i in range(100):
-            if giskard.api.world.state.version != state_version:
-                break
-            sleep(0.01)  # wait for sync
 
-        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
+        arm_lift_joint: (
+            ActiveConnection1DOF
+        ) = GiskardBlackboard().giskard.world_config.world.get_connection_by_name(
             "arm_lift_joint"
         )
         np.testing.assert_almost_equal(
@@ -258,14 +251,11 @@ class TestJointGoals:
         )
         msc.add_node(EndMotion.when_true(node))
 
-        state_version = giskard.api.world.state.version
         giskard.api.execute(msc)
-        for i in range(100):
-            if giskard.api.world.state.version != state_version:
-                break
-            sleep(0.01)
 
-        arm_lift_joint: ActiveConnection1DOF = giskard.api.world.get_connection_by_name(
+        arm_lift_joint: (
+            ActiveConnection1DOF
+        ) = GiskardBlackboard().giskard.world_config.world.get_connection_by_name(
             "arm_lift_joint"
         )
         np.testing.assert_almost_equal(
@@ -289,13 +279,13 @@ class TestJointGoals:
         arm_lift_joints: ActiveConnection1DOF = (
             giskard.api.world.get_connection_by_name("arm_lift_joint")
         )
-        assert arm_lift_joints.dof.lower_limits.velocity == -0.15
-        assert arm_lift_joints.dof.upper_limits.velocity == 0.15
+        assert arm_lift_joints.dof.limits.lower.velocity == -0.15
+        assert arm_lift_joints.dof.limits.upper.velocity == 0.15
         torso_lift_joints: ActiveConnection1DOF = (
             giskard.api.world.get_connection_by_name("torso_lift_joint")
         )
-        assert torso_lift_joints.dof.lower_limits.velocity == -0.075
-        assert torso_lift_joints.dof.upper_limits.velocity == 0.075
+        assert torso_lift_joints.dof.limits.lower.velocity == -0.075
+        assert torso_lift_joints.dof.limits.upper.velocity == 0.075
         msc = MotionStatechart()
         msc.add_node(
             joint_goal := JointPositionList(
