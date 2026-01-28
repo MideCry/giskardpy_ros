@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import traceback
 from dataclasses import dataclass, field
@@ -37,6 +38,8 @@ from semantic_digital_twin.adapters.ros.world_synchronizer import (
 )
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.world_description.connections import ActiveConnection
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -112,21 +115,27 @@ class Giskard:
         GiskardBlackboard().tree.setup(rospy.node)
 
     def setup_world_model_ros_interface(self):
-        semantic_digital_twin_database_uri = os.environ.get(
-            "SEMANTIC_DIGITAL_TWIN_DATABASE_URI"
-        )
-        assert (
-            semantic_digital_twin_database_uri is not None
-        ), "Please set the SEMANTIC_DIGITAL_TWIN_DATABASE_URI environment variable."
+        try:
+            semantic_digital_twin_database_uri = os.environ.get(
+                "SEMANTIC_DIGITAL_TWIN_DATABASE_URI"
+            )
+            assert (
+                semantic_digital_twin_database_uri is not None
+            ), "Please set the SEMANTIC_DIGITAL_TWIN_DATABASE_URI environment variable."
 
-        engine = create_engine(semantic_digital_twin_database_uri)
-        session = sessionmaker(bind=engine)()
+            engine = create_engine(semantic_digital_twin_database_uri)
+            session = sessionmaker(bind=engine)()
 
-        self.model_reload_synchronizer = ModelReloadSynchronizer(
-            node=rospy.node,
-            world=self.world_config.world,
-            session=session,
-        )
+            self.model_reload_synchronizer = ModelReloadSynchronizer(
+                node=rospy.node,
+                world=self.world_config.world,
+                session=session,
+            )
+        except AssertionError as e:
+            logger.warning(
+                f'Model reload synchronization not available because "SEMANTIC_DIGITAL_TWIN_DATABASE_URI" is not set.'
+            )
+            self.model_reload_synchronizer = None
 
         self.model_synchronizer = ModelSynchronizer(
             world=self.world_config.world, node=rospy.node
