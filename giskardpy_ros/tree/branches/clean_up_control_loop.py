@@ -3,9 +3,6 @@ from py_trees.decorators import FailureIsSuccess
 
 from giskardpy.utils.decorators import toggle_on, toggle_off
 from giskardpy_ros.tree.behaviors.append_zero_velocity import SetZeroVelocity
-from giskardpy_ros.tree.behaviors.debug_marker_publisher import (
-    DebugMarkerPublisherTrajectory,
-)
 from giskardpy_ros.tree.behaviors.plot_goal_gantt_chart import PlotGanttChart
 from giskardpy_ros.tree.behaviors.plot_trajectory import PlotTrajectory
 from giskardpy_ros.tree.behaviors.publish_feedback import (
@@ -34,9 +31,6 @@ class CleanupControlLoop(Sequence):
             ),
             index=-1,
         )
-
-    def add_debug_visualize_trajectory(self):
-        self.add_child(DebugMarkerPublisherTrajectory())
 
     def add_plot_gantt_chart(self):
         self.insert_child(PlotGanttChart(), 2)

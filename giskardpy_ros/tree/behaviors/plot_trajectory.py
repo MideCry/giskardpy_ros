@@ -32,6 +32,8 @@ class PlotTrajectory(GiskardBehavior):
 
     def plot(self):
         try:
+            if len(GiskardBlackboard().executor.world_state_trajectory.times) <= 1:
+                return
             file_name = (
                 GiskardBlackboard().executor.tmp_folder
                 + f"trajectories/goal_{GiskardBlackboard().move_action_server.goal_id}.pdf"

@@ -14,10 +14,17 @@ from giskardpy.model.collision_world_syncer import (
 )
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig, StandAloneBTConfig
+from giskardpy_ros.configs.behavior_tree_config import (
+    BehaviorTreeConfig,
+    StandAloneBTConfig,
+)
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
+from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
+    VizMarkerPublisher,
+)
 from semantic_digital_twin.adapters.ros.world_fetcher import FetchWorldServer
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
     ModelSynchronizer,
@@ -53,6 +60,8 @@ class Giskard:
     executor: Executor = field(init=False)
     model_synchronizer: ModelSynchronizer = field(init=False)
     state_synchronizer: StateSynchronizer = field(init=False)
+    tf_publisher: TFPublisher = field(init=False)
+    viz_marker_publisher: VizMarkerPublisher = field(init=False)
     world_fetcher: FetchWorldServer = field(init=False)
     tmp_folder: str = field(
         default_factory=lambda: get_middleware().resolve_iri(
@@ -79,7 +88,7 @@ class Giskard:
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
                 tmp_folder=self.tmp_folder,
-                pacer=SimulationPacer(real_time_factor=real_time_factor)
+                pacer=SimulationPacer(real_time_factor=real_time_factor),
             )
 
             self.behavior_tree_config.setup()
@@ -105,6 +114,13 @@ class Giskard:
         )
         self.state_synchronizer.pause()
         self.world_fetcher = FetchWorldServer(
+            node=rospy.node, world=self.world_config.world
+        )
+        self.tf_publisher = TFPublisher.create_with_ignore_existing_tf(
+            node=rospy.node, world=self.world_config.world
+        )
+        self.tf_publisher.pause()
+        self.viz_marker_publisher = VizMarkerPublisher(
             node=rospy.node, world=self.world_config.world
         )
 
