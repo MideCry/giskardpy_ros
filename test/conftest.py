@@ -2,10 +2,7 @@ from typing import Dict
 
 import numpy as np
 import pytest
-from geometry_msgs.msg import PoseStamped, Quaternion
-from krrood.symbolic_math.symbolic_math import trinary_logic_and
 
-import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
@@ -14,14 +11,12 @@ from giskardpy.motion_statechart.monitors.overwrite_state_monitors import (
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.joint_tasks import JointState
-from giskardpy.utils.math import quaternion_from_axis_angle
-from giskardpy_ros.ros2 import rospy, ros2_interface
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from krrood.symbolic_math.symbolic_math import trinary_logic_and
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
-from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
 @pytest.fixture(scope="function")
@@ -29,18 +24,12 @@ def init_rospy():
 
     rospy.init_node("giskard")
     get_middleware().loginfo("init ros")
-    tf.init()
-    get_middleware().loginfo("done tf init")
 
     try:
         yield None
     finally:
         print("kill ros")
         # Cleanly reset TF and shutdown ROS2 node/executor
-        try:
-            tf.shutdown()
-        except Exception:
-            pass
         rospy.shutdown()
 
 

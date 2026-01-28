@@ -22,8 +22,15 @@ from giskardpy_ros.exceptions import (
 )
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
-from giskardpy_ros.ros2.msg_converter import msg_type_as_str
 from giskardpy_ros.utils.asynio_utils import wait_until_not_none
+
+
+def msg_type_as_str(msg_type) -> str:
+    type_str_parts = str(type(msg_type())).split(".")
+    part1 = type_str_parts[0].split("'")[1]
+    part2 = type_str_parts[1]
+    part3 = type_str_parts[-1].split("'")[0]
+    return f"{part1}/{part2}/{part3}"
 
 
 def wait_for_message(

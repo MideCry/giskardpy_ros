@@ -1,17 +1,15 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict
 
 from py_trees.common import Status
-from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2 import msg_converter
-from giskardpy_ros.ros2.tfwrapper import lookup_pose
+from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
-    GiskardBlackboard,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.adapters.ros.tfwrapper import TFWrapper
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 from semantic_digital_twin.world_description.connections import Connection6DoF
 
 
@@ -21,6 +19,7 @@ class SyncTfFrames(GiskardBehavior):
     def __init__(self, name):
         super().__init__(name)
         self.joint_map = {}
+        self.tf = TFWrapper(node=rospy.node)
 
     def sync_6dof_joint_with_tf_frame(
         self, joint: Connection6DoF, tf_parent_frame: str, tf_child_frame: str
@@ -40,7 +39,7 @@ class SyncTfFrames(GiskardBehavior):
     @record_time
     def update(self):
         for joint, (tf_parent_frame, tf_child_frame) in self.joint_map.items():
-            parent_T_child = lookup_pose(tf_parent_frame, tf_child_frame)
+            parent_T_child = self.tf.lookup_pose(tf_parent_frame, tf_child_frame)
             joint.origin = HomogeneousTransformationMatrix.from_xyz_quaternion(
                 pos_x=parent_T_child.pose.position.x,
                 pos_y=parent_T_child.pose.position.y,

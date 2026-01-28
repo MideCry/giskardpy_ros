@@ -77,16 +77,6 @@ class GiskardBT(BehaviourTree):
     def has_started(self) -> bool:
         return self.count > 1
 
-    @toggle_on("visualization_mode")
-    def turn_on_visualization(self):
-        self.wait_for_goal.publish_state.add_visualization_marker_behavior()
-        self.control_loop_branch.publish_state.add_visualization_marker_behavior()
-
-    @toggle_off("visualization_mode")
-    def turn_off_visualization(self):
-        self.wait_for_goal.publish_state.remove_visualization_marker_behavior()
-        self.control_loop_branch.publish_state.remove_visualization_marker_behavior()
-
     @toggle_on("projection_mode")
     def switch_to_projection(self):
         GiskardBlackboard().tree_config.switch_to_projection_mode()

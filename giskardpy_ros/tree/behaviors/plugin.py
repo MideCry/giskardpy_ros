@@ -3,7 +3,6 @@ from typing import Optional
 
 from py_trees.behaviour import Behaviour
 
-import giskardpy_ros.ros2.tfwrapper as tf
 from giskardpy_ros.tree.blackboard_utils import (
     has_blackboard_exception,
     get_blackboard_exception,
@@ -47,11 +46,3 @@ class GiskardBehavior(Behaviour):
     @staticmethod
     def clear_blackboard_exception():
         clear_blackboard_exception()
-
-    def transform_msg(self, target_frame, msg, timeout=1):
-        try:
-            return GiskardBlackboard().executor.world.transform(
-                target_frame=target_frame, spatial_object=msg
-            )
-        except KeyError as e:
-            return tf.transform_msg(target_frame, msg, timeout=timeout)

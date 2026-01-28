@@ -12,10 +12,6 @@ from giskardpy.executor import Executor
 if TYPE_CHECKING:
     from giskardpy_ros.configs.behavior_tree_config import BehaviorTreeConfig
     from giskardpy_ros.configs.giskard import Giskard
-    from giskardpy_ros.ros2.ros_msg_visualization import (
-        ROSMsgVisualization,
-        DebugMarkerVisualizer,
-    )
     from giskardpy_ros.tree.behaviors.action_server import ActionServerHandler
 
 
@@ -24,8 +20,6 @@ class GiskardBlackboard:
     tree_config: BehaviorTreeConfig
     runtime: float
     move_action_server: ActionServerHandler
-    ros_visualizer: ROSMsgVisualization
-    debug_marker_visualizer: DebugMarkerVisualizer
     fill_trajectory_velocity_values: bool
     exception: Optional[Exception]
     motion_start_time: float

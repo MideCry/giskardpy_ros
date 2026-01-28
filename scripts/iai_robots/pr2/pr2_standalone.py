@@ -40,8 +40,8 @@ def main():
                 "odom_combined_T_base_footprint",
             ]
         ),
-        behavior_tree_config=StandAloneBTConfig(publish_tf=True, debug_mode=True),
-        qp_controller_config=QPControllerConfig(control_dt=None, mpc_dt=0.05),
+        behavior_tree_config=StandAloneBTConfig(debug_mode=True),
+        qp_controller_config=QPControllerConfig(target_frequency=20),
     )
     giskard.live()
 

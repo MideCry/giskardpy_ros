@@ -31,13 +31,14 @@ class R6BotInterface(RobotInterfaceConfig):
 
 
 def main():
+    # ros2 launch ros2_control_demo_example_7 r6bot_controller.launch.py
     rospy.init_node("giskard")
     robot_description = get_robot_description()
     giskard = Giskard(
         world_config=GenericWorldConfig(urdf=robot_description),
         robot_interface_config=R6BotInterface(),
         behavior_tree_config=ClosedLoopBTConfig(),
-        qp_controller_config=QPControllerConfig(control_dt=0.0125, mpc_dt=0.0125),
+        qp_controller_config=QPControllerConfig(target_frequency=80),
     )
     giskard.live()
 

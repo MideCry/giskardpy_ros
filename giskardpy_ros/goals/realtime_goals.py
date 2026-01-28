@@ -11,7 +11,6 @@ from rclpy.subscription import Subscription
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import MarkerArray, Marker
 
-import giskardpy_ros.ros2.msg_converter as msg_converter
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.data_types.exceptions import (
     GoalInitalizationException,
@@ -23,6 +22,7 @@ from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.utils.decorators import clear_memo
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import raise_to_blackboard
+from semantic_digital_twin.adapters.ros import Ros2ToSemDTConverter
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world_description.connections import OmniDrive
 
@@ -39,7 +39,7 @@ class RealTimePointing(Pointing):
         self.sub = rospy.node.create_subscription(PointStamped, "muh", self.cb, 10)
 
     def cb(self, data: PointStamped):
-        data = msg_converter.ros_msg_to_giskard_obj(data, context.world)
+        data = Ros2ToSemDTConverter.convert(data, context.world)
         data = context.world.transform(
             target_frame=self.root_link, spatial_object=data
         ).to_np()

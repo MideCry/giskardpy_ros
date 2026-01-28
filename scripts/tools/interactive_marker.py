@@ -6,8 +6,8 @@ from rclpy import Parameter
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 from visualization_msgs.msg import InteractiveMarkerFeedback
 
-from giskardpy.model.collision_matrix_manager import CollisionRequest
-from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
+import semantic_digital_twin.spatial_types.spatial_types as cas
+from giskardpy.motion_statechart.goals.templates import Parallel
 from giskardpy.motion_statechart.graph_node import EndMotion
 from giskardpy.motion_statechart.monitors.payload_monitors import CountSeconds
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
@@ -16,10 +16,8 @@ from giskardpy_ros.python_interface.python_interface import (
     GiskardWrapper,
 )
 from giskardpy_ros.ros2 import rospy
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
-import semantic_digital_twin.spatial_types.spatial_types as cas
 
 
 class InteractiveMarkerNode:
@@ -64,7 +62,7 @@ class InteractiveMarkerNode:
 
         # Create an interactive marker
         int_marker = InteractiveMarker()
-        int_marker.header.frame_id = self.tip_link
+        int_marker.header.frame_id = str(self.tip_body.name)
         int_marker.name = f"{self.root_link}/{self.tip_link}"
         int_marker.scale = 0.25
         int_marker.pose.orientation.w = 1.0
@@ -173,26 +171,21 @@ class InteractiveMarkerNode:
                 quat_y=feedback.pose.orientation.y,
                 quat_z=feedback.pose.orientation.z,
                 quat_w=feedback.pose.orientation.w,
-                reference_frame=self.giskard.world.get_kinematic_structure_entity_by_name(
-                    feedback.header.frame_id
-                ),
+                reference_frame=self.tip_body,
             )
 
             msc = MotionStatechart()
-            cart_goal = CartesianPose(
-                root_link=self.root_body,
-                tip_link=self.tip_body,
-                goal_pose=goal,
+            msc.add_nodes(
+                [
+                    goal := CartesianPose(
+                        root_link=self.root_body,
+                        tip_link=self.tip_body,
+                        goal_pose=goal,
+                    ),
+                    time_out := CountSeconds(seconds=20),
+                ]
             )
-            msc.add_node(cart_goal)
-            max_traj = CountSeconds(seconds=20)
-            msc.add_node(max_traj)
-            end = EndMotion()
-            msc.add_node(end)
-            # end.start_condition = cart_goal.observation_variable
-            end.start_condition = cas.trinary_logic_or(
-                cart_goal.observation_variable, max_traj.observation_variable
-            )
+            msc.add_node(EndMotion.when_any_true([goal, time_out]))
             self.giskard.execute_async(msc)
             # reset marker pose
             self.int_marker.pose.position.x = 0.0
