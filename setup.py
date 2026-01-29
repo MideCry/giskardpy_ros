@@ -32,6 +32,7 @@ setup(
             "pr2_standalone = scripts.iai_robots.pr2.pr2_standalone:main",
             "hsr_standalone = scripts.iai_robots.hsr.hsr_standalone:main",
             "hsr_velocity = scripts.iai_robots.hsr.iai_hsr_real_time:main",
+            "hsr_trust_me_bro = scripts.iai_hsr_real_time_trust_me_bro:main",
             "r6bot = scripts.other_robots.test.r6bot:main",
             "generic_giskard_standalone = scripts.generic_giskard_standalone:main",
             "interactive_marker = scripts.tools.interactive_marker:main",

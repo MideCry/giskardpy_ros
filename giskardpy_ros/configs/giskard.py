@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
+import os
 import traceback
 from dataclasses import dataclass, field
 from typing import List
 
 import rclpy
+from sqlalchemy.orm import sessionmaker
 
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.executor import Executor, SimulationPacer
@@ -14,6 +17,7 @@ from giskardpy.model.collision_world_syncer import (
 )
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
+from giskardpy.ros_executor import Ros2Executor
 from giskardpy_ros.configs.behavior_tree_config import (
     BehaviorTreeConfig,
     StandAloneBTConfig,
@@ -21,6 +25,7 @@ from giskardpy_ros.configs.behavior_tree_config import (
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from giskardpy_ros.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from krrood.ormatic.utils import create_engine
 from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
 from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
     VizMarkerPublisher,
@@ -29,9 +34,12 @@ from semantic_digital_twin.adapters.ros.world_fetcher import FetchWorldServer
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
     ModelSynchronizer,
     StateSynchronizer,
+    ModelReloadSynchronizer,
 )
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.world_description.connections import ActiveConnection
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -62,6 +70,7 @@ class Giskard:
     state_synchronizer: StateSynchronizer = field(init=False)
     tf_publisher: TFPublisher = field(init=False)
     viz_marker_publisher: VizMarkerPublisher = field(init=False)
+    model_reload_synchronizer: ModelReloadSynchronizer = field(init=False)
     world_fetcher: FetchWorldServer = field(init=False)
     tmp_folder: str = field(
         default_factory=lambda: get_middleware().resolve_iri(
@@ -83,7 +92,8 @@ class Giskard:
                 real_time_factor = None
             else:
                 real_time_factor = 1.0
-            self.executor = Executor(
+            self.executor = Ros2Executor(
+                ros_node=rospy.node,
                 world=self.world_config.world,
                 controller_config=self.qp_controller_config,
                 collision_checker=self.collision_checker_id,
@@ -105,6 +115,28 @@ class Giskard:
         GiskardBlackboard().tree.setup(rospy.node)
 
     def setup_world_model_ros_interface(self):
+        try:
+            semantic_digital_twin_database_uri = os.environ.get(
+                "SEMANTIC_DIGITAL_TWIN_DATABASE_URI"
+            )
+            assert (
+                semantic_digital_twin_database_uri is not None
+            ), "Please set the SEMANTIC_DIGITAL_TWIN_DATABASE_URI environment variable."
+
+            engine = create_engine(semantic_digital_twin_database_uri)
+            session = sessionmaker(bind=engine)()
+
+            self.model_reload_synchronizer = ModelReloadSynchronizer(
+                node=rospy.node,
+                world=self.world_config.world,
+                session=session,
+            )
+        except AssertionError as e:
+            logger.warning(
+                f'Model reload synchronization not available because "SEMANTIC_DIGITAL_TWIN_DATABASE_URI" is not set.'
+            )
+            self.model_reload_synchronizer = None
+
         self.model_synchronizer = ModelSynchronizer(
             world=self.world_config.world, node=rospy.node
         )
