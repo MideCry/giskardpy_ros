@@ -59,7 +59,7 @@ class WorldWithTracyConfig(WorldWithFixedRobot):
 
     def setup_collision_config(self):
         path_to_srdf = resource_filename(
-            "giskardpy", "../self_collision_matrices/iai/tracy.srdf"
+            "giskardpy", "../../self_collision_matrices/iai/tracy.srdf"
         )
         self.world.load_collision_srdf(path_to_srdf)
 
