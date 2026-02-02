@@ -29,51 +29,6 @@ from semantic_digital_twin.world_description.world_entity import CollisionChecki
 class WorldWithHSRConfig(WorldWithOmniDriveRobot):
     urdf_view: AbstractRobot = field(kw_only=True, default=HSRB, init=False)
 
-    def setup_collision_config(self):
-        srdf_path = os.path.join(
-            resource_filename("giskardpy", "../../"),
-            "self_collision_matrices",
-            "iai",
-            "hsrb.srdf",
-        )
-        self.collision_rules.append(
-            SelfCollisionMatrixRule.from_collision_srdf(srdf_path)
-        )
-        for body in self.robot.bodies_with_collisions:
-            collision_config = CollisionCheckingConfig(
-                buffer_zone_distance=0.05, violated_distance=0.0
-            )
-            body.set_static_collision_config(collision_config)
-
-        connection: ActiveConnection = self.world.get_connection_by_name(
-            "wrist_roll_joint"
-        )
-        connection.set_static_collision_config_for_direct_child_bodies(
-            CollisionCheckingConfig(
-                buffer_zone_distance=0.05,
-                violated_distance=0.0,
-                max_avoided_bodies=4,
-            )
-        )
-
-        connection: ActiveConnection = self.robot.drive
-        connection.set_static_collision_config_for_direct_child_bodies(
-            CollisionCheckingConfig(
-                buffer_zone_distance=0.1,
-                violated_distance=0.03,
-                max_avoided_bodies=2,
-            )
-        )
-
-        connection: ActiveConnection = self.world.get_connection_by_name(
-            "head_tilt_joint"
-        )
-        connection.set_static_collision_config_for_direct_child_bodies(
-            CollisionCheckingConfig(
-                buffer_zone_distance=0.03,
-            )
-        )
-
 
 class HSRStandaloneInterface(RobotInterfaceConfig):
     def setup(self):

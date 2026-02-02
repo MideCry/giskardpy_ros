@@ -275,7 +275,6 @@ class GiskardTester(ABC):
             box_shape = Box(scale=Scale(*size))
             box.collision.append(box_shape)
             box.visual.append(box_shape)
-            box.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
@@ -337,7 +336,6 @@ class GiskardTester(ABC):
             cylinder_shape = Cylinder(width=radius * 2, height=height)
             cylinder.collision.append(cylinder_shape)
             cylinder.visual.append(cylinder_shape)
-            cylinder.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,
@@ -370,7 +368,6 @@ class GiskardTester(ABC):
             mesh_shape = FileMesh(filename=mesh, scale=Scale(*scale))
             mesh_body.collision.append(mesh_shape)
             mesh_body.visual.append(mesh_shape)
-            mesh_body.collision_config.buffer_zone_distance = 0.05
 
             connection = FixedConnection(
                 parent=parent_link,

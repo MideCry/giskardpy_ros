@@ -94,8 +94,6 @@ class Giskard:
             self.behavior_tree_config.setup()
 
             self.robot_interface_config.setup()
-        with self.world_config.world.modify_world():
-            self.world_config.setup_collision_config()
 
         if self.executor.collision_scene.is_collision_checking_enabled():
             self.executor.collision_scene.sync()

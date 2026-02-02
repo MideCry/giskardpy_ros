@@ -59,18 +59,6 @@ class WorldWithTracyConfig(WorldWithFixedRobot):
     def __init__(self, urdf: Optional[str] = None):
         super().__init__(urdf=urdf, root_name=PrefixedName("map2"), urdf_view=Tracy)
 
-    def setup_collision_config(self):
-        path_to_srdf = resource_filename(
-            "giskardpy", "../self_collision_matrices/iai/tracy.srdf"
-        )
-        self.world.load_collision_srdf(path_to_srdf)
-
-        for body in self.robot.bodies_with_collisions:
-            collision_config = CollisionCheckingConfig(
-                buffer_zone_distance=0.03, violated_distance=0.0
-            )
-            body.set_static_collision_config(collision_config)
-
     def setup_world(self, robot_name: Optional[str] = None) -> None:
         super().setup_world()
         self.robot = self.world.get_semantic_annotations_by_type(Tracy)[0]

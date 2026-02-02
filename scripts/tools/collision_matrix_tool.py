@@ -553,7 +553,6 @@ class Application(QMainWindow):
         )
         with self.world.modify_world():
             GiskardBlackboard().giskard.world_config.setup_world()
-        GiskardBlackboard().giskard.world_config.setup_collision_config()
         self.timer = QTimer()
         self.timer.start(1000)  # Time in milliseconds
         self.timer.timeout.connect(lambda: None)
