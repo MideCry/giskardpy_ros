@@ -9,7 +9,7 @@ from numpy import pi
 
 from conftest import kitchen_setup
 from semantic_digital_twin.collision_checking.collision_matrix_manager import (
-    CollisionRequest,
+    CollisionRule,
 )
 from semantic_digital_twin.collision_checking.collision_world_syncer import (
     CollisionCheckerLib,
@@ -662,7 +662,7 @@ class TestCollisionAvoidanceGoals:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -702,7 +702,7 @@ class TestCollisionAvoidanceGoals:
                     ]
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -789,7 +789,7 @@ class TestCollisionAvoidanceGoals:
                         {"arm_flex_joint": -np.pi / 2}, world=giskard.api.world
                     )
                 ),
-                CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
             ]
         )
         msc.add_node(EndMotion.when_true(msc.nodes[0]))
@@ -811,7 +811,7 @@ class TestCollisionAvoidanceGoals:
                         {"arm_flex_joint": 0}, world=giskard.api.world
                     )
                 ),
-                CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
             ]
         )
         msc.add_node(EndMotion.when_true(msc.nodes[0]))

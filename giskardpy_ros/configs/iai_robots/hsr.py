@@ -3,6 +3,10 @@ from typing import Optional
 
 import numpy as np
 from pkg_resources import resource_filename
+
+from semantic_digital_twin.collision_checking.collision_rules import (
+    SelfCollisionMatrixRule,
+)
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 
 from giskardpy.model.world_config import WorldConfig, WorldWithOmniDriveRobot
@@ -26,10 +30,15 @@ class WorldWithHSRConfig(WorldWithOmniDriveRobot):
     urdf_view: AbstractRobot = field(kw_only=True, default=HSRB, init=False)
 
     def setup_collision_config(self):
-        path_to_srdf = resource_filename(
-            "giskardpy", "../../self_collision_matrices/iai/hsrb.srdf"
+        srdf_path = os.path.join(
+            resource_filename("giskardpy", "../../"),
+            "self_collision_matrices",
+            "iai",
+            "hsrb.srdf",
         )
-        self.world.load_collision_srdf(path_to_srdf)
+        self.collision_rules.append(
+            SelfCollisionMatrixRule.from_collision_srdf(srdf_path)
+        )
         for body in self.robot.bodies_with_collisions:
             collision_config = CollisionCheckingConfig(
                 buffer_zone_distance=0.05, violated_distance=0.0

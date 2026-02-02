@@ -27,7 +27,7 @@ from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
 )
 from semantic_digital_twin.collision_checking.collision_matrix_manager import (
-    CollisionRequest,
+    CollisionRule,
     CollisionAvoidanceTypes,
 )
 from semantic_digital_twin.collision_checking.collision_world_syncer import (
@@ -1047,7 +1047,7 @@ class TestSelfCollisionAvoidance:
                     )
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
                 local_min := LocalMinimumReached(),
             ]
@@ -1118,7 +1118,7 @@ class TestSelfCollisionAvoidance:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -1160,7 +1160,7 @@ class TestSelfCollisionAvoidance:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -1197,7 +1197,7 @@ class TestSelfCollisionAvoidance:
         cart_goal.start_condition = joint_goal.observation_variable
 
         collision_avoidance = CollisionAvoidance(
-            collision_entries=[CollisionRequest.avoid_all_collision()],
+            collision_entries=[CollisionRule.avoid_all_collision()],
         )
         msc.add_node(collision_avoidance)
 
@@ -1241,7 +1241,7 @@ class TestSelfCollisionAvoidance:
                 ),
                 CollisionAvoidance(
                     collision_entries=[
-                        CollisionRequest(
+                        CollisionRule(
                             type_=CollisionAvoidanceTypes.AVOID_COLLISION,
                             body_group1=list(giskard.get_r_gripper_links()),
                             body_group2=[
@@ -1294,7 +1294,7 @@ class TestSelfCollisionAvoidance:
         msc.add_nodes(
             [
                 CollisionAvoidance(
-                    collision_entries=[CollisionRequest.avoid_all_collision()]
+                    collision_entries=[CollisionRule.avoid_all_collision()]
                 ),
                 local_min := LocalMinimumReached(),
             ]
@@ -1317,7 +1317,7 @@ class TestCollisionAvoidanceGoals:
                             x=2.0, reference_frame=kitchen_setup.map
                         )
                     ),
-                    CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                    CollisionAvoidance([CollisionRule.avoid_all_collision()]),
                 ]
             )
         )
@@ -1343,7 +1343,7 @@ class TestCollisionAvoidanceGoals:
         msc.add_node(cart_goal)
 
         collision_avoidance = CollisionAvoidance(
-            collision_entries=[CollisionRequest.avoid_all_collision(0.1)],
+            collision_entries=[CollisionRule.avoid_all_collision(0.1)],
         )
         msc.add_node(collision_avoidance)
         local_min = LocalMinimumReached()
@@ -1419,7 +1419,7 @@ class TestCollisionAvoidanceGoals:
                     tip_normal=Vector3.Y(reference_frame=box),
                     goal_normal=Vector3.Y(reference_frame=pocky_pose_setup.map),
                 ),
-                CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
                 local_min := LocalMinimumReached(),
             ]
         )
@@ -1495,7 +1495,7 @@ class TestCollisionAvoidanceGoals:
         msc = MotionStatechart()
         msc.add_nodes(
             [
-                CollisionAvoidance([CollisionRequest.avoid_all_collision()]),
+                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
                 local_min := LocalMinimumReached(),
             ]
         )

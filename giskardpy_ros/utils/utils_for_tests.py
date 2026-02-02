@@ -13,7 +13,7 @@ from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.middleware import get_middleware
 from semantic_digital_twin.collision_checking.collision_matrix_manager import (
-    CollisionRequest,
+    CollisionRule,
     CollisionAvoidanceTypes,
 )
 from semantic_digital_twin.collision_checking.collisions import (
@@ -416,9 +416,7 @@ class GiskardTester(ABC):
             self.api.world.move_branch(branch_root=body, new_parent=parent)
         self.wait_heartbeats()
 
-    def compute_collisions(
-        self, collision_entries: List[CollisionRequest]
-    ) -> Collisions:
+    def compute_collisions(self, collision_entries: List[CollisionRule]) -> Collisions:
         GiskardBlackboard().executor.collision_scene.collision_detector.reset_cache()
         GiskardBlackboard().executor.collision_scene.matrix_manager.parse_collision_requests(
             collision_entries
@@ -433,9 +431,7 @@ class GiskardTester(ABC):
 
     def compute_all_collisions(self) -> Collisions:
         collision_entries = [
-            CollisionRequest(
-                type_=CollisionAvoidanceTypes.AVOID_COLLISION, distance=None
-            )
+            CollisionRule(type_=CollisionAvoidanceTypes.AVOID_COLLISION, distance=None)
         ]
         return self.compute_collisions(collision_entries)
 
