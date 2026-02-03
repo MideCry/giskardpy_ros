@@ -180,7 +180,7 @@ class Table(QTableWidget):
 
     def table_item_callback(self, row, column):
         self.ros_visualizer.clear_marker("")
-        god_map.collision_scene.sync()
+        god_map.collision_expression_manager.sync()
         for link_name in self.world.link_names_with_collisions:
             self.world.links[link_name].dye_collisions(self.world.default_link_color)
         link1 = self.world.search_for_link_name(self.link_names[row])
@@ -201,7 +201,7 @@ class Table(QTableWidget):
         if disabled_color is None:
             disabled_color = ColorRGBA(1, 0, 0, 1)
         self.ros_visualizer.clear_marker("")
-        god_map.collision_scene.sync()
+        god_map.collision_expression_manager.sync()
         for link_name in self.world.link_names_with_collisions:
             if link_name.short_name in self.enabled_link_names:
                 self.world.links[link_name].dye_collisions(
@@ -655,11 +655,13 @@ class Application(QMainWindow):
         dialog = ComputeSelfCollisionMatrixParameterDialog(self)
         if dialog.exec_() == QDialog.Accepted:
             parameters = dialog.get_parameter_map()
-            reasons = god_map.collision_scene.compute_self_collision_matrix(
-                self.group_name,
-                save_to_tmp=False,
-                progress_callback=self.progress.set_progress,
-                **parameters,
+            reasons = (
+                god_map.collision_expression_manager.compute_self_collision_matrix(
+                    self.group_name,
+                    save_to_tmp=False,
+                    progress_callback=self.progress.set_progress,
+                    **parameters,
+                )
             )
             self.table.update_table(reasons)
             self.progress.set_progress(100, "Done checking collisions")
@@ -691,7 +693,7 @@ class Application(QMainWindow):
         self.urdf_progress.set_progress(
             50, f"Applying vhacd to concave meshes of {progress_str}"
         )
-        god_map.collision_scene.sync()
+        god_map.collision_expression_manager.sync()
         self.urdf_progress.set_progress(80, f"Updating table {progress_str}")
         reasons = {
             (link_name, link_name): DisableCollisionReason.Adjacent
@@ -725,11 +727,11 @@ class Application(QMainWindow):
             return
         try:
             if os.path.isfile(srdf_file):
-                god_map.collision_scene.load_self_collision_matrix_from_srdf(
+                god_map.collision_expression_manager.load_self_collision_matrix_from_srdf(
                     srdf_file, self.group_name
                 )
-                reasons = god_map.collision_scene.self_collision_matrix
-                disabled_links = god_map.collision_scene.disabled_links
+                reasons = god_map.collision_expression_manager.self_collision_matrix
+                disabled_links = god_map.collision_expression_manager.disabled_links
                 self.table.update_disabled_links(disabled_links)
                 self.table.update_table(reasons)
                 self.progress.set_progress(100, f"Loaded {srdf_file}")
@@ -795,7 +797,7 @@ class Application(QMainWindow):
     def save_srdf(self):
         srdf_path = self.get_srdf_path_with_dialog(True)
         if srdf_path is not None:
-            god_map.collision_scene.save_self_collision_matrix(
+            god_map.collision_expression_manager.save_self_collision_matrix(
                 self.world.groups[self.group_name],
                 self.table.reasons,
                 self.table.disabled_link_prefix_names,

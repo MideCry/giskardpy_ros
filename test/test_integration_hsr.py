@@ -662,7 +662,7 @@ class TestCollisionAvoidanceGoals:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -702,7 +702,7 @@ class TestCollisionAvoidanceGoals:
                     ]
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )

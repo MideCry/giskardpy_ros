@@ -1047,7 +1047,7 @@ class TestSelfCollisionAvoidance:
                     )
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
                 local_min := LocalMinimumReached(),
             ]
@@ -1118,7 +1118,7 @@ class TestSelfCollisionAvoidance:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -1160,7 +1160,7 @@ class TestSelfCollisionAvoidance:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
             ]
         )
@@ -1197,7 +1197,7 @@ class TestSelfCollisionAvoidance:
         cart_goal.start_condition = joint_goal.observation_variable
 
         collision_avoidance = CollisionAvoidance(
-            collision_entries=[CollisionRule.avoid_all_collision()],
+            collision_rules=[CollisionRule.avoid_all_collision()],
         )
         msc.add_node(collision_avoidance)
 
@@ -1240,7 +1240,7 @@ class TestSelfCollisionAvoidance:
                     ),
                 ),
                 CollisionAvoidance(
-                    collision_entries=[
+                    collision_rules=[
                         CollisionRule(
                             type_=CollisionAvoidanceTypes.AVOID_COLLISION,
                             body_group1=list(giskard.get_r_gripper_links()),
@@ -1294,7 +1294,7 @@ class TestSelfCollisionAvoidance:
         msc.add_nodes(
             [
                 CollisionAvoidance(
-                    collision_entries=[CollisionRule.avoid_all_collision()]
+                    collision_rules=[CollisionRule.avoid_all_collision()]
                 ),
                 local_min := LocalMinimumReached(),
             ]
@@ -1343,7 +1343,7 @@ class TestCollisionAvoidanceGoals:
         msc.add_node(cart_goal)
 
         collision_avoidance = CollisionAvoidance(
-            collision_entries=[CollisionRule.avoid_all_collision(0.1)],
+            collision_rules=[CollisionRule.avoid_all_collision(0.1)],
         )
         msc.add_node(collision_avoidance)
         local_min = LocalMinimumReached()
