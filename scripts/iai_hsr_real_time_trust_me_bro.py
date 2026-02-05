@@ -1,4 +1,3 @@
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
 from giskardpy.model.world_config import WorldFromDatabaseConfig
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
@@ -16,7 +15,6 @@ def main():
     rospy.init_node("giskard")
     giskard = Giskard(
         world_config=WorldFromDatabaseConfig(primary_key=1),
-        collision_checker_id=CollisionCheckerLib.bpb,
         robot_interface_config=HSRVelocityInterface(),
         qp_controller_config=QPControllerConfig(
             target_frequency=40, prediction_horizon=15
