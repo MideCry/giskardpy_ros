@@ -31,7 +31,7 @@ class PlotGanttChart(GiskardBehavior):
             )
             GiskardBlackboard().motion_statechart.plot_gantt_chart(
                 file_name,
-                context=GiskardBlackboard().executor.build_context,
+                context=GiskardBlackboard().executor.context,
                 second_length_in_cm=1.5,
             )
         except Exception as e:
