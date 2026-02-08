@@ -9,21 +9,16 @@ import giskard_msgs.msg as giskard_msgs
 import numpy as np
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
-
-import semantic_digital_twin.spatial_types.spatial_types as cas
-from giskardpy.middleware import get_middleware
 from semantic_digital_twin.collision_checking.collision_matrix_manager import (
     CollisionRule,
     CollisionAvoidanceTypes,
 )
-from semantic_digital_twin.collision_checking.collisions import (
-    Collisions,
-    GiskardCollision,
-)
+
+import semantic_digital_twin.spatial_types.spatial_types as cas
+from giskardpy.middleware import get_middleware
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy_ros.utils.utils import is_in_github_workflow
 from semantic_digital_twin.adapters.ros import (
     Ros2ToSemDTConverter,
     SemDTToRos2Converter,
