@@ -445,8 +445,8 @@ class GiskardTester(ABC):
                 collision.original_body_a in bodies
                 or collision.original_body_b in bodies
             ):
-                assert collision.contact_distance >= distance_threshold, (
-                    f"{collision.contact_distance} < {distance_threshold} "
+                assert collision.distance >= distance_threshold, (
+                    f"{collision.distance} < {distance_threshold} "
                     f"({collision.original_body_a} with {collision.original_body_b})"
                 )
 
@@ -471,7 +471,7 @@ class GiskardTester(ABC):
                 continue
             if (
                 min_contact is None
-                or collision.contact_distance <= min_contact.contact_distance
+                or collision.distance <= min_contact.contact_distance
             ):
                 min_contact = collision
         assert min_contact.contact_distance <= distance_threshold, (
