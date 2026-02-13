@@ -483,7 +483,7 @@ class TestJointGoals:
         msc = MotionStatechart()
 
         min_joint_goal = JointPositionList(
-            goal_state=JointState(
+            goal_state=JointState.from_mapping(
                 mapping={
                     r_elbow_flex_joint: r_elbow_flex_joint.dof.limits.lower.position
                     - 0.2,
@@ -496,14 +496,14 @@ class TestJointGoals:
         min_joint_goal.end_condition = min_joint_goal.observation_variable
 
         torso_joint_goal = JointPositionList(
-            goal_state=JointState(mapping={torso_lift_joint: 3.2})
+            goal_state=JointState.from_mapping(mapping={torso_lift_joint: 3.2})
         )
         msc.add_node(torso_joint_goal)
         torso_joint_goal.start_condition = min_joint_goal.observation_variable
         torso_joint_goal.end_condition = torso_joint_goal.observation_variable
 
         max_joint_goal = JointPositionList(
-            goal_state=JointState(
+            goal_state=JointState.from_mapping(
                 mapping={
                     r_elbow_flex_joint: r_elbow_flex_joint.dof.limits.upper.position
                     + 0.2,
