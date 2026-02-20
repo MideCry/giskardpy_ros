@@ -1,28 +1,16 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
-import numpy as np
-from pkg_resources import resource_filename
-
-from semantic_digital_twin.collision_checking.collision_rules import (
-    SelfCollisionMatrixRule,
-)
-from semantic_digital_twin.robots.abstract_robot import AbstractRobot
-
-from giskardpy.model.world_config import WorldConfig, WorldWithOmniDriveRobot
+from giskardpy.model.world_config import WorldWithOmniDriveRobot
 from giskardpy_ros.configs.robot_interface_config import (
-    StandAloneRobotInterfaceConfig,
     RobotInterfaceConfig,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.robots.hsrb import HSRB
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
 from semantic_digital_twin.world_description.connections import (
-    ActiveConnection,
     OmniDrive,
     Connection6DoF,
 )
-from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
 
 
 @dataclass

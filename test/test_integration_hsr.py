@@ -8,13 +8,6 @@ from geometry_msgs.msg import PoseStamped, PointStamped, Vector3Stamped, Point
 from numpy import pi
 
 from conftest import kitchen_setup
-from semantic_digital_twin.collision_checking.collision_matrix_manager import (
-    CollisionRule,
-)
-from semantic_digital_twin.collision_checking.collision_world_syncer import (
-    CollisionCheckerLib,
-)
-from giskardpy.motion_statechart.goals.collision_avoidance import CollisionAvoidance
 from giskardpy.motion_statechart.goals.open_close import Open, Close
 from giskardpy.motion_statechart.goals.templates import Sequence
 from giskardpy.motion_statechart.goals.test import GraspSequence, Cutting
@@ -110,8 +103,10 @@ class HSRTester(GiskardTester):
 
     @property
     def robot(self) -> HSRB:
-        return GiskardBlackboard().executor.world.get_semantic_annotation_by_name(
-            self.api.robot_name
+        return (
+            GiskardBlackboard().executor.context.world.get_semantic_annotation_by_name(
+                self.api.robot_name
+            )
         )
 
     def open_gripper(self):

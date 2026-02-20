@@ -7,7 +7,6 @@ from py_trees.common import Status
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
 from giskardpy.motion_statechart.monitors.monitors import (
-    TimeAbove,
     LocalMinimumReached,
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
@@ -36,10 +35,10 @@ class ParseActionGoal(GiskardBehavior):
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
         tracker = WorldEntityWithIDKwargsTracker.from_world(
-            GiskardBlackboard().executor.world
+            GiskardBlackboard().executor.context.world
         )
         kwargs = tracker.create_kwargs()
-        kwargs["world"] = GiskardBlackboard().executor.world
+        kwargs["world"] = GiskardBlackboard().executor.context.world
         motion_statechart = MotionStatechart.from_json(
             json.loads(move_goal.goal), **kwargs
         )
@@ -86,7 +85,9 @@ class SetExecutionMode(GiskardBehavior):
 class AddBaseTrajFollowerGoal(GiskardBehavior):
     def __init__(self, name: str = "add base traj goal"):
         super().__init__(name)
-        joints = GiskardBlackboard().executor.world.get_connections_by_type(OmniDrive)
+        joints = GiskardBlackboard().executor.context.world.get_connections_by_type(
+            OmniDrive
+        )
         assert len(joints) == 1
         self.joint = joints[0]
 

@@ -9,7 +9,6 @@ from giskardpy_ros.configs.robot_interface_config import (
 )
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.tracy import Tracy
-from semantic_digital_twin.world_description.world_entity import CollisionCheckingConfig
 
 if TYPE_CHECKING:
     pass

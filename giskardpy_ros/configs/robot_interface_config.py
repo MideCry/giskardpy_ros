@@ -42,7 +42,7 @@ class RobotInterfaceConfig(ABC):
 
     @property
     def world(self) -> World:
-        return GiskardBlackboard().executor.world
+        return GiskardBlackboard().executor.context.world
 
     @property
     def robot(self) -> AbstractRobot:
@@ -251,7 +251,7 @@ class RobotInterfaceConfig(ABC):
         controlled_connections: List[Connection] = []
         for i in range(len(connections)):
             controlled_connections.append(
-                GiskardBlackboard().executor.world.get_connection_by_name(
+                GiskardBlackboard().executor.context.world.get_connection_by_name(
                     connections[i]
                 )
             )

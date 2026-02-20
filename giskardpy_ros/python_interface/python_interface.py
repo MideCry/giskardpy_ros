@@ -56,15 +56,19 @@ class GiskardWrapper:
         get_middleware().loginfo("syncing world")
         self.world = fetch_world_from_service(self.node_handle, timeout_seconds=300)
         get_middleware().loginfo("world synced")
-        self.model_synchronizer = ModelSynchronizer(world=self.world, node=rospy.node)
-        self.state_synchronizer = StateSynchronizer(world=self.world, node=rospy.node)
+        self.model_synchronizer = ModelSynchronizer(_world=self.world, node=rospy.node)
+        self.state_synchronizer = StateSynchronizer(_world=self.world, node=rospy.node)
         giskard_topic = f"{self.giskard_node_name}/command"
         self._client = MyActionClient(self.node_handle, JsonAction, giskard_topic)
         sleep(0.3)
 
     @property
     def robot_name(self) -> PrefixedName:
-        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0].name
+        return self.robot.name
+
+    @property
+    def robot(self) -> AbstractRobot:
+        return self.world.get_semantic_annotations_by_type(AbstractRobot)[0]
 
     def execute_async(self, motion_statechart: MotionStatechart) -> Future:
         self._motion_statechart = motion_statechart

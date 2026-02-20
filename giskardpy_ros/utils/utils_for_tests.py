@@ -9,10 +9,6 @@ import giskard_msgs.msg as giskard_msgs
 import numpy as np
 from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
-from semantic_digital_twin.collision_checking.collision_matrix_manager import (
-    CollisionRule,
-    CollisionAvoidanceTypes,
-)
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from giskardpy.middleware import get_middleware
@@ -24,6 +20,11 @@ from semantic_digital_twin.adapters.ros import (
     SemDTToRos2Converter,
 )
 from semantic_digital_twin.adapters.urdf import URDFParser
+from semantic_digital_twin.collision_checking.collision_detector import (
+    CollisionCheckingResult,
+)
+from semantic_digital_twin.collision_checking.collision_matrix import CollisionMatrix
+from semantic_digital_twin.collision_checking.collision_rules import AvoidAllCollisions
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
@@ -136,13 +137,15 @@ class GiskardTester(ABC):
         self.giskard.setup()
         self.robot_names = [
             v.name
-            for v in GiskardBlackboard().executor.world.get_semantic_annotations_by_type(
+            for v in GiskardBlackboard().executor.context.world.get_semantic_annotations_by_type(
                 AbstractRobot
             )
         ]
-        self.default_root = GiskardBlackboard().executor.world.root
+        self.default_root = GiskardBlackboard().executor.context.world.root
 
-        self.original_number_of_links = len(GiskardBlackboard().executor.world.bodies)
+        self.original_number_of_links = len(
+            GiskardBlackboard().executor.context.world.bodies
+        )
         self.heart = Thread(target=GiskardBlackboard().tree.live, name="bt ticker")
         self.heart.start()
         self.wait_heartbeats(1)
@@ -154,16 +157,18 @@ class GiskardTester(ABC):
     def get_odometry_joint(self) -> OmniDrive:
         return (
             GiskardBlackboard()
-            .giskard.executor.world.get_semantic_annotations_by_type(AbstractRobot)[0]
+            .giskard.executor.context.world.get_semantic_annotations_by_type(
+                AbstractRobot
+            )[0]
             .drive
         )
 
     def compute_fk_pose(self, root_link: str, tip_link: str) -> PoseStamped:
-        root_T_tip = GiskardBlackboard().executor.world.compute_forward_kinematics(
-            root=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+        root_T_tip = GiskardBlackboard().executor.context.world.compute_forward_kinematics(
+            root=GiskardBlackboard().executor.context.world.get_kinematic_structure_entity_by_name(
                 root_link
             ),
-            tip=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+            tip=GiskardBlackboard().executor.context.world.get_kinematic_structure_entity_by_name(
                 tip_link
             ),
         )
@@ -173,10 +178,10 @@ class GiskardTester(ABC):
         root_T_tip = (
             GiskardBlackboard()
             .executor.world.compute_forward_kinematics(
-                root=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                root=GiskardBlackboard().executor.context.world.get_kinematic_structure_entity_by_name(
                     root_link
                 ),
-                tip=GiskardBlackboard().executor.world.get_kinematic_structure_entity_by_name(
+                tip=GiskardBlackboard().executor.context.world.get_kinematic_structure_entity_by_name(
                     tip_link
                 ),
             )
@@ -215,8 +220,10 @@ class GiskardTester(ABC):
         for joint_name in goal_js:
             goal = goal_js[joint_name]
             current = current_js[joint_name]
-            connection: ActiveConnection1DOF = (
-                GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
+            connection: (
+                ActiveConnection1DOF
+            ) = GiskardBlackboard().executor.context.world.get_connection_by_name(
+                joint_name
             )
             if not connection.dof.has_position_limits():
                 np.testing.assert_almost_equal(
@@ -408,24 +415,13 @@ class GiskardTester(ABC):
             self.api.world.move_branch(branch_root=body, new_parent=parent)
         self.wait_heartbeats()
 
-    def compute_collisions(self, collision_entries: List[CollisionRule]) -> Collisions:
-        GiskardBlackboard().executor.collision_scene.collision_detector.reset_cache()
-        GiskardBlackboard().executor.collision_scene.matrix_manager.parse_collision_requests(
-            collision_entries
-        )
-        collision_matrix = (
-            GiskardBlackboard().executor.collision_scene.matrix_manager.compute_collision_matrix()
-        )
-        GiskardBlackboard().executor.collision_scene.set_collision_matrix(
-            collision_matrix
-        )
-        return GiskardBlackboard().executor.collision_scene.check_collisions()
-
-    def compute_all_collisions(self) -> Collisions:
-        collision_entries = [
-            CollisionRule(type_=CollisionAvoidanceTypes.AVOID_COLLISION, distance=None)
-        ]
-        return self.compute_collisions(collision_entries)
+    def compute_all_collisions(self) -> CollisionCheckingResult:
+        collision_manager = GiskardBlackboard().executor.context.world.collision_manager
+        with GiskardBlackboard().executor.context.world.modify_world():
+            collision_manager.clear_temporary_rules()
+            collision_manager.add_temporary_rule(AvoidAllCollisions())
+        collision_manager.update_collision_matrix()
+        return collision_manager.compute_collisions()
 
     def check_cpi_geq(
         self,
@@ -435,19 +431,12 @@ class GiskardTester(ABC):
         check_self: bool = True,
     ):
         collisions = self.compute_all_collisions()
-        assert len(collisions.all_collisions) > 0
-        for collision in collisions.all_collisions:
-            if not check_external and collision.is_external:
-                continue
-            if not check_self and not collision.is_external:
-                continue
-            if (
-                collision.original_body_a in bodies
-                or collision.original_body_b in bodies
-            ):
+        assert len(collisions.contacts) > 0
+        for collision in collisions.contacts:
+            if collision.body_a in bodies or collision.body_b in bodies:
                 assert collision.distance >= distance_threshold, (
                     f"{collision.distance} < {distance_threshold} "
-                    f"({collision.original_body_a} with {collision.original_body_b})"
+                    f"({collision.body_a} with {collision.body_b})"
                 )
 
     def check_cpi_leq(
@@ -458,7 +447,7 @@ class GiskardTester(ABC):
         check_self: bool = True,
     ):
         collisions = self.compute_all_collisions()
-        min_contact: GiskardCollision = None
+        min_contact = None
         for collision in collisions.all_collisions:
             if not check_external and collision.is_external:
                 continue

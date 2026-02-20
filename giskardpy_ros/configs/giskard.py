@@ -9,10 +9,8 @@ import rclpy
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.executor import Executor, SimulationPacer
 from giskardpy.middleware import get_middleware
-from semantic_digital_twin.collision_checking.collision_world_syncer import (
-    CollisionCheckerLib,
-)
 from giskardpy.model.world_config import WorldConfig
+from giskardpy.motion_statechart.context import MotionStatechartContext
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy_ros.configs.behavior_tree_config import (
     BehaviorTreeConfig,
@@ -55,7 +53,6 @@ class Giskard:
     world_config: WorldConfig
     behavior_tree_config: BehaviorTreeConfig
     robot_interface_config: RobotInterfaceConfig
-    collision_checker_id: CollisionCheckerLib = CollisionCheckerLib.bpb
     qp_controller_config: QPControllerConfig = field(default_factory=QPControllerConfig)
     executor: Executor = field(init=False)
     model_synchronizer: ModelSynchronizer = field(init=False)
@@ -84,10 +81,10 @@ class Giskard:
             else:
                 real_time_factor = 1.0
             self.executor = Executor(
-                world=self.world_config.world,
-                controller_config=self.qp_controller_config,
-                collision_checker=self.collision_checker_id,
-                tmp_folder=self.tmp_folder,
+                MotionStatechartContext(
+                    world=self.world_config.world,
+                    qp_controller_config=self.qp_controller_config,
+                ),
                 pacer=SimulationPacer(real_time_factor=real_time_factor),
             )
 
@@ -95,20 +92,17 @@ class Giskard:
 
             self.robot_interface_config.setup()
 
-        if self.executor.collision_scene.is_collision_checking_enabled():
-            self.executor.collision_scene.sync()
-
         self.sanity_check()
         self.setup_world_model_ros_interface()
         GiskardBlackboard().tree.setup(rospy.node)
 
     def setup_world_model_ros_interface(self):
         self.model_synchronizer = ModelSynchronizer(
-            world=self.world_config.world, node=rospy.node
+            _world=self.world_config.world, node=rospy.node
         )
         self.model_synchronizer.pause()
         self.state_synchronizer = StateSynchronizer(
-            world=self.world_config.world, node=rospy.node
+            _world=self.world_config.world, node=rospy.node
         )
         self.state_synchronizer.pause()
         self.world_fetcher = FetchWorldServer(
@@ -119,7 +113,7 @@ class Giskard:
         )
         self.tf_publisher.pause()
         self.viz_marker_publisher = VizMarkerPublisher(
-            node=rospy.node, world=self.world_config.world
+            node=rospy.node, _world=self.world_config.world
         )
 
     def sanity_check(self):

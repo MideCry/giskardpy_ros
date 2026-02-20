@@ -37,10 +37,10 @@ class SyncJointState(GiskardBehavior):
     def update(self):
         if self.data:
             for i, joint_name in enumerate(self.data.name):
-                connection: ActiveConnection1DOF = (
-                    GiskardBlackboard().executor.world.get_connection_by_name(
-                        joint_name
-                    )
+                connection: (
+                    ActiveConnection1DOF
+                ) = GiskardBlackboard().executor.context.world.get_connection_by_name(
+                    joint_name
                 )
                 connection._world.state[connection.raw_dof.id].position = (
                     self.data.position[i]
@@ -86,8 +86,10 @@ class SyncJointStatePosition(GiskardBehavior):
     @record_time
     def update(self):
         for joint_name, position in zip(self.msg.name, self.msg.position):
-            connection: ActiveConnection1DOF = (
-                GiskardBlackboard().executor.world.get_connection_by_name(joint_name)
+            connection: (
+                ActiveConnection1DOF
+            ) = GiskardBlackboard().executor.context.world.get_connection_by_name(
+                joint_name
             )
             connection._world.state[connection.raw_dof.id].position = position
         return Status.SUCCESS

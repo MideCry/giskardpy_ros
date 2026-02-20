@@ -22,7 +22,7 @@ class ProcessWorldUpdate(GiskardBehavior):
             if not self.worker_thread.is_alive():
                 self.worker_thread = None
                 get_middleware().loginfo(
-                    f"Finished world update, model version: {GiskardBlackboard().executor.world._model_manager.version}."
+                    f"Finished world update, model version: {GiskardBlackboard().executor.context.world._model_manager.version}."
                 )
                 return Status.SUCCESS
         return Status.RUNNING
