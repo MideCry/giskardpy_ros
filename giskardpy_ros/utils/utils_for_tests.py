@@ -448,22 +448,12 @@ class GiskardTester(ABC):
     ):
         collisions = self.compute_all_collisions()
         min_contact = None
-        for collision in collisions.all_collisions:
-            if not check_external and collision.is_external:
+        for collision in collisions.contacts:
+            if collision.body_a not in bodies and collision.body_b not in bodies:
                 continue
-            if not check_self and not collision.is_external:
-                continue
-            if (
-                collision.original_body_a not in bodies
-                and collision.original_body_b not in bodies
-            ):
-                continue
-            if (
-                min_contact is None
-                or collision.distance <= min_contact.contact_distance
-            ):
+            if min_contact is None or collision.distance <= min_contact.distance:
                 min_contact = collision
-        assert min_contact.contact_distance <= distance_threshold, (
-            f"{min_contact.contact_distance} > {distance_threshold} "
-            f"({min_contact.original_body_a} with {min_contact.original_body_b})"
+        assert min_contact.distance <= distance_threshold, (
+            f"{min_contact.distance} > {distance_threshold} "
+            f"({min_contact.body_a} with {min_contact.body_b})"
         )
