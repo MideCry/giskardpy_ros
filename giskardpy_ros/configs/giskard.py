@@ -8,7 +8,6 @@ import rclpy
 
 from giskardpy.data_types.exceptions import SetupException
 from giskardpy.executor import Executor, SimulationPacer
-from giskardpy.middleware import get_middleware
 from giskardpy.model.world_config import WorldConfig
 from giskardpy.motion_statechart.context import MotionStatechartContext
 from giskardpy.qp.qp_controller_config import QPControllerConfig
@@ -17,7 +16,7 @@ from giskardpy_ros.configs.behavior_tree_config import (
     StandAloneBTConfig,
 )
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
 from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
@@ -60,11 +59,6 @@ class Giskard:
     tf_publisher: TFPublisher = field(init=False)
     viz_marker_publisher: VizMarkerPublisher = field(init=False)
     world_fetcher: FetchWorldServer = field(init=False)
-    tmp_folder: str = field(
-        default_factory=lambda: get_middleware().resolve_iri(
-            "package://giskardpy_ros/tmp/"
-        )
-    )
 
     def __post_init__(self):
         GiskardBlackboard().giskard = self
@@ -135,7 +129,7 @@ class Giskard:
         if len(controlled_joints) == 0 and len(world.connections) > 0:
             raise SetupException("No joints are flagged as controlled.")
         if len(non_controlled_joints) > 0:
-            get_middleware().loginfo(
+            rospy.node.get_logger().info(
                 f"The following joints are non-fixed according to the urdf, "
                 f"but not flagged as controlled: {[c.name for c in non_controlled_joints]}."
             )

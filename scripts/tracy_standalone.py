@@ -1,7 +1,7 @@
 from semantic_digital_twin.collision_checking.collision_world_syncer import (
     CollisionCheckerLib,
 )
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from rclpy import Parameter
 
 from giskardpy.qp.qp_controller_config import QPControllerConfig

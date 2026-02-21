@@ -66,7 +66,7 @@ from giskardpy_ros.exceptions import (
     ExecutionCanceledException,
     ExecutionAbortedException,
 )
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import (

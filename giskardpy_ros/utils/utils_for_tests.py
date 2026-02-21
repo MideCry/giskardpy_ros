@@ -11,7 +11,7 @@ from angles import shortest_angular_distance
 from geometry_msgs.msg import PoseStamped, Point, PointStamped, Quaternion, Pose
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
-from giskardpy.middleware import get_middleware
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.configs.giskard import Giskard
 from giskardpy_ros.python_interface.python_interface import GiskardWrapperNode
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
@@ -206,8 +206,8 @@ class GiskardTester(ABC):
         giskarding_time = self.total_time_spend_giskarding
         if not GiskardBlackboard().tree_config.is_standalone():
             giskarding_time -= self.total_time_spend_moving
-        get_middleware().loginfo(f"total time spend giskarding: {giskarding_time}")
-        get_middleware().loginfo(
+        rospy.node.get_logger().info(f"total time spend giskarding: {giskarding_time}")
+        rospy.node.get_logger().info(
             f"total time spend moving: {self.total_time_spend_moving}"
         )
 

@@ -8,7 +8,7 @@ from giskardpy_ros.configs.iai_robots.hsr import (
     WorldWithHSRConfig,
     HSRVelocityInterface,
 )
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.utils.utils import load_xacro
 
 

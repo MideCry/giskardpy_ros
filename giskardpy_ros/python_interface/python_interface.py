@@ -12,17 +12,16 @@ from giskard_msgs.action._json_action import JsonAction_Result
 from giskard_msgs.msg import ExecutionState
 from rclpy import Context, Parameter, Future
 from rclpy.action.client import ClientGoalHandle
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
-from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.motion_statechart import (
     MotionStatechart,
     LifeCycleState,
     ObservationState,
 )
 from giskardpy_ros.exceptions import ExecutionException
-from giskardpy_ros.ros2 import rospy
-from giskardpy_ros.ros2.my_multithreaded_executor import MyMultiThreadedExecutor
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.ros2.ros2_interface import MyActionClient
 from semantic_digital_twin.adapters.ros.world_fetcher import fetch_world_from_service
 from semantic_digital_twin.adapters.ros.world_synchronizer import (
@@ -53,9 +52,9 @@ class GiskardWrapper:
     _motion_statechart: MotionStatechart = field(init=False)
 
     def __post_init__(self):
-        get_middleware().loginfo("syncing world")
+        rospy.node.get_logger().info("syncing world")
         self.world = fetch_world_from_service(self.node_handle, timeout_seconds=300)
-        get_middleware().loginfo("world synced")
+        rospy.node.get_logger().info("world synced")
         self.model_synchronizer = ModelSynchronizer(_world=self.world, node=rospy.node)
         self.state_synchronizer = StateSynchronizer(_world=self.world, node=rospy.node)
         giskard_topic = f"{self.giskard_node_name}/command"
@@ -181,9 +180,7 @@ class GiskardWrapperNode(GiskardWrapper):
         super().__post_init__()
 
     def __spin(self):
-        self.my_executor = MyMultiThreadedExecutor(
-            thread_name_prefix="python interface"
-        )
+        self.my_executor = MultiThreadedExecutor()
         self.my_executor.add_node(self.node_handle)
         self.is_spinning = True
         while rclpy.ok():

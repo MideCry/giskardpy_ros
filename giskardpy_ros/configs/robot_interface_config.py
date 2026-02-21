@@ -11,7 +11,7 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 from giskardpy.data_types.exceptions import SetupException
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.ros2.ros2_interface import (
     search_for_subscriber_of_node_with_type,
     get_parameters,

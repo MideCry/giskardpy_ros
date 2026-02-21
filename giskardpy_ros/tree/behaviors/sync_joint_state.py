@@ -3,9 +3,8 @@ from typing import Optional
 from py_trees.common import Status
 from sensor_msgs.msg import JointState
 
-from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
@@ -77,7 +76,7 @@ class SyncJointStatePosition(GiskardBehavior):
         self.joint_state_sub = rospy.node.create_subscription(
             JointState, self.joint_state_topic, self.cb, 1
         )
-        get_middleware().loginfo(f"Subscribed to {self.joint_state_topic}")
+        rospy.node.get_logger().info(f"Subscribed to {self.joint_state_topic}")
         return super().setup(**kwargs)
 
     def cb(self, data):

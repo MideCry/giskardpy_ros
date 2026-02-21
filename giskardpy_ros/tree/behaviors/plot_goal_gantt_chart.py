@@ -2,8 +2,8 @@ import traceback
 
 from py_trees.common import Status
 
-from giskardpy.middleware import get_middleware
 from giskardpy.utils.decorators import record_time
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 
@@ -28,7 +28,7 @@ class PlotGanttChart(GiskardBehavior):
                 second_length_in_cm=1.5,
             )
         except Exception as e:
-            get_middleware().logwarn(f"Failed to create goal gantt chart: {e}.")
+            rospy.node.get_logger().warning(f"Failed to create goal gantt chart: {e}.")
             traceback.print_exc()
 
         return Status.SUCCESS

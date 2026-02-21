@@ -4,13 +4,13 @@ from typing import Union
 from giskard_msgs.action import JsonAction
 from py_trees.common import Status
 
-from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.goals.base_traj_follower import BaseTrajFollower
 from giskardpy.motion_statechart.monitors.monitors import (
     LocalMinimumReached,
 )
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.utils.decorators import record_time
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.behaviors.plugin import GiskardBehavior
 from giskardpy_ros.tree.blackboard_utils import (
     catch_and_raise_to_blackboard,
@@ -31,7 +31,7 @@ class ParseActionGoal(GiskardBehavior):
     @record_time
     def update(self):
         move_goal: JsonAction.Goal = GiskardBlackboard().move_action_server.goal_msg
-        get_middleware().loginfo(
+        rospy.node.get_logger().info(
             f"Parsing goal #{GiskardBlackboard().move_action_server.goal_id} message."
         )
         tracker = WorldEntityWithIDKwargsTracker.from_world(
@@ -43,7 +43,7 @@ class ParseActionGoal(GiskardBehavior):
             json.loads(move_goal.goal), **kwargs
         )
         GiskardBlackboard().executor.compile(motion_statechart)
-        get_middleware().loginfo("Done parsing goal message.")
+        rospy.node.get_logger().info("Done parsing goal message.")
         return Status.SUCCESS
 
 
@@ -68,7 +68,7 @@ class SetExecutionMode(GiskardBehavior):
     @catch_and_raise_to_blackboard
     @record_time
     def update(self):
-        # get_middleware().loginfo(
+        # rospy.node.get_logger().info(
         #     f"Goal is of type {get_ros_msgs_constant_name_by_value(type(GiskardBlackboard().move_action_server.goal_msg))}"
         # )
         # if GiskardBlackboard().move_action_server.is_goal_msg_type_projection():
