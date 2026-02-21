@@ -22,6 +22,7 @@ from rclpy.duration import Duration
 
 from giskardpy.motion_statechart.goals.collision_avoidance import (
     ExternalCollisionAvoidance,
+    SelfCollisionAvoidance,
 )
 from krrood.symbolic_math import symbolic_math as sm
 
@@ -1196,10 +1197,7 @@ class TestSelfCollisionAvoidance:
         msc.add_node(cart_goal)
         cart_goal.start_condition = joint_goal.observation_variable
 
-        collision_avoidance = CollisionAvoidance(
-            collision_rules=[CollisionRule.avoid_all_collision()],
-        )
-        msc.add_node(collision_avoidance)
+        msc.add_node(SelfCollisionAvoidance(robot=giskard.api.robot))
 
         end = EndMotion()
         msc.add_node(end)
