@@ -417,9 +417,10 @@ class GiskardTester(ABC):
 
     def compute_all_collisions(self) -> CollisionCheckingResult:
         collision_manager = GiskardBlackboard().executor.context.world.collision_manager
-        with GiskardBlackboard().executor.context.world.modify_world():
-            collision_manager.clear_temporary_rules()
-            collision_manager.add_temporary_rule(AvoidAllCollisions())
+        collision_manager.clear_temporary_rules()
+        collision_manager.add_temporary_rule(
+            AvoidAllCollisions(buffer_zone_distance=0.5)
+        )
         collision_manager.update_collision_matrix()
         return collision_manager.compute_collisions()
 

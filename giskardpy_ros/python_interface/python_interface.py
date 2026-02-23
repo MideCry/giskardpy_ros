@@ -55,7 +55,9 @@ class GiskardWrapper:
         rospy.node.get_logger().info("syncing world")
         self.world = fetch_world_from_service(self.node_handle, timeout_seconds=300)
         rospy.node.get_logger().info("world synced")
-        self.model_synchronizer = ModelSynchronizer(_world=self.world, node=rospy.node)
+        self.model_synchronizer = ModelSynchronizer(
+            _world=self.world, node=rospy.node, synchronous=True
+        )
         self.state_synchronizer = StateSynchronizer(_world=self.world, node=rospy.node)
         giskard_topic = f"{self.giskard_node_name}/command"
         self._client = MyActionClient(self.node_handle, JsonAction, giskard_topic)

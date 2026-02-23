@@ -23,6 +23,7 @@ from rclpy.duration import Duration
 from giskardpy.motion_statechart.goals.collision_avoidance import (
     ExternalCollisionAvoidance,
     SelfCollisionAvoidance,
+    UpdateTemporaryCollisionRules,
 )
 from krrood.symbolic_math import symbolic_math as sm
 
@@ -75,6 +76,7 @@ from giskardpy_ros.utils.utils_for_tests import (
 )
 from semantic_digital_twin.collision_checking.collision_rules import (
     AvoidExternalCollisions,
+    AvoidCollisionBetweenGroups,
 )
 from semantic_digital_twin.exceptions import WorldEntityNotFoundError
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot, ParallelGripper
@@ -1118,9 +1120,7 @@ class TestSelfCollisionAvoidance:
                         z=0.2, reference_frame=giskard.l_tip
                     ),
                 ),
-                CollisionAvoidance(
-                    collision_rules=[CollisionRule.avoid_all_collision()]
-                ),
+                SelfCollisionAvoidance(robot=giskard.api.robot),
             ]
         )
         msc.add_node(EndMotion.when_true(cart_goal))
@@ -1160,9 +1160,7 @@ class TestSelfCollisionAvoidance:
                         x=-0.5, reference_frame=box
                     ),
                 ),
-                CollisionAvoidance(
-                    collision_rules=[CollisionRule.avoid_all_collision()]
-                ),
+                SelfCollisionAvoidance(robot=giskard_better_pose.api.robot),
             ]
         )
         msc.add_node(EndMotion.when_true(cart_goal))
@@ -1237,12 +1235,13 @@ class TestSelfCollisionAvoidance:
                         -0.2, reference_frame=giskard.r_tip
                     ),
                 ),
-                CollisionAvoidance(
-                    collision_rules=[
-                        CollisionRule(
-                            type_=CollisionAvoidanceTypes.AVOID_COLLISION,
-                            body_group1=list(giskard.get_r_gripper_links()),
-                            body_group2=[
+                SelfCollisionAvoidance(robot=giskard.api.robot),
+                UpdateTemporaryCollisionRules(
+                    temporary_rules=[
+                        AvoidCollisionBetweenGroups(
+                            buffer_zone_distance=0.05,
+                            body_group_a=list(giskard.get_r_gripper_links()),
+                            body_group_b=[
                                 giskard.api.world.get_kinematic_structure_entity_by_name(
                                     "l_forearm_link"
                                 )
@@ -1291,9 +1290,7 @@ class TestSelfCollisionAvoidance:
         msc = MotionStatechart()
         msc.add_nodes(
             [
-                CollisionAvoidance(
-                    collision_rules=[CollisionRule.avoid_all_collision()]
-                ),
+                SelfCollisionAvoidance(robot=giskard.api.robot),
                 local_min := LocalMinimumReached(),
             ]
         )
@@ -1340,13 +1337,15 @@ class TestCollisionAvoidanceGoals:
         )
         msc.add_node(cart_goal)
 
-        with fake_table_setup.api.world.modify_world():
-            fake_table_setup.api.world.collision_manager.clear_temporary_rules()
-            fake_table_setup.api.world.collision_manager.add_temporary_rule(
-                AvoidExternalCollisions(
-                    buffer_zone_distance=0.1, robot=fake_table_setup.api.robot
-                )
+        msc.add_node(
+            UpdateTemporaryCollisionRules(
+                temporary_rules=[
+                    AvoidExternalCollisions(
+                        buffer_zone_distance=0.1, robot=fake_table_setup.api.robot
+                    )
+                ]
             )
+        )
         msc.add_node(ExternalCollisionAvoidance(robot=fake_table_setup.api.robot))
         local_min = LocalMinimumReached()
         msc.add_node(local_min)
@@ -1497,7 +1496,7 @@ class TestCollisionAvoidanceGoals:
         msc = MotionStatechart()
         msc.add_nodes(
             [
-                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
+                SelfCollisionAvoidance(robot=giskard.api.robot),
                 local_min := LocalMinimumReached(),
             ]
         )
