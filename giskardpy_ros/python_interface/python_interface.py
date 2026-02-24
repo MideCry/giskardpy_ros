@@ -52,13 +52,15 @@ class GiskardWrapper:
     _motion_statechart: MotionStatechart = field(init=False)
 
     def __post_init__(self):
-        rospy.node.get_logger().info("syncing world")
+        self.node_handle.get_logger().info("syncing world")
         self.world = fetch_world_from_service(self.node_handle, timeout_seconds=300)
-        rospy.node.get_logger().info("world synced")
+        self.node_handle.get_logger().info("world synced")
         self.model_synchronizer = ModelSynchronizer(
-            _world=self.world, node=rospy.node, synchronous=True
+            _world=self.world, node=self.node_handle, synchronous=True
         )
-        self.state_synchronizer = StateSynchronizer(_world=self.world, node=rospy.node)
+        self.state_synchronizer = StateSynchronizer(
+            _world=self.world, node=self.node_handle
+        )
         giskard_topic = f"{self.giskard_node_name}/command"
         self._client = MyActionClient(self.node_handle, JsonAction, giskard_topic)
         sleep(0.3)
