@@ -1120,7 +1120,7 @@ class TestSelfCollisionAvoidance:
                         z=0.2, reference_frame=giskard.l_tip
                     ),
                 ),
-                SelfCollisionAvoidance(robot=giskard.api.robot),
+                SelfCollisionAvoidance(),
             ]
         )
         msc.add_node(EndMotion.when_true(cart_goal))
@@ -1312,7 +1312,7 @@ class TestCollisionAvoidanceGoals:
                             x=2.0, reference_frame=kitchen_setup.map
                         )
                     ),
-                    CollisionAvoidance([CollisionRule.avoid_all_collision()]),
+                    ExternalCollisionAvoidance(),
                 ]
             )
         )
