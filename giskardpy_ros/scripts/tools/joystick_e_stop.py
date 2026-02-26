@@ -1,36 +1,55 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+import rclpy
+from action_msgs.srv import CancelGoal
 from sensor_msgs.msg import Joy
 import numpy as np
 
+from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.ros2.ros2_interface import wait_for_message
 
-class MUH:
+
+class JoystickEStop:
     cancel_msg = "Canceling all Giskard goals."
 
-    def __init__(self, button_ids):
-        self.giskard = OldGiskardWrapper()
-        joy_msg: Joy = rospy.wait_for_message("/joy", Joy)
-        self.button_filter = np.zeros(len(joy_msg.buttons), dtype=bool)
+    def __init__(self, num_buttons: int, button_ids: list, giskard_node_name: str = "giskard"):
+        self.cancel_client = rospy.node.create_client(
+            CancelGoal, f"{giskard_node_name}/command/_action/cancel_goal"
+        )
+        self.button_filter = np.zeros(num_buttons, dtype=bool)
         self.button_filter[button_ids] = True
-        self.button_ids = button_ids
-        self.joy_sub = rospy.Subscriber("/joy", Joy, self.joy_cb)
+        self.joy_sub = rospy.node.create_subscription(Joy, "/joy", self.joy_cb, 10)
 
     def joy_cb(self, joy_msg: Joy):
         buttons = np.array(joy_msg.buttons)
         filtered_buttons = buttons[self.button_filter]
         if np.any(filtered_buttons):
-            rospy.logwarn(
+            rospy.node.get_logger().warning(
                 f"joystick buttons {np.argwhere(filtered_buttons).tolist()} pressed"
             )
-            rospy.logwarn(self.cancel_msg)
-            self.giskard.cancel_all_goals()
+            rospy.node.get_logger().warning(self.cancel_msg)
+            if self.cancel_client.service_is_ready():
+                # An empty CancelGoal request with all-zero goal_id cancels all goals.
+                self.cancel_client.call_async(CancelGoal.Request())
+            else:
+                rospy.node.get_logger().warning("Cancel service not ready, cannot cancel goals.")
 
 
-rospy.init_node("giskard_e_stop")
+def main(args=None):
+    rospy.init_node("giskard_e_stop")
 
-joy_msg: Joy = rospy.wait_for_message("/joy", Joy)
-num_buttons = len(joy_msg.buttons)
+    _, joy_msg = wait_for_message(Joy, rospy.node, "/joy")
+    num_buttons = len(joy_msg.buttons)
 
-button_ids = rospy.get_param("~button_ids", default=list(range(num_buttons)))
-muh = MUH(button_ids)
-rospy.loginfo("giskard joystick e stop is running")
-rospy.spin()
+    rospy.node.declare_parameter("button_ids", list(range(num_buttons)))
+    button_ids = rospy.node.get_parameter("button_ids").value
+
+    e_stop = JoystickEStop(num_buttons, button_ids)
+    rospy.node.get_logger().info("giskard joystick e stop is running")
+
+    rospy.spinner_thread.join()
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+
