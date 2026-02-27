@@ -1,4 +1,4 @@
-from semantic_digital_twin.collision_checking.collision_world_syncer import (
+# from semantic_digital_twin.collision_checking.collision_world_syncer import (
     CollisionCheckerLib,
 )
 from giskardpy.middleware.ros2 import rospy
@@ -26,7 +26,7 @@ def main():
         robot_interface_config=TracyStandAloneRobotInterfaceConfig(),
         behavior_tree_config=StandAloneBTConfig(debug_mode=True),
         qp_controller_config=QPControllerConfig(target_frequency=33),
-        collision_checker_id=CollisionCheckerLib.bpb,
+        # collision_checker_id=CollisionCheckerLib.bpb,
     )
     giskard.live()
 
