@@ -85,7 +85,7 @@ class Giskard:
                 real_time_factor = 1.0
             self.executor = Ros2Executor(
                 ros_node=rospy.node,
-                MotionStatechartContext(
+                context=MotionStatechartContext(
                     world=self.world_config.world,
                     qp_controller_config=self.qp_controller_config,
                 ),
@@ -114,7 +114,7 @@ class Giskard:
 
             self.model_reload_synchronizer = ModelReloadSynchronizer(
                 node=rospy.node,
-                world=self.world_config.world,
+                _world=self.world_config.world,
                 session=session,
             )
         except AssertionError as e:
