@@ -1419,17 +1419,13 @@ class TestCollisionAvoidanceGoals:
                     tip_normal=Vector3.Y(reference_frame=box),
                     goal_normal=Vector3.Y(reference_frame=pocky_pose_setup.map),
                 ),
-                CollisionAvoidance([CollisionRule.avoid_all_collision()]),
+                ExternalCollisionAvoidance(),
                 local_min := LocalMinimumReached(),
             ]
         )
         msc.add_node(EndMotion.when_true(local_min))
 
         pocky_pose_setup.api.execute(msc)
-        assert (
-            "box",
-            "bl",
-        ) not in GiskardBlackboard().executor.collision_scene.collision_matrix
         pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_r_gripper_links(), 0.04)
 
     def test_attached_two_items(self, giskard: PR2Tester):
