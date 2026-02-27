@@ -1050,9 +1050,7 @@ class TestSelfCollisionAvoidance:
                         world=giskard.api.world,
                     )
                 ),
-                CollisionAvoidance(
-                    collision_rules=[CollisionRule.avoid_all_collision()]
-                ),
+                SelfCollisionAvoidance(),
                 local_min := LocalMinimumReached(),
             ]
         )
