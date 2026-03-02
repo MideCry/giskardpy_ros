@@ -1,5 +1,4 @@
-# from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from rclpy import Parameter
 
 from giskardpy.qp.qp_controller_config import QPControllerConfig
@@ -9,7 +8,6 @@ from giskardpy_ros.configs.iai_robots.tracy import (
     WorldWithTracyConfig,
     TracyStandAloneRobotInterfaceConfig,
 )
-from giskardpy_ros.utils.utils import load_xacro
 
 
 def main():
@@ -25,7 +23,6 @@ def main():
         robot_interface_config=TracyStandAloneRobotInterfaceConfig(),
         behavior_tree_config=StandAloneBTConfig(debug_mode=True),
         qp_controller_config=QPControllerConfig(target_frequency=33),
-        # collision_checker_id=CollisionCheckerLib.bpb,
     )
     giskard.live()
 
