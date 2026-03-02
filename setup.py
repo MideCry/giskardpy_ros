@@ -37,6 +37,7 @@ setup(
             "generic_giskard_standalone = giskardpy_ros.scripts.generic_giskard_standalone:main",
             "interactive_marker = giskardpy_ros.scripts.tools.interactive_marker:main",
             "motion_statechart_inspector = giskardpy_ros.scripts.tools.motion_statechart_inspector:main",
+            "joystick_e_stop = giskardpy_ros.scripts.tools.joystick_e_stop:main",
             "tracy_standalone = giskardpy_ros.scripts.tracy_standalone:main",
             "tracy_velocity = giskardpy_ros.scripts.tracy_velocity:main",
         ],

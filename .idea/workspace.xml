@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="371f7f03-b94b-4b97-8d06-5360646e14b0" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="1560" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$USER_HOME$/suturo/cognitive_robot_abstract_machine" value="marvin" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$USER_HOME$/suturo/cognitive_robot_abstract_machine" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="38x3LDtEKQLRAr85rei90hZR1Lb" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python tests.Python tests for test.giskardpy_test.test_motion_statechart.test_motion_statechart.test_milestone2.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks.test_cart_pose_with_external_reference_frame.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks.test_front_facing_orientation.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success_zero.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_cart_pose_negative_w_quaternion.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_milestone2.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_pick_up.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for pycram_test.test_designator.test_motion_designator.TestActionDesignatorGrounding.test_pick_up_motion.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker_pr2.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker_tracy.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for semantic_digital_twin_test.test_spatial_types.test_spatial_types.TestQuaternion.test_axis_angle_negative_w_identity.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for semantic_digital_twin_test.test_spatial_types.test_spatial_types.TestQuaternion.test_axis_angle_negative_w_small_rotation.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest in test_joystick_cancel.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.aaa.executor&quot;: &quot;Run&quot;,
+    &quot;Python.joystick_cancel.executor&quot;: &quot;Run&quot;,
+    &quot;Python.joystick_e_stop.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ms2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pickup_demo_marc.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_motion_statechart.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;ai.playground.ignore.import.keys.banner.in.settings&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/marvin/suturo/cognitive_robot_abstract_machine&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="Python.joystick_cancel">
+    <configuration name="joystick_cancel" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="giskardpy_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/giskardpy_ros/scripts" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/giskardpy_ros/scripts/joystick_cancel.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="joystick_e_stop" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="giskardpy_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/giskardpy_ros/scripts/tools" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/giskardpy_ros/scripts/tools/joystick_e_stop.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pickup_demo_marc" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="cognitive_robot_abstract_machine" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$USER_HOME$/suturo/cognitive_robot_abstract_machine/pycram/demos/pycram_suturo_demos/pycram_basic_hsr_demos" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$USER_HOME$/suturo/cognitive_robot_abstract_machine/pycram/demos/pycram_suturo_demos/pycram_basic_hsr_demos/pickup_demo_marc.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success_zero" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="cognitive_robot_abstract_machine" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success_zero&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in joystick_cancel.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="giskardpy_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/giskardpy_ros/scripts/joystick_cancel.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.joystick_cancel" />
+        <item itemvalue="Python.joystick_e_stop" />
+        <item itemvalue="Python tests.pytest in joystick_cancel.py" />
+        <item itemvalue="Python.pickup_demo_marc" />
+        <item itemvalue="Python tests.pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success_zero" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.30387.127" />
+        <option value="bundled-python-sdk-3944b0c99280-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.30387.127" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="371f7f03-b94b-4b97-8d06-5360646e14b0" name="Changes" comment="" />
+      <created>1769727336160</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1769727336160</updated>
+      <workItem from="1769727337420" duration="379000" />
+      <workItem from="1769762035062" duration="12000" />
+      <workItem from="1769766254707" duration="282000" />
+      <workItem from="1769767016329" duration="336000" />
+      <workItem from="1769768116828" duration="2643000" />
+      <workItem from="1769776521393" duration="20000" />
+      <workItem from="1770066582589" duration="1106000" />
+      <workItem from="1770067756464" duration="9747000" />
+      <workItem from="1770127491616" duration="9000" />
+      <workItem from="1770159180143" duration="4441000" />
+      <workItem from="1770194275100" duration="82000" />
+      <workItem from="1770284098811" duration="21000" />
+      <workItem from="1770295068642" duration="3605000" />
+      <workItem from="1770298722931" duration="2221000" />
+      <workItem from="1770313376825" duration="19586000" />
+      <workItem from="1770342124610" duration="1366000" />
+      <workItem from="1770343512400" duration="232000" />
+      <workItem from="1770343788810" duration="14000" />
+      <workItem from="1770343811759" duration="919000" />
+      <workItem from="1770344842343" duration="23000" />
+      <workItem from="1770344888580" duration="4073000" />
+      <workItem from="1770375153145" duration="48000" />
+      <workItem from="1770391514578" duration="702000" />
+      <workItem from="1770743975249" duration="12000" />
+      <workItem from="1770744204589" duration="32000" />
+      <workItem from="1770815385671" duration="10066000" />
+      <workItem from="1770833547764" duration="28000" />
+      <workItem from="1770834858209" duration="2734000" />
+      <workItem from="1770837702901" duration="111000" />
+      <workItem from="1770840502921" duration="123000" />
+      <workItem from="1770977774960" duration="1508000" />
+      <workItem from="1770979317688" duration="1029000" />
+      <workItem from="1770980630071" duration="4000" />
+      <workItem from="1771278504286" duration="1640000" />
+      <workItem from="1771280165917" duration="28000" />
+      <workItem from="1771507598696" duration="6958000" />
+      <workItem from="1771539178543" duration="9000" />
+      <workItem from="1771589843300" duration="5045000" />
+      <workItem from="1771792720662" duration="143000" />
+      <workItem from="1772029444416" duration="316000" />
+      <workItem from="1772060576524" duration="4773000" />
+      <workItem from="1772096700985" duration="295000" />
+      <workItem from="1772112217373" duration="5085000" />
+      <workItem from="1772136168829" duration="12000" />
+      <workItem from="1772186268012" duration="4518000" />
+      <workItem from="1772194179916" duration="14000" />
+      <workItem from="1772204688503" duration="13734000" />
+      <workItem from="1772451729764" duration="1061000" />
+      <workItem from="1772486549602" duration="7528000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="SHOW_ROOT_NAMES" value="true" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_semantic_digital_twin_test_test_ros_test_visualization_marker_test_visualization_marker.coverage" NAME="pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker Coverage Results" MODIFIED="1770298623340" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$joystick_e_stop.coverage" NAME="joystick_e_stop Coverage Results" MODIFIED="1772491919902" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/giskardpy_ros/scripts/tools" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestCartesianTasks_test_cart_pose_with_external_reference_frame.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks.test_cart_pose_with_external_reference_frame Coverage Results" MODIFIED="1770837387947" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestParallel.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel Coverage Results" MODIFIED="1771279069896" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_test_cart_pose_negative_w_quaternion.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_cart_pose_negative_w_quaternion Coverage Results" MODIFIED="1770980282333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestCartesianTasks.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks Coverage Results" MODIFIED="1770837468819" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$ms2.coverage" NAME="ms2 Coverage Results" MODIFIED="1770328325787" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/giskardpy/scripts" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$test.coverage" NAME="test Coverage Results" MODIFIED="1769727439354" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_test_milestone2.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_milestone2 Coverage Results" MODIFIED="1770343722282" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_semantic_digital_twin_test_test_spatial_types_test_spatial_types_TestQuaternion_test_axis_angle_negative_w_identity.coverage" NAME="pytest for semantic_digital_twin_test.test_spatial_types.test_spatial_types.TestQuaternion.test_axis_angle_negative_w_identity Coverage Results" MODIFIED="1770979701890" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_semantic_digital_twin_test_test_ros_test_visualization_marker_test_visualization_marker_tracy.coverage" NAME="pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker_tracy Coverage Results" MODIFIED="1770313473926" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$test_motion_statechart.coverage" NAME="test_motion_statechart Coverage Results" MODIFIED="1770344627294" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test/giskardpy_test/test_motion_statechart" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_test_pick_up.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.test_pick_up Coverage Results" MODIFIED="1772395083041" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_in_test_joystick_cancel_py.coverage" NAME="pytest in test_joystick_cancel.py Coverage Results" MODIFIED="1772491855144" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestCartesianTasks_test_front_facing_orientation.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestCartesianTasks.test_front_facing_orientation Coverage Results" MODIFIED="1770066863046" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$aaa.coverage" NAME="aaa Coverage Results" MODIFIED="1772064372603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestParallel_test_parallel_minimum_success_zero.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success_zero Coverage Results" MODIFIED="1771278914850" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pickup_demo_marc.coverage" NAME="pickup_demo_marc Coverage Results" MODIFIED="1772490281501" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/pycram/demos/pycram_suturo_demos/pycram_basic_hsr_demos" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_pycram_test_test_designator_test_motion_designator_TestActionDesignatorGrounding_test_pick_up_motion.coverage" NAME="pytest for pycram_test.test_designator.test_motion_designator.TestActionDesignatorGrounding.test_pick_up_motion Coverage Results" MODIFIED="1770392172107" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$joystick_cancel.coverage" NAME="joystick_cancel Coverage Results" MODIFIED="1772492015273" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/giskardpy_ros/scripts" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_semantic_digital_twin_test_test_ros_test_visualization_marker_test_visualization_marker_pr2.coverage" NAME="pytest for semantic_digital_twin_test.test_ros.test_visualization_marker.test_visualization_marker_pr2 Coverage Results" MODIFIED="1770298645036" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_giskardpy_test_test_motion_statechart_test_motion_statechart_TestParallel_test_parallel_minimum_success.coverage" NAME="pytest for giskardpy_test.test_motion_statechart.test_motion_statechart.TestParallel.test_parallel_minimum_success Coverage Results" MODIFIED="1771511290319" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$.coverage" NAME=" Coverage Results" MODIFIED="1770391771841" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine" />
+    <SUITE FILE_PATH="coverage/giskardpy_ros$pytest_for_semantic_digital_twin_test_test_spatial_types_test_spatial_types_TestQuaternion_test_axis_angle_negative_w_small_rotation.coverage" NAME="pytest for semantic_digital_twin_test.test_spatial_types.test_spatial_types.TestQuaternion.test_axis_angle_negative_w_small_rotation Coverage Results" MODIFIED="1770979710580" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/suturo/cognitive_robot_abstract_machine/test" />
+  </component>
+</project>
