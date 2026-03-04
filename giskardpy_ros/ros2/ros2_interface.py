@@ -1,3 +1,4 @@
+import threading
 from typing import List, Optional, Tuple, Union, Any
 
 import xacro
@@ -37,22 +38,26 @@ def wait_for_message(
     node: "Node",
     topic: str,
     *,
-    qos_profile: Union[QoSProfile, int] = QoSProfile,
+    qos_profile: Union[QoSProfile, int] = QoSProfile(depth=10),
     time_to_wait=-1,
 ) -> Tuple[bool, Any]:
-    while True:
-        try:
-            result = rclpy_wait_for_message(
-                msg_type=msg_type,
-                node=node,
-                topic=topic,
-                qos_profile=qos_profile,
-                time_to_wait=time_to_wait,
-            )
-            if result[1] is not None:
-                return result
-        except Exception as e:
-            node.get_logger().info(f"waiting for message from {topic}.")
+    event = threading.Event()
+    msg_holder = [None]
+
+    def cb(msg):
+        msg_holder[0] = msg
+        event.set()
+
+    sub = node.create_subscription(msg_type, topic, cb, qos_profile)
+    try:
+        timeout = None if time_to_wait < 0 else time_to_wait
+        received = event.wait(timeout=timeout)
+    finally:
+        node.destroy_subscription(sub)
+
+    if received:
+        return True, msg_holder[0]
+    return False, None
 
 
 def get_robot_description(topic: str = "/robot_description") -> str:
