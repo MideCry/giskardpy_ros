@@ -20,24 +20,23 @@ from giskard_msgs.action._move import Move_Goal
 from numpy import pi
 from rclpy.duration import Duration
 
-from giskardpy.middleware.ros2.rospy import wait_for_future_to_complete
-from giskardpy.motion_statechart.goals.collision_avoidance import (
-    ExternalCollisionAvoidance,
-    SelfCollisionAvoidance,
-    UpdateTemporaryCollisionRules,
-)
-from krrood.symbolic_math import symbolic_math as sm
-
 import semantic_digital_twin.spatial_types.spatial_types as cas
 from conftest import kitchen_setup
 from giskardpy.data_types.exceptions import (
     MaxTrajectoryLengthException,
 )
+from giskardpy.middleware.ros2 import rospy
+from giskardpy.middleware.ros2.rospy import wait_for_future_to_complete
 from giskardpy.motion_statechart.data_types import (
     DefaultWeights,
     ObservationStateValues,
 )
 from giskardpy.motion_statechart.exceptions import EmptyMotionStatechartError
+from giskardpy.motion_statechart.goals.collision_avoidance import (
+    ExternalCollisionAvoidance,
+    SelfCollisionAvoidance,
+    UpdateTemporaryCollisionRules,
+)
 from giskardpy.motion_statechart.goals.templates import Parallel, Sequence
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
 from giskardpy.motion_statechart.graph_node import EndMotion, CancelMotion
@@ -54,7 +53,6 @@ from giskardpy.motion_statechart.tasks.joint_tasks import (
 )
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.utils.math import (
     quaternion_from_axis_angle,
     quaternion_from_rotation_matrix,
@@ -69,12 +67,12 @@ from giskardpy_ros.exceptions import (
     ExecutionCanceledException,
     ExecutionAbortedException,
 )
-from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
 from giskardpy_ros.utils.utils import load_xacro
 from giskardpy_ros.utils.utils_for_tests import (
     GiskardTester,
 )
+from krrood.symbolic_math import symbolic_math as sm
 from semantic_digital_twin.collision_checking.collision_rules import (
     AvoidExternalCollisions,
     AvoidCollisionBetweenGroups,
@@ -163,7 +161,6 @@ class PR2Tester(GiskardTester):
             qp_controller_config=QPControllerConfig(
                 target_frequency=20,
                 retries_with_relaxed_constraints=15,
-                qp_formulation=QPFormulation(),
             ),
         )
 
