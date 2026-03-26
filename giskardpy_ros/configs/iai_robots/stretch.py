@@ -67,7 +67,7 @@ class StretchVelocityInterface(RobotInterfaceConfig):
             "joint_wrist_pitch",
             "joint_wrist_roll",
             "joint_head_pan",
-            "joint_head_pan"
+            "joint_head_pan",
             "joint_right_wheel",
             "joint_left_wheel",
             "joint_gripper_finger_left"
@@ -83,7 +83,7 @@ class WorldWithStretchConfig(WorldWithOmniDriveRobot):
     def setup_collision_config(self):
         pass
 
-
+@dataclass
 class WorldWithStretchConfigDiffDrive(WorldWithDiffDriveRobot):
     urdf_view: AbstractRobot = field(kw_only=True, default=Stretch, init=False)
 
