@@ -1,3 +1,4 @@
+import threading
 from typing import List, Optional, Tuple, Union, Any
 
 import xacro
@@ -15,12 +16,11 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.wait_for_message import wait_for_message as rclpy_wait_for_message
 from std_msgs.msg import String
 
-from giskardpy.middleware import get_middleware
 from giskardpy_ros.exceptions import (
     ExecutionAbortedException,
     ExecutionCanceledException,
 )
-from giskardpy_ros.ros2 import rospy
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.ros2.event_loop_manager import get_event_loop
 from giskardpy_ros.utils.asynio_utils import wait_until_not_none
 
@@ -38,22 +38,26 @@ def wait_for_message(
     node: "Node",
     topic: str,
     *,
-    qos_profile: Union[QoSProfile, int] = QoSProfile,
+    qos_profile: Union[QoSProfile, int] = QoSProfile(depth=10),
     time_to_wait=-1,
 ) -> Tuple[bool, Any]:
-    while True:
-        try:
-            result = rclpy_wait_for_message(
-                msg_type=msg_type,
-                node=node,
-                topic=topic,
-                qos_profile=qos_profile,
-                time_to_wait=time_to_wait,
-            )
-            if result[1] is not None:
-                return result
-        except Exception as e:
-            node.get_logger().info(f"waiting for message from {topic}.")
+    event = threading.Event()
+    msg_holder = [None]
+
+    def cb(msg):
+        msg_holder[0] = msg
+        event.set()
+
+    sub = node.create_subscription(msg_type, topic, cb, qos_profile)
+    try:
+        timeout = None if time_to_wait < 0 else time_to_wait
+        received = event.wait(timeout=timeout)
+    finally:
+        node.destroy_subscription(sub)
+
+    if received:
+        return True, msg_holder[0]
+    return False, None
 
 
 def get_robot_description(topic: str = "/robot_description") -> str:
@@ -151,19 +155,6 @@ def wait_for_publisher(publisher):
     #     rospy.sleep(0.1)
 
 
-def load_urdf(file_path: str) -> str:
-    file_path = get_middleware().resolve_iri(file_path)
-    doc = xacro.process_file(file_path, mappings={"radius": "0.9"})
-    return doc.toprettyxml(indent="  ")
-
-
-class ControllerManager:
-    name: str
-
-    def __init__(self, name: str = "controller_manager"):
-        self.name = name
-
-
 class MyActionClient:
     _goal_handle: Optional[ClientGoalHandle]
     _result_future: Optional[Future]
@@ -182,7 +173,7 @@ class MyActionClient:
             node=node_handle, action_type=action_type, action_name=action_name
         )
         while not self._client.wait_for_server(timeout_sec=2):
-            rospy.get_middleware().loginfo(f"Waiting for {action_name} server...")
+            rospy.node.get_logger().info(f"Waiting for {action_name} server...")
 
     def send_goal_async(self, goal) -> Future:
         self._goal_counter += 1

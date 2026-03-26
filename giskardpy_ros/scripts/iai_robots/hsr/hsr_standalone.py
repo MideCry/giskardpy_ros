@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from giskardpy.middleware.ros2 import rospy
 from giskardpy_ros.utils.utils import load_xacro
 from rclpy import Parameter
 
@@ -9,7 +10,6 @@ from giskardpy_ros.configs.iai_robots.hsr import (
     WorldWithHSRConfig,
     HSRStandaloneInterface,
 )
-from giskardpy_ros.ros2 import rospy
 
 
 def main():
