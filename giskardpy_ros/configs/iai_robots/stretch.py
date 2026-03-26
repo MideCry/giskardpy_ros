@@ -1,22 +1,24 @@
 from dataclasses import dataclass, field
 
 from giskardpy_ros.configs.robot_interface_config import StandAloneRobotInterfaceConfig
-from giskardpy.configs.world_config import WorldWithDiffDriveRobot
+from dataclasses import dataclass, field
+from giskardpy.model.world_config import WorldWithOmniDriveRobot, WorldWithDiffDriveRobot
+from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from semantic_digital_twin.robots.stretch import Stretch
 
-
-class StretchCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-    def __init__(self, drive_joint_name: str = 'brumbrum'):
-        super().__init__()
-        self.drive_joint_name = drive_joint_name
-
-    def setup(self):
-        self.load_self_collision_matrix('package://giskardpy_ros/self_collision_matrices/iai/stretch.srdf')
-        self.overwrite_external_collision_avoidance(self.drive_joint_name,
-                                                    number_of_repeller=2,
-                                                    soft_threshold=0.2,
-                                                    hard_threshold=0.1)
+#
+# class StretchCollisionAvoidanceConfig(CollisionAvoidanceConfig):
+#     def __init__(self, drive_joint_name: str = 'brumbrum'):
+#         super().__init__()
+#         self.drive_joint_name = drive_joint_name
+#
+#     def setup(self):
+#         self.load_self_collision_matrix('package://giskardpy_ros/self_collision_matrices/iai/stretch.srdf')
+#         self.overwrite_external_collision_avoidance(self.drive_joint_name,
+#                                                     number_of_repeller=2,
+#                                                     soft_threshold=0.2,
+#                                                     hard_threshold=0.1)
 
 
 class StretchStandaloneInterface(StandAloneRobotInterfaceConfig):
@@ -76,6 +78,13 @@ class StretchVelocityInterface(RobotInterfaceConfig):
 
 @dataclass
 class WorldWithStretchConfig(WorldWithOmniDriveRobot):
+    urdf_view: AbstractRobot = field(kw_only=True, default=Stretch, init=False)
+
+    def setup_collision_config(self):
+        pass
+
+
+class WorldWithStretchConfigDiffDrive(WorldWithDiffDriveRobot):
     urdf_view: AbstractRobot = field(kw_only=True, default=Stretch, init=False)
 
     def setup_collision_config(self):

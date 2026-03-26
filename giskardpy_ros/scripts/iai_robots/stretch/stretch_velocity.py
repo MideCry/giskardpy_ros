@@ -1,8 +1,5 @@
-from giskardpy.model.collision_world_syncer import CollisionCheckerLib
-
-from configs.iai_robots.stretch import WorldWithStretchConfig, StretchVelocityInterface
-from giskardpy_ros.configs.iai_robots.tiago import TiagoVelocityInterface, WorldWithTiagoConfig
-from giskardpy_ros.ros2 import rospy
+from giskardpy_ros.configs.iai_robots.stretch import WorldWithStretchConfig, StretchVelocityInterface
+from giskardpy.middleware.ros2 import rospy
 from rclpy import Parameter
 from rclpy.exceptions import ParameterUninitializedException
 
@@ -26,7 +23,6 @@ def main():
     )
     giskard = Giskard(
         world_config=WorldWithStretchConfig(urdf=robot_description),
-        collision_checker_id=CollisionCheckerLib.none,
         robot_interface_config=StretchVelocityInterface(),
         behavior_tree_config=ClosedLoopBTConfig(
             visualization_mode=VisualizationMode.VisualsFrameLocked
