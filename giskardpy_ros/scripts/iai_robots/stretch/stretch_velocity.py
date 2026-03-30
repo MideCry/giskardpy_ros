@@ -1,4 +1,4 @@
-from giskardpy_ros.configs.iai_robots.stretch import WorldWithStretchConfig, StretchVelocityInterface
+from giskardpy_ros.configs.iai_robots.stretch import WorldWithStretchConfigDiffDrive, StretchVelocityInterface
 from giskardpy.middleware.ros2 import rospy
 from rclpy import Parameter
 from rclpy.exceptions import ParameterUninitializedException
@@ -22,7 +22,7 @@ def main():
         "package://stretch_description/urdf/stretch_description_RE2V0_tool_stretch_dex_wrist.xacro"
     )
     giskard = Giskard(
-        world_config=WorldWithStretchConfig(urdf=robot_description),
+        world_config=WorldWithStretchConfigDiffDrive(urdf=robot_description),
         robot_interface_config=StretchVelocityInterface(),
         behavior_tree_config=ClosedLoopBTConfig(
             visualization_mode=VisualizationMode.VisualsFrameLocked

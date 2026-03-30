@@ -6,19 +6,7 @@ from giskardpy.model.world_config import WorldWithOmniDriveRobot, WorldWithDiffD
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from giskardpy_ros.configs.robot_interface_config import RobotInterfaceConfig
 from semantic_digital_twin.robots.stretch import Stretch
-
-#
-# class StretchCollisionAvoidanceConfig(CollisionAvoidanceConfig):
-#     def __init__(self, drive_joint_name: str = 'brumbrum'):
-#         super().__init__()
-#         self.drive_joint_name = drive_joint_name
-#
-#     def setup(self):
-#         self.load_self_collision_matrix('package://giskardpy_ros/self_collision_matrices/iai/stretch.srdf')
-#         self.overwrite_external_collision_avoidance(self.drive_joint_name,
-#                                                     number_of_repeller=2,
-#                                                     soft_threshold=0.2,
-#                                                     hard_threshold=0.1)
+from semantic_digital_twin.world_description.connections import Connection6DoF, DifferentialDrive
 
 
 class StretchStandaloneInterface(StandAloneRobotInterfaceConfig):
@@ -43,21 +31,21 @@ class StretchStandaloneInterface(StandAloneRobotInterfaceConfig):
 class StretchVelocityInterface(RobotInterfaceConfig):
 
     def setup(self):
-        # self.sync_6dof_joint_with_tf_frame(
-        #     joint=self.world.get_connections_by_type(Connection6DoF)[0],
-        #     tf_parent_frame="map",
-        #     tf_child_frame="odom",
-        # )
-        #
-        # omni_drive = self.world.get_connections_by_type(OmniDrive)[0]
-        # self.sync_odometry_topic(
-        #     "/laser_odom",
-        #     omni_drive,
-        # )
-        #
-        # self.add_base_cmd_velocity(
-        #     cmd_vel_topic="/omni_base_controller/cmd_vel", joint=omni_drive
-        # )
+        self.sync_6dof_joint_with_tf_frame(
+            joint=self.world.get_connections_by_type(Connection6DoF)[0],
+            tf_parent_frame="map",
+            tf_child_frame="odom",
+        )
+
+        diff_drive = self.world.get_connections_by_type(DifferentialDrive)[0]
+        self.sync_odometry_topic(
+            "/odom",
+            diff_drive,
+        )
+
+        self.add_base_cmd_velocity(
+            cmd_vel_topic="/stretch/cmd_vel", joint=diff_drive
+        )
 
         self.sync_joint_state_topic("/joint_states")
         joints = [
