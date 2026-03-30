@@ -45,22 +45,25 @@ class SendCmdVelTwist(GiskardBehavior):
 
     @catch_and_raise_to_blackboard
     def update(self):
+        cmd = Twist()
+
         x_vel = (
             GiskardBlackboard()
             .executor.context.world.state[self.joint.x_velocity.id]
             .velocity
         )
-        y_vel = (
-            GiskardBlackboard()
-            .executor.context.world.state[self.joint.y_velocity.id]
-            .velocity
-        )
+        if isinstance(self.joint, OmniDrive):
+            y_vel = (
+                GiskardBlackboard()
+                .executor.context.world.state[self.joint.y_velocity.id]
+                .velocity
+            )
+            cmd.linear.y = y_vel
         yaw_vel = (
             GiskardBlackboard().executor.context.world.state[self.joint.yaw.id].velocity
         )
-        cmd = Twist()
+
         cmd.linear.x = x_vel
-        cmd.linear.y = y_vel
         cmd.angular.z = yaw_vel
         cmd = self.solver_cmd_to_twist(cmd)
         self.vel_pub.publish(cmd)
