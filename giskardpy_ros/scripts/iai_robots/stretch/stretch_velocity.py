@@ -19,7 +19,7 @@ def main():
     #     robot_description = rospy.node.get_parameter_or("robot_description").value
     # except ParameterUninitializedException as e:
     robot_description = load_xacro(
-        "package://stretch_urdf/stretch_urdf/RE2V0/stretch_description_RE2V0_tool_stretch_dex_wrist.urdf"
+        "package://stretch_description/urdf/stretch_description_RE2V0_tool_stretch_dex_wrist.xacro"
     )
     giskard = Giskard(
         world_config=WorldWithStretchConfig(urdf=robot_description),
@@ -28,7 +28,7 @@ def main():
             visualization_mode=VisualizationMode.VisualsFrameLocked
         ),
         qp_controller_config=QPControllerConfig(
-            target_frequency=80, prediction_horizon=15
+            target_frequency=25, prediction_horizon=15
         ),
     )
     giskard.live()

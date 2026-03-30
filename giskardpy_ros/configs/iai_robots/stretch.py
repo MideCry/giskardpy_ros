@@ -68,12 +68,12 @@ class StretchVelocityInterface(RobotInterfaceConfig):
             "joint_wrist_roll",
             "joint_head_pan",
             "joint_head_pan",
+            "joint_gripper_finger_left",
             "joint_right_wheel",
-            "joint_left_wheel",
-            "joint_gripper_finger_left"
+            "joint_left_wheel"
         ]
         self.add_joint_velocity_group_controller(
-            cmd_topic="/joint_velocity_command", connections=joints
+            cmd_topic="/joint_velocity_cmd", connections=joints
         )
 
 @dataclass

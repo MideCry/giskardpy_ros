@@ -40,6 +40,7 @@ setup(
             "joystick_e_stop = giskardpy_ros.scripts.tools.joystick_e_stop:main",
             "tracy_standalone = giskardpy_ros.scripts.tracy_standalone:main",
             "tracy_velocity = giskardpy_ros.scripts.tracy_velocity:main",
+            "stretch_velocity = giskardpy_ros.scripts.iai_robots.stretch.stretch_velocity:main",
         ],
     },
 )
