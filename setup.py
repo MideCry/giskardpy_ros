@@ -29,7 +29,7 @@ setup(
     entry_points={
         "console_scripts": [
             "generic_giskard = giskardpy_ros.scripts.generic_giskard:main",
-            "pr2_standalone = giskardpy_ros.scripts.iai_robots.pr2.pr2_standalone:main",
+            "pr2_standalone = giskardpy_ros.pr2_standalone:main",
             "hsr_standalone = giskardpy_ros.scripts.iai_robots.hsr.hsr_standalone:main",
             "hsr_velocity = giskardpy_ros.scripts.iai_robots.hsr.iai_hsr_real_time:main",
             "hsr_trust_me_bro = giskardpy_ros.scripts.iai_hsr_real_time_trust_me_bro:main",
@@ -40,6 +40,7 @@ setup(
             "joystick_e_stop = giskardpy_ros.scripts.tools.joystick_e_stop:main",
             "tracy_standalone = giskardpy_ros.scripts.tracy_standalone:main",
             "tracy_velocity = giskardpy_ros.scripts.tracy_velocity:main",
+            "stretch_velocity = giskardpy_ros.scripts.iai_robots.stretch.stretch_velocity:main",
         ],
     },
 )
