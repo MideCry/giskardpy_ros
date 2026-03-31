@@ -1,5 +1,9 @@
+import ast
 import itertools
 import os
+import pkgutil
+from dataclasses import dataclass
+from typing import List, Optional
 
 from setuptools import find_packages, setup
 
@@ -14,6 +18,7 @@ for dirpath, _, filenames in itertools.chain(os.walk("data"), os.walk("launch"))
     install_path = os.path.join("share", package_name, dirpath)
     data_files.append((install_path, full_paths))
 
+script_folder = "giskardpy.middleware.ros2.scripts"
 setup(
     name=package_name,
     version="0.0.1",
@@ -28,17 +33,17 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "pr2_standalone = giskardpy.middleware.ros2.scripts.iai_robots.pr2.pr2_standalone:main",
-            "hsr_standalone = giskardpy.middleware.ros2.scripts.iai_robots.hsr.hsr_standalone:main",
-            "hsr_velocity = giskardpy.middleware.ros2.scripts.iai_robots.hsr.hsr_velocity:main",
-            "hsr_trust_me_bro = giskardpy.middleware.ros2.scripts.iai_robots.hsr.iai_hsr_real_time_trust_me_bro:main",
-            "tracy_standalone = giskardpy.middleware.ros2.scripts.iai_robots.tracy.tracy_standalone:main",
-            "tracy_velocity = giskardpy.middleware.ros2.scripts.iai_robots.tracy.tracy_velocity:main",
-            "stretch_velocity = giskardpy_ros.scripts.iai_robots.stretch.stretch_velocity:main",
-            "r6bot = giskardpy_ros.scripts.other_robots.test.r6bot:main",
-            "interactive_marker = giskardpy_ros.scripts.tools.interactive_marker:main",
-            "motion_statechart_inspector = giskardpy_ros.scripts.tools.motion_statechart_inspector:main",
-            "joystick_e_stop = giskardpy_ros.scripts.tools.joystick_e_stop:main",
+            f"pr2_standalone = {script_folder}.iai_robots.pr2.pr2_standalone:main",
+            f"hsr_standalone = {script_folder}.iai_robots.hsr.hsr_standalone:main",
+            f"hsr_velocity = {script_folder}.iai_robots.hsr.hsr_velocity:main",
+            f"hsr_trust_me_bro = {script_folder}.iai_robots.hsr.iai_hsr_real_time_trust_me_bro:main",
+            f"tracy_standalone = {script_folder}.iai_robots.tracy.tracy_standalone:main",
+            f"tracy_velocity = {script_folder}.iai_robots.tracy.tracy_velocity:main",
+            f"stretch_velocity = {script_folder}.iai_robots.stretch.stretch_velocity:main",
+            f"r6bot = {script_folder}.other_robots.test.r6bot:main",
+            f"interactive_marker = {script_folder}.tools.interactive_marker:main",
+            f"motion_statechart_inspector = {script_folder}.tools.motion_statechart_inspector:main",
+            f"joystick_e_stop = {script_folder}.tools.joystick_e_stop:main",
         ],
     },
 )
