@@ -29,15 +29,15 @@ from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import (
     quaternion_from_rotation_matrix,
 )
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import (
+from giskardpy.middleware.ros2.behavior_tree_config import StandAloneBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
+from giskardpy.middleware.ros2.configs import (
     WorldWithHSRConfig,
     HSRStandaloneInterface,
 )
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
-from giskardpy_ros.utils.utils import load_xacro
-from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
+from giskardpy.tree import GiskardBlackboard
+from giskardpy.middleware.ros2.utils import load_xacro
+from giskardpy.middleware.ros2.utils import compare_poses, GiskardTester
 from krrood.symbolic_math.symbolic_math import trinary_logic_not
 from semantic_digital_twin.robots.hsrb import HSRB
 from semantic_digital_twin.spatial_types import (

@@ -1,15 +1,15 @@
 import pytest
 from geometry_msgs.msg import PoseStamped, PointStamped
 
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
+from giskardpy.middleware.ros2.behavior_tree_config import StandAloneBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.iai_robots.tracy import (
+from giskardpy.middleware.ros2.configs import (
     TracyStandAloneRobotInterfaceConfig,
     # TracyWorldConfig,
 )
 from giskardpy.motion_statechart.goals.tracebot import InsertCylinder
-from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from giskardpy.middleware.ros2.utils import GiskardTester
 
 
 @pytest.fixture(scope="module")

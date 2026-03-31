@@ -11,14 +11,14 @@ from geometry_msgs.msg import (
 )
 from numpy import pi
 
-from giskardpy_ros.configs.behavior_tree_config import ClosedLoopBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.hsr import (
+from giskardpy.middleware.ros2.behavior_tree_config import ClosedLoopBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
+from giskardpy.middleware.ros2.configs import (
     WorldWithHSRConfig,
     HSRMujocoVelocityInterface,
 )
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.utils.utils_for_tests import compare_poses, GiskardTester
+from giskardpy.middleware.ros2.utils import compare_poses, GiskardTester
 
 
 class HSRTester(GiskardTester):
