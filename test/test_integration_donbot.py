@@ -11,13 +11,13 @@ from geometry_msgs.msg import (
 )
 
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.donbot import (
+from giskardpy.middleware.ros2.behavior_tree_config import StandAloneBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
+from giskardpy.middleware.ros2.configs import (
     WorldWithBoxyBaseConfig,
     DonbotStandaloneInterfaceConfig,
 )
-from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from giskardpy.middleware.ros2.utils import GiskardTester
 
 # TODO roslaunch iai_donbot_sim ros_control_sim.launch
 

@@ -3,19 +3,18 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from geometry_msgs.msg import PoseStamped, Quaternion, PointStamped, Vector3Stamped
-from giskardpy_ros.tree.blackboard_utils import GiskardBlackboard
+from giskardpy.tree import GiskardBlackboard
 
-from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from giskardpy.middleware.ros2.utils import GiskardTester
 
 from giskardpy.utils.math import quaternion_from_rotation_matrix
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
+from giskardpy.middleware.ros2.behavior_tree_config import StandAloneBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
 from giskardpy.qp.qp_controller_config import QPControllerConfig
-from giskardpy_ros.configs.other_robots.justin import (
+from giskardpy.middleware.ros2.configs import (
     WorldWithJustinConfig,
     JustinStandaloneInterface,
 )
-from giskardpy_ros.ros2.visualization_mode import VisualizationMode
 
 
 class JustinTestWrapper(GiskardTester):
@@ -118,7 +117,6 @@ class JustinTestWrapper(GiskardTester):
                 robot_interface_config=JustinStandaloneInterface(),
                 behavior_tree_config=StandAloneBTConfig(
                     debug_mode=True,
-                    visualization_mode=VisualizationMode.VisualsFrameLocked,
                 ),
                 qp_controller_config=QPControllerConfig(mpc_dt=0.0125, control_dt=None),
             )

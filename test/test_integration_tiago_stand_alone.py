@@ -17,10 +17,10 @@ from giskardpy.utils.math import (
     quaternion_from_axis_angle,
     quaternion_from_rotation_matrix,
 )
-from giskardpy_ros.configs.behavior_tree_config import StandAloneBTConfig
-from giskardpy_ros.configs.giskard import Giskard
-from giskardpy_ros.configs.iai_robots.tiago import TiagoStandaloneInterface
-from giskardpy_ros.utils.utils_for_tests import GiskardTester
+from giskardpy.middleware.ros2.behavior_tree_config import StandAloneBTConfig
+from giskardpy.middleware.ros2.giskard import Giskard
+from giskardpy.middleware.ros2.configs import TiagoStandaloneInterface
+from giskardpy.middleware.ros2.utils import GiskardTester
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 
 
