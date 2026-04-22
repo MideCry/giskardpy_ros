@@ -24,7 +24,7 @@ def generate_launch_description():
     dualarm_xacro_file = os.path.join(
         get_package_share_directory("iai_dualarm_description"),
         "robots",
-        "dualarm_ur5s_one_gripper.urdf.xacro",
+        "dualarm_ur5_two_gripper_table.urdf.xacro",
     )
     kinematics_config = PathJoinSubstitution(
         [FindPackageShare("iai_ur_description"), "config", "ur5_default.yaml"]
