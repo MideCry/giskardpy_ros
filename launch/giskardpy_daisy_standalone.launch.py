@@ -21,10 +21,10 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    dualarm_xacro_file = os.path.join(
-        get_package_share_directory("iai_dualarm_description"),
+    daisy_xacro_file = os.path.join(
+        get_package_share_directory("iai_daisy_description"),
         "robots",
-        "dualarm_ur5_two_gripper_table.urdf.xacro",
+        "daisy_ur5_two_gripper_table.urdf.xacro",
     )
     kinematics_config = PathJoinSubstitution(
         [FindPackageShare("iai_ur_description"), "config", "ur5_default.yaml"]
@@ -35,7 +35,7 @@ def generate_launch_description():
             [
                 FindExecutable(name="xacro"),
                 " ",
-                dualarm_xacro_file,
+                daisy_xacro_file,
                 " transmission_hw_interface:=hardware_interface/PositionJointInterface",
                 " kinematics_config_left:=",
                 kinematics_config,
@@ -74,7 +74,7 @@ def generate_launch_description():
             ),
             Node(
                 package="giskardpy_ros",
-                executable="dualarm_standalone",
+                executable="daisy_standalone",
                 name="giskard",
                 parameters=[{"robot_description": robot_description}],
                 output="screen",
