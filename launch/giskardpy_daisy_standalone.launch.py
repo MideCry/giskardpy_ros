@@ -24,7 +24,7 @@ def generate_launch_description():
     daisy_xacro_file = os.path.join(
         get_package_share_directory("iai_daisy_description"),
         "robots",
-        "daisy_ur5_two_gripper_table.urdf.xacro",
+        "daisy.urdf.xacro",
     )
     kinematics_config = PathJoinSubstitution(
         [FindPackageShare("iai_ur_description"), "config", "ur5_default.yaml"]
