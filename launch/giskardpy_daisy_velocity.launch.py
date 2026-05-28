@@ -10,10 +10,12 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    tracy_xacro_file = os.path.join(
-        get_package_share_directory("iai_daisy_description"), "urdf", "daisy.urdf.xacro"
+    daisy_xacro_file = os.path.join(
+        get_package_share_directory("iai_daisy_description"),
+        "robots",
+        "daisy.urdf.xacro",
     )
-    robot_description = Command([FindExecutable(name="xacro"), " ", tracy_xacro_file])
+    robot_description = Command([FindExecutable(name="xacro"), " ", daisy_xacro_file])
 
     return LaunchDescription(
         [
