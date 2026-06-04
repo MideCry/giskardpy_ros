@@ -27,7 +27,7 @@ def generate_launch_description():
         "daisy.urdf.xacro",
     )
     kinematics_config = PathJoinSubstitution(
-        [FindPackageShare("iai_ur_description"), "config", "ur5_default.yaml"]
+        [FindPackageShare("ur_description"), "config", "ur5", "default_kinematics.yaml"]
     )
 
     robot_description = ParameterValue(
